@@ -15,6 +15,7 @@ import { formatRaceClockInput } from '../../utils/dateInput';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../../constants/brand';
+import { COVER_CROP_CENTER, coverCropImageStyle } from '../../constants/sportVisuals';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
@@ -127,7 +128,11 @@ export function IntakeChoiceCard({
       ]}
     >
       {image ? (
-        <Image source={image} style={styles.choiceThumb} resizeMode="cover" />
+        <Image
+          source={image}
+          style={[styles.choiceThumb, coverCropImageStyle(COVER_CROP_CENTER)]}
+          resizeMode="cover"
+        />
       ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={styles.choiceTitleRow}>
@@ -227,7 +232,7 @@ export function RelayHero({
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <Image
           source={ONBOARDING_IMAGES.heroRelay}
-          style={StyleSheet.absoluteFill}
+          style={[StyleSheet.absoluteFill, coverCropImageStyle(COVER_CROP_CENTER)]}
           resizeMode="cover"
           accessibilityIgnoresInvertColors
         />
@@ -267,7 +272,7 @@ export function PlanPreviewCard({ onContinue }: { onContinue: () => void }) {
       <ImageBackground
         source={ONBOARDING_IMAGES.planTeaser}
         style={styles.planHero}
-        imageStyle={{ borderRadius: radii.lg }}
+        imageStyle={[{ borderRadius: radii.lg }, coverCropImageStyle(COVER_CROP_CENTER)]}
         resizeMode="cover"
       >
         <View style={styles.planScrim} />

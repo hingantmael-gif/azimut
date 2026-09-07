@@ -12,15 +12,13 @@ import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import {
   canAccessSessionRpe,
   hasRpeFeedbackForSession,
-  resendLabelForWatch,
-  sendLabelForWatch,
 } from '../../src/engines/subscription';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
-import { watchExportHint, canSendWorkoutToWatch } from '../../src/engines/watchExport';
-import { exportWorkoutToSelectedWatch } from '../../src/utils/watchWorkoutExport';
+import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { shareWorkoutSession } from '../../src/engines/stravaExport';
+import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
 import { FocusTarget } from '../../src/ui/FocusTarget';
 import { AppScrollView } from '../../src/ui/scrolling';
@@ -32,7 +30,14 @@ export default function SessionDetailScreen() {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const workout = state.plan.find((w) => w.id === id);
-  const brandId = state.profile.watch?.brandId ?? null;
+  const {
+    exporting,
+    sendWorkout,
+    sendLabel,
+    resendLabel,
+    hint,
+    WatchPicker,
+  } = useWatchWorkoutExport();
   const focusGarmin = useActionFocus('garmin');
   const focusStrava = useActionFocus('strava');
   const focusRpe = useActionFocus('rpe');
@@ -65,21 +70,16 @@ export default function SessionDetailScreen() {
   if (!canWatchSend) {
     watchHint = isRest
       ? 'Pas d’export pour un jour de repos.'
-      : 'Garmin Connect accepte course, vélo, natation et musculation. Cette séance ne peut pas être envoyée telle quelle.';
+      : 'Course, vélo, natation et musculation uniquement — cette séance ne peut pas être envoyée telle quelle.';
   } else if (workout.exportedToGarmin) {
     watchHint = 'Séance déjà envoyée vers ta montre — tu peux renvoyer si besoin.';
   } else {
-    watchHint = watchExportHint(brandId);
+    watchHint = hint;
   }
 
   const onWatchPress = () => {
-    if (!canWatchSend) return;
-    void exportWorkoutToSelectedWatch({
-      state,
-      dispatch,
-      workoutId: workout.id,
-      router,
-    });
+    if (!canWatchSend || exporting) return;
+    void sendWorkout(workout.id, router);
   };
 
   const onStravaPress = async () => {
@@ -145,11 +145,14 @@ export default function SessionDetailScreen() {
             <FocusTarget active={focusGarmin} style={{ marginTop: spacing.md }}>
               <PrimaryButton
                 label={
-                  workout.exportedToGarmin
-                    ? resendLabelForWatch(brandId)
-                    : sendLabelForWatch(brandId)
+                  exporting
+                    ? 'Préparation…'
+                    : workout.exportedToGarmin
+                      ? resendLabel
+                      : sendLabel
                 }
                 onPress={onWatchPress}
+                disabled={exporting}
               />
             </FocusTarget>
             <Muted style={{ marginTop: 6 }}>{watchHint}</Muted>
@@ -192,6 +195,7 @@ export default function SessionDetailScreen() {
           </Muted>
         ) : null}
       </AppScrollView>
+      {WatchPicker}
     </Screen>
   );
 }

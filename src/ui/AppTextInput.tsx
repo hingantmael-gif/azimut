@@ -2,23 +2,20 @@ import { forwardRef, useCallback, useMemo } from 'react';
 import {
   Platform,
   TextInput,
-  type NativeSyntheticEvent,
-  type TextInputFocusEventData,
   type TextInputProps,
   type StyleProp,
   type TextStyle,
 } from 'react-native';
-import { useIsPhoneExperience } from './platformExperience';
+import { useIsWebPhoneFrame } from './platformExperience';
 
 /**
- * Champs texte : clavier virtuel sur téléphone uniquement.
- * Sur PC (web large), saisie au clavier physique + curseur texte visible.
+ * Champs texte : clavier physique sur PC (cadre web), virtuel sur vrai téléphone.
  */
 export const AppTextInput = forwardRef<TextInput, TextInputProps>(function AppTextInput(
   { onFocus, showSoftInputOnFocus, style, ...props },
   ref,
 ) {
-  const isPhone = useIsPhoneExperience();
+  const framedDesktop = useIsWebPhoneFrame();
 
   const handleFocus = useCallback(
     (e: any) => {
@@ -31,14 +28,13 @@ export const AppTextInput = forwardRef<TextInput, TextInputProps>(function AppTe
     showSoftInputOnFocus !== undefined
       ? showSoftInputOnFocus
       : Platform.OS === 'web'
-        ? isPhone
-        : isPhone;
+        ? !framedDesktop
+        : true;
 
   const webCursorStyle = useMemo(
     () =>
       Platform.OS === 'web'
         ? ({
-            // Empêche le pointeur de « disparaître » au survol des champs (RN Web).
             cursor: 'text',
             caretColor: '#1A1A1A',
           } as TextStyle)

@@ -58,19 +58,19 @@ export function watchResendLabel(brandId?: WatchBrandId | null): string {
  */
 export function watchExportHint(brandId?: WatchBrandId | null): string {
   if (!brandId) {
-    return 'Choisis d’abord ta montre (Paramètres → Montre). Au prochain envoi, Azimut gère le reste.';
+    return 'Au premier envoi, Azimut te demande quelle montre tu as — puis exporte le bon fichier.';
   }
   switch (brandId) {
     case 'garmin':
-      return 'Azimut pousse la séance sur Garmin Connect. Ta montre (déjà appairée en Bluetooth dans Garmin Connect) la reçoit au prochain sync — souvent automatique.';
+      return 'Export JSON Garmin Training (+ TCX). Si ton compte est lié, Azimut pousse aussi sur Garmin Connect → sync Bluetooth.';
     case 'apple':
-      return 'Azimut prépare la séance et ouvre Apple Santé / Fitness. Sur iPhone, confirme l’ajout : l’Apple Watch (Bluetooth) récupère le plan.';
+      return 'Export JSON WorkoutKit (+ TCX). Ouvre Fitness / Santé sur iPhone — l’Apple Watch récupère le plan.';
     case 'samsung':
-      return 'Azimut prépare la séance et ouvre Samsung Health. Synchronise ta Galaxy Watch (Bluetooth) depuis cette app.';
+      return 'Export TCX Samsung Health (+ JSON). Importe dans Samsung Health puis sync Bluetooth Galaxy Watch.';
     case 'google_fitbit':
-      return 'Azimut prépare la séance et ouvre Fitbit. La sync Bluetooth vers ta Pixel / Fitbit se fait dans l’app Fitbit.';
+      return 'Export TCX Fitbit (+ JSON). Importe dans l’app Fitbit puis sync Pixel Watch / Fitbit.';
     case 'huawei':
-      return 'Azimut prépare la séance et ouvre Huawei Santé. Synchronise ta montre depuis cette app (Bluetooth).';
+      return 'Export TCX Huawei Santé (+ JSON). Importe dans Huawei Santé puis sync ta montre.';
     default:
       return `Ouvre l’app ${getWatchEntry(brandId).subtitle} pour synchroniser ta montre en Bluetooth.`;
   }

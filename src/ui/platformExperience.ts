@@ -1,26 +1,26 @@
 import { Platform, useWindowDimensions } from 'react-native';
 
-const PHONE_MAX = 480;
-const TABLET_MAX = 1024;
+const FRAME_BREAKPOINT = 520;
 
 export type DeviceKind = 'phone' | 'tablet' | 'desktop';
 
-/** Détecte téléphone / tablette / PC pour adapter le design. */
+/**
+ * Expérience produit = téléphone partout sur le web (PC = même UI qu’Edge mobile).
+ * Natif : tablette si largeur confortable.
+ */
 export function useDeviceKind(): DeviceKind {
   const { width: raw } = useWindowDimensions();
   const width = raw > 0 ? raw : Platform.OS === 'web' ? 1024 : 390;
 
-  if (Platform.OS !== 'web') {
-    // Natif : tablette si largeur confortable
-    if (width >= 768) return 'tablet';
+  if (Platform.OS === 'web') {
+    // PC / tablette web : on force le layout téléphone (cadre PhoneShell).
     return 'phone';
   }
-  if (width <= PHONE_MAX) return 'phone';
-  if (width <= TABLET_MAX) return 'tablet';
-  return 'desktop';
+  if (width >= 768) return 'tablet';
+  return 'phone';
 }
 
-/** Natif ou web étroit = expérience téléphone (plein écran). */
+/** Natif ou web = expérience téléphone (plein écran ou cadre PC). */
 export function useIsPhoneExperience(): boolean {
   return useDeviceKind() === 'phone';
 }
@@ -30,5 +30,13 @@ export function useIsTabletExperience(): boolean {
 }
 
 export function useIsDesktopExperience(): boolean {
-  return useDeviceKind() === 'desktop';
+  // Plus de layout « desktop élargi » : PC web = téléphone dans PhoneShell.
+  if (Platform.OS === 'web') return false;
+  return false;
+}
+
+/** Viewport assez large pour afficher le cadre téléphone (PC). */
+export function useIsWebPhoneFrame(): boolean {
+  const { width } = useWindowDimensions();
+  return Platform.OS === 'web' && width > FRAME_BREAKPOINT;
 }

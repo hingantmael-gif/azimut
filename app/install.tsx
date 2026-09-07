@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View, ActivityIndicator, Linking, Pressable
 import { useRouter } from 'expo-router';
 import { BRAND } from '../src/constants/brand';
 
-const INSTALL_PAGE = 'https://hingantmael-gif.github.io/azimut/telecharger.html';
+const INSTALL_PAGE = 'https://hingantmael-gif.github.io/telecharger.html';
 
 /** Redirige vers la page Installer isolée (PWA), style BTP Pro. */
 export default function InstallLandingScreen() {
@@ -11,8 +11,7 @@ export default function InstallLandingScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const base = window.location.pathname.startsWith('/azimut') ? '/azimut' : '';
-      window.location.replace(`${window.location.origin}${base}/telecharger.html`);
+      window.location.replace(`${window.location.origin}/telecharger.html`);
       return;
     }
     router.replace('/(auth)/welcome');

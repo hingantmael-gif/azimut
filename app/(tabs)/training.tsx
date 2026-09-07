@@ -29,6 +29,7 @@ export default function TrainingScreen() {
     resendLabel,
     hint,
     brandId,
+    WatchPicker,
   } = useWatchWorkoutExport();
   const focusGarmin = useActionFocus('garmin');
   const focusStrava = useActionFocus('strava');
@@ -56,6 +57,7 @@ export default function TrainingScreen() {
   const workoutSummary = workout ? summarizeWorkout(workout) : null;
 
   return (
+    <>
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 32 }}>
       <Text style={styles.greeting}>
         Bonjour {state.profile.firstName || 'athlète'}
@@ -150,6 +152,8 @@ export default function TrainingScreen() {
         <Text style={styles.chevron}>›</Text>
       </Pressable>
     </AppScrollView>
+    {WatchPicker}
+    </>
   );
 }
 

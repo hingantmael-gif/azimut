@@ -10,9 +10,9 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
 import type { SportDiscipline } from '../../src/types/domain';
-import { sendLabelForWatch, hasRpeFeedbackForSession } from '../../src/engines/subscription';
+import { hasRpeFeedbackForSession } from '../../src/engines/subscription';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
-import { exportWorkoutToSelectedWatch } from '../../src/utils/watchWorkoutExport';
+import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
 import { FocusTarget } from '../../src/ui/FocusTarget';
 import { AppScrollView } from '../../src/ui/scrolling';
@@ -31,11 +31,11 @@ const RECORD_MODES: Array<{
 /** Enregistrer — choix du type de sport puis actions */
 export default function RecordScreen() {
   const router = useRouter();
-  const { dispatch, state } = useApp();
+  const { state } = useApp();
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [sport, setSport] = useState<SportDiscipline>('run');
-  const brandId = state.profile.watch?.brandId ?? null;
+  const { sendWorkout, sendLabel, WatchPicker, exporting } = useWatchWorkoutExport();
   const focusGarmin = useActionFocus('garmin');
 
   const workout = state.plan.find(
@@ -52,15 +52,11 @@ export default function RecordScreen() {
       );
       return;
     }
-    void exportWorkoutToSelectedWatch({
-      state,
-      dispatch,
-      workoutId: workout.id,
-      router,
-    });
+    void sendWorkout(workout.id, router);
   };
 
   return (
+    <>
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.title}>Enregistrer</Text>
       <Text style={styles.sub}>Choisissez le type d&apos;activité pour optimiser le suivi.</Text>
@@ -94,8 +90,11 @@ export default function RecordScreen() {
           <Pressable
             style={[styles.actionBtn, { backgroundColor: disciplineColor(sport) }]}
             onPress={sendToWatch}
+            disabled={exporting}
           >
-            <Text style={styles.actionBtnText}>{sendLabelForWatch(brandId)}</Text>
+            <Text style={styles.actionBtnText}>
+              {exporting ? 'Préparation…' : sendLabel}
+            </Text>
           </Pressable>
         </FocusTarget>
       ) : null}
@@ -113,6 +112,8 @@ export default function RecordScreen() {
         <Text style={styles.actionBtnOutlineText}>Voir impact sur le corps</Text>
       </Pressable>
     </AppScrollView>
+    {WatchPicker}
+    </>
   );
 }
 

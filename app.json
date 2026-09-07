@@ -129,8 +129,7 @@
       "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": "/azimut"
+      "typedRoutes": true
     }
   }
 }

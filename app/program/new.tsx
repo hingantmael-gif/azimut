@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ImageBackground,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,9 +17,20 @@ import {
   type ProgramSportCategory,
   type TrainingProgramTemplate,
 } from '../../src/constants/programs';
-import { SPORT_HERO_IMAGES, SWIM_VENUE_IMAGES, CUSTOM_DISTANCE_IMAGES, customDistanceExample, customDistancePlaceholder, imageForProgram, programImageFocus } from '../../src/constants/sportVisuals';
+import {
+  SPORT_HERO_IMAGES,
+  SWIM_VENUE_IMAGES,
+  CUSTOM_DISTANCE_IMAGES,
+  customDistanceExample,
+  customDistancePlaceholder,
+  imageForProgram,
+  programImageFocus,
+  coverCropImageStyle,
+  COVER_CROP_CENTER,
+} from '../../src/constants/sportVisuals';
 import { NewProgramLabel } from '../../src/ui/brand/NewProgramLabel';
 import { ProgramCreatedCelebration } from '../../src/ui/program/ProgramCreatedCelebration';
+import { SportCover } from '../../src/ui/program/SportCover';
 import {
   formatRaceDateFr,
   getDurationGuide,
@@ -854,19 +864,21 @@ export default function NewProgramScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={cat.label}
               >
-                <ImageBackground
+                <SportCover
                   source={SPORT_HERO_IMAGES[cat.id]}
+                  minHeight={168}
+                  borderRadius={radii.lg}
+                  objectPosition={COVER_CROP_CENTER}
+                  scrim="rgba(7, 17, 31, 0.22)"
                   style={styles.sportHero}
-                  imageStyle={styles.sportHeroImage}
-                  resizeMode="cover"
+                  contentStyle={styles.sportHeroContent}
                 >
-                  <View style={styles.sportHeroScrim} />
                   <View style={styles.sportHeroText}>
                     <Text style={styles.sportHeroLabel}>{cat.label}</Text>
                     <Text style={styles.sportHeroDesc}>{cat.desc}</Text>
                   </View>
                   <Text style={styles.sportHeroChevron}>›</Text>
-                </ImageBackground>
+                </SportCover>
               </Pressable>
             ))}
             <Pressable
@@ -874,19 +886,21 @@ export default function NewProgramScreen() {
               accessibilityRole="button"
               accessibilityLabel="Duathlon sprint"
             >
-              <ImageBackground
+              <SportCover
                 source={SPORT_HERO_IMAGES.other}
+                minHeight={168}
+                borderRadius={radii.lg}
+                objectPosition={COVER_CROP_CENTER}
+                scrim="rgba(7, 17, 31, 0.22)"
                 style={styles.sportHero}
-                imageStyle={styles.sportHeroImage}
-                resizeMode="cover"
+                contentStyle={styles.sportHeroContent}
               >
-                <View style={styles.sportHeroScrim} />
                 <View style={styles.sportHeroText}>
                   <Text style={styles.sportHeroLabel}>Duathlon sprint</Text>
                   <Text style={styles.sportHeroDesc}>Course · vélo · course — biathlon inclus</Text>
                 </View>
                 <Text style={styles.sportHeroChevron}>›</Text>
-              </ImageBackground>
+              </SportCover>
             </Pressable>
           </>
         )}
@@ -901,16 +915,18 @@ export default function NewProgramScreen() {
               accessibilityRole="button"
               accessibilityLabel="Piscine"
             >
-              <ImageBackground
+              <SportCover
                 source={SWIM_VENUE_IMAGES.pool}
+                minHeight={168}
+                borderRadius={radii.lg}
+                objectPosition={COVER_CROP_CENTER}
+                scrim="rgba(7, 17, 31, 0.22)"
                 style={[
                   styles.sportHero,
                   swimVenue === 'pool' && { borderWidth: 2, borderColor: colors.accent },
                 ]}
-                imageStyle={styles.sportHeroImage}
-                resizeMode="cover"
+                contentStyle={styles.sportHeroContent}
               >
-                <View style={styles.sportHeroScrim} />
                 <View style={styles.sportHeroText}>
                   <Text style={styles.sportHeroLabel}>Piscine</Text>
                   <Text style={styles.sportHeroDesc}>
@@ -918,23 +934,25 @@ export default function NewProgramScreen() {
                   </Text>
                 </View>
                 <Text style={styles.sportHeroChevron}>›</Text>
-              </ImageBackground>
+              </SportCover>
             </Pressable>
             <Pressable
               onPress={() => selectSwimVenue('open_water')}
               accessibilityRole="button"
               accessibilityLabel="Eau libre"
             >
-              <ImageBackground
+              <SportCover
                 source={SWIM_VENUE_IMAGES.open_water}
+                minHeight={168}
+                borderRadius={radii.lg}
+                objectPosition={COVER_CROP_CENTER}
+                scrim="rgba(7, 17, 31, 0.22)"
                 style={[
                   styles.sportHero,
                   swimVenue === 'open_water' && { borderWidth: 2, borderColor: colors.accent },
                 ]}
-                imageStyle={styles.sportHeroImage}
-                resizeMode="cover"
+                contentStyle={styles.sportHeroContent}
               >
-                <View style={styles.sportHeroScrim} />
                 <View style={styles.sportHeroText}>
                   <Text style={styles.sportHeroLabel}>Eau libre</Text>
                   <Text style={styles.sportHeroDesc}>
@@ -942,7 +960,7 @@ export default function NewProgramScreen() {
                   </Text>
                 </View>
                 <Text style={styles.sportHeroChevron}>›</Text>
-              </ImageBackground>
+              </SportCover>
             </Pressable>
           </>
         )}
@@ -1423,7 +1441,7 @@ export default function NewProgramScreen() {
   const wizardFocus =
     selectedTemplate && selectedTemplate !== 'custom'
       ? programImageFocus(selectedTemplate.id)
-      : '50% 40%';
+      : COVER_CROP_CENTER;
 
   if (wizardBg) {
     return (
@@ -1440,12 +1458,7 @@ export default function NewProgramScreen() {
         <ImageBackground
           source={wizardBg}
           style={styles.heroBg}
-          imageStyle={[
-            styles.heroBgImage,
-            Platform.OS === 'web'
-              ? ({ objectPosition: wizardFocus, objectFit: 'cover' } as object)
-              : null,
-          ]}
+          imageStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
           resizeMode="cover"
         >
           <View style={styles.heroScrim} pointerEvents="none" />
@@ -1486,18 +1499,15 @@ function ProgramCard({
   const focus = programImageFocus(prog.id);
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={prog.title}>
-      <ImageBackground
+      <SportCover
         source={image}
+        minHeight={128}
+        borderRadius={radii.lg}
+        objectPosition={focus}
+        scrim="rgba(7,17,31,0.28)"
         style={styles.progHero}
-        imageStyle={[
-          styles.progHeroImage,
-          Platform.OS === 'web'
-            ? ({ objectPosition: focus, objectFit: 'cover' } as object)
-            : null,
-        ]}
-        resizeMode="cover"
+        contentStyle={styles.sportHeroContent}
       >
-        <View style={styles.progHeroScrim} />
         <View style={styles.progHeroBody}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <Text style={styles.progHeroTitle}>{prog.title}</Text>
@@ -1516,7 +1526,7 @@ function ProgramCard({
           ) : null}
         </View>
         <Text style={styles.sportHeroChevron}>›</Text>
-      </ImageBackground>
+      </SportCover>
     </Pressable>
   );
 }
@@ -1590,19 +1600,12 @@ function makeStyles(colors: ColorPalette) {
       color: '#12201C',
     },
     sportHero: {
-      minHeight: 168,
       marginBottom: spacing.sm,
-      borderRadius: radii.lg,
-      overflow: 'hidden',
-      justifyContent: 'flex-end',
-      padding: spacing.md,
+    },
+    sportHeroContent: {
       flexDirection: 'row',
       alignItems: 'flex-end',
-    },
-    sportHeroImage: { borderRadius: radii.lg },
-    sportHeroScrim: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(7, 17, 31, 0.22)',
+      padding: spacing.md,
     },
     sportHeroText: { flex: 1, zIndex: 1 },
     sportHeroLabel: {
@@ -1639,19 +1642,7 @@ function makeStyles(colors: ColorPalette) {
       marginTop: spacing.sm,
     },
     progHero: {
-      minHeight: 128,
       marginBottom: spacing.sm,
-      borderRadius: radii.lg,
-      overflow: 'hidden',
-      justifyContent: 'flex-end',
-      padding: spacing.md,
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-    },
-    progHeroImage: { borderRadius: radii.lg },
-    progHeroScrim: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(7,17,31,0.28)',
     },
     progHeroBody: { flex: 1, zIndex: 1 },
     progHeroTitle: { fontWeight: '800', color: '#fff', fontSize: 16 },

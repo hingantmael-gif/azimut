@@ -16,7 +16,7 @@ import { spacing } from '../../src/theme/tokens';
 import { openWatchCompanion } from '../../src/services/sleepImport';
 import { watchExportHint, watchSendLabel, canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { todayWorkout } from '../../src/store/AppContext';
-import { exportWorkoutToSelectedWatch } from '../../src/utils/watchWorkoutExport';
+import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 
 /** Paramètres → Montre — marque pour sommeil + envoi de séances */
 export default function WatchSettingsScreen() {
@@ -43,6 +43,7 @@ export default function WatchSettingsScreen() {
   );
   const brandId = watch?.brandId ?? null;
   const workout = todayWorkout(state.plan);
+  const { sendWorkout, WatchPicker, exporting } = useWatchWorkoutExport();
 
   const onSelect = (id: WatchBrandId) => {
     dispatch({ type: 'SET_WATCH', brandId: id });
@@ -75,12 +76,7 @@ export default function WatchSettingsScreen() {
       );
       return;
     }
-    void exportWorkoutToSelectedWatch({
-      state,
-      dispatch,
-      workoutId: workout.id,
-      router,
-    });
+    void sendWorkout(workout.id, router);
   };
 
   if (changing || !watch?.brandId) {
@@ -142,9 +138,11 @@ export default function WatchSettingsScreen() {
           />
           <SettingsRow
             label={
-              workout && canSendWorkoutToWatch(workout.discipline)
-                ? watchSendLabel(brandId)
-                : 'Envoi séance (indisponible aujourd’hui)'
+              exporting
+                ? 'Préparation…'
+                : workout && canSendWorkoutToWatch(workout.discipline)
+                  ? watchSendLabel(brandId)
+                  : 'Envoi séance (indisponible aujourd’hui)'
             }
             value={
               workout && canSendWorkoutToWatch(workout.discipline)
@@ -162,6 +160,7 @@ export default function WatchSettingsScreen() {
           <SettingsRow label="Planning du sommeil" onPress={() => router.push('/sleep')} />
         </SettingsSection>
       </AppScrollView>
+      {WatchPicker}
     </SettingsScreen>
   );
 }

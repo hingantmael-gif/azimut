@@ -9,12 +9,12 @@ export function WebPwaBootstrap() {
 
     const link = document.createElement('link');
     link.rel = 'manifest';
-    link.href = '/azimut/manifest.webmanifest';
+    link.href = '/manifest.webmanifest';
     if (!document.querySelector('link[rel="manifest"]')) {
       document.head.appendChild(link);
     }
 
-    navigator.serviceWorker.register('/azimut/sw.js', { scope: '/azimut/' }).catch(() => {});
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
   }, []);
 
   return null;

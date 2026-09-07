@@ -1,12 +1,12 @@
 /**
- * Génère qr-install.png → scan = page Installer Azimut (PWA).
+ * Génère qr-install.png → scan = page Installer Azimut (PWA racine, comme BTP Pro).
  */
 import QRCode from 'qrcode';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const url = 'https://hingantmael-gif.github.io/azimut/telecharger.html';
+const url = 'https://hingantmael-gif.github.io/telecharger.html';
 const out = path.join(root, 'public', 'qr-install.png');
 
 await QRCode.toFile(out, url, {

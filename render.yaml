@@ -1,5 +1,5 @@
-# Azimut — service web indépendant (option Render)
-# Brancher ce dépôt sur Render → Static Site ou Web Service Node.
+# Azimut — Web Service racine (comme BTP Pro)
+# URL : https://azimut.onrender.com  (après branchement Render)
 
 services:
   - type: web
@@ -7,8 +7,8 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm ci && npx expo export --platform web && cp -f public/manifest.webmanifest public/sw.js public/icon.png public/favicon.png dist/ 2>/dev/null || true
-    startCommand: npx serve dist -s -l $PORT
+    buildCommand: npm ci && npm run build:web && node -e "const fs=require('fs');const p=require('path');['manifest.webmanifest','sw.js','icon.png','icon-192.png','icon-512.png','favicon.png','telecharger.html','qr-install.png'].forEach(f=>{const s=p.join('public',f);if(fs.existsSync(s))fs.copyFileSync(s,p.join('dist',f));});fs.copyFileSync('dist/index.html','dist/404.html');fs.writeFileSync('dist/.nojekyll','');"
+    startCommand: npx --yes serve dist -s -l $PORT
     envVars:
       - key: NODE_VERSION
         value: "22"

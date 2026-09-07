@@ -10,6 +10,7 @@ import {
 import { useThemeColors } from '../theme/ThemeContext';
 import { radii, spacing } from '../theme/tokens';
 import type { ColorPalette } from '../theme/palettes';
+import { COVER_CROP_CENTER, coverCropImageStyle } from '../constants/sportVisuals';
 
 /**
  * Bandeau photo pour écrans trop « vides » — modernise sans surcharge.
@@ -37,9 +38,8 @@ export function SportAtmosphereBanner({
     <>
       <Image
         source={source}
-        style={styles.image}
+        style={[styles.image, coverCropImageStyle(COVER_CROP_CENTER)]}
         resizeMode="cover"
-        pointerEvents="none"
       />
       <View style={styles.scrim} pointerEvents="none" />
       <View style={styles.textBlock} pointerEvents="none">
@@ -92,18 +92,18 @@ function makeStyles(colors: ColorPalette, height: number) {
       opacity: 0.92,
     },
     image: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       width: '100%',
       height: '100%',
       zIndex: 0,
     },
     scrim: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(8, 16, 28, 0.45)',
       zIndex: 1,
     },
     textBlock: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       justifyContent: 'flex-end',
       padding: spacing.md,
       zIndex: 2,

@@ -1,4 +1,4 @@
-import { Alert, Platform, Share } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import type { AppState } from '../data/seed';
 import type { WatchBrandId } from '../types/domain';
 import {
@@ -6,10 +6,10 @@ import {
   exportWorkoutToGarmin,
 } from './garminExport';
 import { openWatchCompanion } from '../services/sleepImport';
+import { buildWatchExportFiles } from '../engines/watchFileFormats';
+import { deliverWatchExportBundle } from './downloadWatchFile';
 import {
-  buildWatchWorkoutBrief,
   canSendWorkoutToWatch,
-  shareWorkoutForWatch,
   watchBrandShortLabel,
   watchExportHint,
   watchExportSuccessMessage,
@@ -35,6 +35,13 @@ export type WatchWorkoutExportOptions = {
   workoutId: string;
   router?: WatchRouter;
   silentSuccess?: boolean;
+  /** Marque déjà choisie (évite Alert — préférer la modal UI). */
+  brandIdOverride?: WatchBrandId;
+  /**
+   * Si aucune montre n’est sélectionnée : ouvre le picker UI (modal).
+   * Remplace Alert.alert (cassé / vide sur le web).
+   */
+  requestWatchPick?: () => Promise<WatchBrandId | null>;
 };
 
 export {
@@ -45,58 +52,15 @@ export {
   canSendWorkoutToWatch,
 };
 
-/**
- * Android = max ~3 boutons d’alerte → choix en 2 étapes.
- * iOS / web = toutes les marques d’un coup.
- */
-function pickWatchBrandInteractive(): Promise<WatchBrandId | null> {
-  if (Platform.OS === 'android') {
-    return new Promise((resolve) => {
-      Alert.alert(
-        'Quelle montre ?',
-        'Un choix unique — Azimut s’en souvient pour les envois et le sommeil.',
-        [
-          { text: 'Garmin', onPress: () => resolve('garmin') },
-          { text: 'Apple Watch', onPress: () => resolve('apple') },
-          {
-            text: 'Autres…',
-            onPress: () => {
-              Alert.alert('Autres montres', undefined, [
-                { text: 'Galaxy Watch', onPress: () => resolve('samsung') },
-                { text: 'Fitbit / Pixel', onPress: () => resolve('google_fitbit') },
-                { text: 'Huawei', onPress: () => resolve('huawei') },
-                {
-                  text: 'Annuler',
-                  style: 'cancel',
-                  onPress: () => resolve(null),
-                },
-              ]);
-            },
-          },
-        ],
-        { cancelable: true, onDismiss: () => resolve(null) },
-      );
-    });
+function showResult(title: string, message: string) {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.alert(`${title}\n\n${message}`);
+    return;
   }
-
-  return new Promise((resolve) => {
-    Alert.alert(
-      'Quelle montre ?',
-      'Un choix unique — Azimut s’en souvient pour les envois et le sommeil.',
-      [
-        { text: 'Garmin', onPress: () => resolve('garmin') },
-        { text: 'Apple Watch', onPress: () => resolve('apple') },
-        { text: 'Galaxy Watch', onPress: () => resolve('samsung') },
-        { text: 'Fitbit / Pixel', onPress: () => resolve('google_fitbit') },
-        { text: 'Huawei', onPress: () => resolve('huawei') },
-        { text: 'Annuler', style: 'cancel', onPress: () => resolve(null) },
-      ],
-      { cancelable: true, onDismiss: () => resolve(null) },
-    );
-  });
+  Alert.alert(title, message);
 }
 
-async function exportViaCompanionShare(opts: {
+async function exportFilesAndCompanion(opts: {
   brandId: WatchBrandId;
   workoutId: string;
   state: AppState;
@@ -105,71 +69,88 @@ async function exportViaCompanionShare(opts: {
 }): Promise<boolean> {
   const { brandId, workoutId, state, dispatch, silentSuccess } = opts;
   const workout = state.plan.find((w) => w.id === workoutId);
-  if (!workout || workout.discipline === 'rest') return false;
+  if (!workout || !canSendWorkoutToWatch(workout.discipline)) return false;
+
+  const { primary, extras } = buildWatchExportFiles(workout, brandId);
+  const { delivered } = await deliverWatchExportBundle(primary, extras);
 
   const opened = await openWatchCompanion(brandId);
-  if (!opened.ok && opened.error) {
-    Alert.alert('App compagnon', opened.error);
-  }
-
-  if (Platform.OS === 'web') {
-    try {
-      await Share.share({
-        message: buildWatchWorkoutBrief(workout),
-        title: workout.title,
-      });
-    } catch {
-      /* ignore */
-    }
-  } else {
-    await shareWorkoutForWatch(workout);
+  if (!opened.ok && opened.error && !silentSuccess) {
+    showResult('App compagnon', opened.error);
   }
 
   dispatch({ type: 'MARK_GARMIN_EXPORTED', workoutId });
 
   if (!silentSuccess) {
-    Alert.alert('Vers ta montre', watchExportSuccessMessage(brandId));
+    const fileLine =
+      delivered > 0
+        ? `Fichier ${primary.formatLabel} prêt (${primary.filename}).`
+        : 'Prépare le fichier dans le partage système.';
+    showResult(
+      `Vers ${watchBrandShortLabel(brandId)}`,
+      `${fileLine}\n\n${primary.nextStep}\n\n${watchExportSuccessMessage(brandId)}`,
+    );
   }
   return true;
 }
 
 /**
- * Stratégie d’envoi selon la montre sélectionnée (sommeil / paramètres).
- *
- * Clics max typiques :
- * 1. Pas de montre → choix marque → envoi (2)
- * 2. Garmin déjà lié → push API (1)
- * 3. Garmin pas lié → OAuth « Lier » → envoi (2–3)
- * 4. Autres marques → ouvre compagnon + partage (1–2)
+ * Envoi séance → montre :
+ * 1. Pas de montre → demande (modal) « Quelle montre ? »
+ * 2. Exporte le bon format (Garmin JSON/TCX, Apple WorkoutKit, Samsung/Fitbit/Huawei TCX+JSON)
+ * 3. Garmin lié → push API en plus
  */
 export async function exportWorkoutToSelectedWatch(
   opts: WatchWorkoutExportOptions,
 ): Promise<boolean> {
-  const { state, dispatch, workoutId, router, silentSuccess = false } = opts;
+  const {
+    state,
+    dispatch,
+    workoutId,
+    router,
+    silentSuccess = false,
+    brandIdOverride,
+    requestWatchPick,
+  } = opts;
 
   const workout = state.plan.find((w) => w.id === workoutId);
   if (!workout || !canSendWorkoutToWatch(workout.discipline)) {
-    Alert.alert(
+    showResult(
       'Envoi impossible',
-      'Cette séance ne peut pas être envoyée à la montre (repos, brick multi-sport…). Course, vélo, natation et musculation sont pris en charge.',
+      'Cette séance ne peut pas être envoyée à la montre (repos, brick…). Course, vélo, natation et musculation sont pris en charge.',
     );
     return false;
   }
 
-  let brandId = state.profile.watch?.brandId ?? null;
+  let brandId = brandIdOverride ?? state.profile.watch?.brandId ?? null;
 
   if (!brandId) {
-    const picked = await pickWatchBrandInteractive();
+    const picked = requestWatchPick ? await requestWatchPick() : null;
     if (!picked) {
-      router?.push('/settings/watch');
+      if (!requestWatchPick) {
+        router?.push('/settings/watch');
+        showResult(
+          'Montre requise',
+          'Choisis d’abord ta montre (Paramètres → Montre), puis renvoie la séance.',
+        );
+      }
       return false;
     }
     brandId = picked;
     dispatch({ type: 'SET_WATCH', brandId });
   }
 
+  // Toujours produire le fichier au bon format (discipline + marque)
+  const filesOk = await exportFilesAndCompanion({
+    brandId,
+    workoutId,
+    state,
+    dispatch,
+    silentSuccess: brandId === 'garmin' ? true : silentSuccess,
+  });
+
   if (brandId === 'garmin') {
-    return exportWorkoutToGarmin({
+    const apiOk = await exportWorkoutToGarmin({
       state,
       dispatch,
       workoutId,
@@ -177,15 +158,16 @@ export async function exportWorkoutToSelectedWatch(
       silentSuccess,
       offerInlineConnect: true,
     });
+    if (!apiOk && filesOk && !silentSuccess) {
+      showResult(
+        'Fichier Garmin prêt',
+        'Le push Garmin Connect n’a pas abouti (compte / liaison). Le fichier JSON/TCX a quand même été préparé — tu peux l’importer dans Garmin Connect.',
+      );
+    }
+    return apiOk || filesOk;
   }
 
-  return exportViaCompanionShare({
-    brandId,
-    workoutId,
-    state,
-    dispatch,
-    silentSuccess,
-  });
+  return filesOk;
 }
 
 /** Auto-envoi séance du jour — Garmin déjà lié uniquement (zéro clic). */

@@ -1,5 +1,8 @@
-import type { ImageSourcePropType } from 'react-native';
+import { Platform, type ImageSourcePropType, type ImageStyle } from 'react-native';
 import type { ProgramSportCategory } from './programs';
+
+/** Crop `cover` centré : même quantité rognée à gauche/droite et haut/bas. */
+export const COVER_CROP_CENTER = '50% 50%';
 
 /**
  * Visuels sportifs Azimut — athlètes au premier plan.
@@ -75,18 +78,35 @@ const PROGRAM_IMAGES: Record<string, ImageSourcePropType> = {
 };
 
 /**
- * Point focal pour le crop `cover` (bannières larges).
- * Valeurs CSS object-position — visage / athlète au centre du cadre.
+ * Point focal pour le crop `cover` (bannières).
+ * Par défaut : centre exact — sur téléphone l’image se réduit en rognant
+ * également à gauche/droite et haut/bas (pas d’étirement).
  */
 export const PROGRAM_IMAGE_FOCUS: Record<string, string> = {
-  'prog-5k': '50% 38%',
-  /** Visage + queueue bien visibles */
-  'prog-semi': '45% 35%',
+  'prog-5k': COVER_CROP_CENTER,
+  'prog-semi': COVER_CROP_CENTER,
 };
 
 export function programImageFocus(catalogId?: string | null): string {
   if (catalogId && PROGRAM_IMAGE_FOCUS[catalogId]) return PROGRAM_IMAGE_FOCUS[catalogId]!;
-  return '50% 40%';
+  return COVER_CROP_CENTER;
+}
+
+/**
+ * Style image pour `Image` / `ImageBackground` : cover + cadrage centré.
+ * Sur web, sans `objectFit: cover` RN étire souvent l’image (déformation).
+ */
+export function coverCropImageStyle(objectPosition: string = COVER_CROP_CENTER): ImageStyle {
+  if (Platform.OS !== 'web') {
+    // Native : resizeMode="cover" centre déjà le sujet
+    return {};
+  }
+  return {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    objectPosition,
+  } as ImageStyle;
 }
 
 /** Fond dédié « distance sur mesure » (différent du héros discipline). */
@@ -116,7 +136,7 @@ export function atmosphereImage(kind: AtmosphereKind): ImageSourcePropType {
   return ATMOSPHERE_IMAGES[kind];
 }
 
-/** Focus carte — léger zoom uniquement, image nette (pas de flou). */
+/** Focus carte — toujours centré pour un crop symétrique. */
 export function sportImageFocus(
   _sportCategory: ProgramSportCategory,
   _catalogId?: string,
@@ -124,11 +144,11 @@ export function sportImageFocus(
   return 'center';
 }
 
-/** Style ImageBackground — net, sans crop agressif qui grisait l’image. */
+/** Style ImageBackground — cover centré (alias). */
 export function sportCoverImageStyle(
   _focus: 'athlete' | 'upper' | 'center' = 'center',
-): object {
-  return {};
+): ImageStyle {
+  return coverCropImageStyle(COVER_CROP_CENTER);
 }
 
 /** Exemple de distance sur mesure réaliste par discipline. */

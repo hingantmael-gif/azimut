@@ -1,13 +1,15 @@
-/* Service worker Azimut — scope /azimut/ (GitHub Pages). */
-const CACHE = 'azimut-shell-v9';
+/* Service worker Azimut — scope / (comme BTP Pro). */
+const CACHE = 'azimut-shell-v12';
 const PRECACHE = [
-  '/azimut/telecharger.html',
-  '/azimut/manifest.webmanifest',
-  '/azimut/icon.png',
-  '/azimut/icon-192.png',
-  '/azimut/icon-512.png',
-  '/azimut/favicon.png',
-  '/azimut/qr-install.png',
+  '/',
+  '/index.html',
+  '/telecharger.html',
+  '/manifest.webmanifest',
+  '/icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/favicon.png',
+  '/qr-install.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -39,14 +41,12 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (!url.pathname.startsWith('/azimut/')) return;
   if (url.pathname.includes('/_expo/') || url.pathname.endsWith('.js')) return;
 
   const isHtml =
     req.mode === 'navigate' ||
     url.pathname.endsWith('.html') ||
-    url.pathname === '/azimut/' ||
-    url.pathname === '/azimut' ||
+    url.pathname === '/' ||
     (req.headers.get('accept') || '').includes('text/html');
 
   if (isHtml) {
@@ -57,7 +57,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(function () {});
           return res;
         })
-        .catch(() => caches.match(req).then((c) => c || caches.match('/azimut/index.html'))),
+        .catch(() => caches.match(req).then((c) => c || caches.match('/index.html'))),
     );
     return;
   }
