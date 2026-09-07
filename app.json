@@ -19,6 +19,7 @@
     "newArchEnabled": true,
     "android": {
       "package": "app.azimut.training",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07111F",
         "foregroundImage": "./assets/android-icon-foreground.png",

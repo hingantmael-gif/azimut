@@ -6,11 +6,13 @@ Application de coaching multi-sport — **100 % indépendante de BTP Pro**.
 
 | | URL |
 |---|---|
-| **Page d’installation** (amis) | https://hingantmael-gif.github.io/azimut/install |
+| **Installer l’app (1 clic)** | https://hingantmael-gif.github.io/azimut/get.html |
 | Accueil du site | https://hingantmael-gif.github.io/azimut/ |
+| APK Android | https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk |
 | Code source GitHub | https://github.com/hingantmael-gif/azimut |
 
-Sur la page d’installation : logo **Azimut**, animation, bouton **Installer l’application** (PWA sur Chrome / Edge / Android ; consignes pour iPhone Safari).
+Sur Android : ouvre le lien → **Télécharger & installer** → l’icône **logo Azimut** apparaît comme une app Play Store.  
+Sur iPhone : Safari → Partager → Sur l’écran d’accueil.
 
 ## Dossier local
 
