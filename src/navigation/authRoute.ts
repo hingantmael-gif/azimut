@@ -12,7 +12,8 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   /** Page d’installation PWA — publique, sans compte */
   const inInstall = root === 'install';
 
-  if (!session.authToken && !inAuth && !inInstall) return '/install';
+  // Sans compte → écran d’accueil / login (comme BTP Pro), PAS /install (évite spinner infini)
+  if (!session.authToken && !inAuth && !inInstall) return '/(auth)/welcome';
   if (
     session.authToken &&
     !session.emailVerified &&

@@ -1557,41 +1557,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const rsid = await getOrCreateRsid();
-      const label = deviceLabel();
-      const persisted = await loadSession();
+    const failSafe = setTimeout(() => {
+      if (!cancelled) {
+        hydrated.current = true;
+        setSessionReady(true);
+      }
+    }, 4000);
 
-      if (!cancelled && persisted && (await isSessionValidForDevice(persisted))) {
-        dispatch({ type: 'RESTORE_SESSION', state: persisted.state });
-        if (persisted.state.profile.onboardingCompleted) {
-          void markOnboardingCompleted(
-            persisted.state.profile.email,
-            persisted.state.profile.username,
-            persisted.state.profile.id,
-          );
-        }
-        setSessionMeta({
-          rsid,
-          deviceLabel: persisted.deviceLabel,
-          lastSavedAt: persisted.savedAt,
-        });
-      } else if (persisted) {
-        await clearSession();
-        if (!cancelled) {
+    (async () => {
+      try {
+        const rsid = await getOrCreateRsid();
+        const label = deviceLabel();
+        const persisted = await loadSession();
+
+        if (!cancelled && persisted && (await isSessionValidForDevice(persisted))) {
+          dispatch({ type: 'RESTORE_SESSION', state: persisted.state });
+          if (persisted.state.profile.onboardingCompleted) {
+            void markOnboardingCompleted(
+              persisted.state.profile.email,
+              persisted.state.profile.username,
+              persisted.state.profile.id,
+            );
+          }
+          setSessionMeta({
+            rsid,
+            deviceLabel: persisted.deviceLabel,
+            lastSavedAt: persisted.savedAt,
+          });
+        } else if (persisted) {
+          await clearSession();
+          if (!cancelled) {
+            setSessionMeta({ rsid, deviceLabel: label });
+          }
+        } else if (!cancelled) {
           setSessionMeta({ rsid, deviceLabel: label });
         }
-      } else if (!cancelled) {
-        setSessionMeta({ rsid, deviceLabel: label });
+      } catch {
+        // session locale indisponible → démarrer quand même (évite page blanche)
       }
 
       if (!cancelled) {
         hydrated.current = true;
         setSessionReady(true);
       }
+      clearTimeout(failSafe);
     })();
     return () => {
       cancelled = true;
+      clearTimeout(failSafe);
     };
   }, []);
 

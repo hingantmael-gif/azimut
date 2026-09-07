@@ -197,7 +197,12 @@
         async function ensureServiceWorker() {
           if (!('serviceWorker' in navigator)) return false;
           try {
-            var reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+            // Après désinstall/réinstall : purger vieux caches qui causaient page blanche
+            var keys = await caches.keys();
+            await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            var regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(function (r) { return r.unregister(); }));
+            var reg = await navigator.serviceWorker.register('./sw.js?v=6', { scope: './' });
             await navigator.serviceWorker.ready;
             if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
             return true;

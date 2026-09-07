@@ -17,6 +17,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   const { state, sessionReady } = useApp();
   const segments = useSegments();
   const router = useRouter();
+  const { colors } = useThemeColors();
 
   useEffect(() => {
     if (!sessionReady) return;
@@ -33,9 +34,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     state.profile.onboardingCompleted,
     segments,
     sessionReady,
+    router,
   ]);
-
-  const { colors } = useThemeColors();
 
   const session = {
     authToken: state.authToken,
@@ -44,7 +44,17 @@ function AuthGate({ children }: { children: ReactNode }) {
   };
   const routeOk = isRouteAuthorized(segments as string[], session);
 
-  if (!sessionReady || !routeOk) {
+  // Pendant la hydratation / redirect : spinner court — jamais bloqué à l’infini
+  if (!sessionReady) {
+    return (
+      <View style={[styles.boot, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
+  // Redirect en cours : laisser le replace se faire sans spinner infini
+  if (!routeOk) {
     return (
       <View style={[styles.boot, { backgroundColor: colors.bg }]}>
         <ActivityIndicator size="large" color={colors.accent} />
