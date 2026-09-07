@@ -1,7 +1,7 @@
 /**
- * Déploie l’app web Azimut + page Installer (style BTP Pro PWA).
- * Bouton « Installer l’application » → installation navigateur (icône logo),
- * pas un .apk à ouvrir avec Adobe/VLC.
+ * Déploie Azimut sur GitHub Pages.
+ * - /azimut/              → application Expo (évite la page blanche)
+ * - /azimut/telecharger.html → page Installer (PWA + QR), comme BTP Pro
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -29,15 +29,10 @@ for (const f of [
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
 }
 
-// Entrée partageable : racine = page Installer (comme BTP /telecharger)
-fs.copyFileSync(path.join(dist, 'telecharger.html'), path.join(dist, 'index-install.html'));
-const appIndex = path.join(dist, 'index.html');
-const installIndex = path.join(dist, 'telecharger.html');
-if (fs.existsSync(appIndex) && fs.existsSync(installIndex)) {
-  fs.copyFileSync(appIndex, path.join(dist, 'app.html'));
-  fs.copyFileSync(installIndex, appIndex);
+// 404 → app (SPA)
+if (fs.existsSync(path.join(dist, 'index.html'))) {
+  fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
 }
-fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'azimut-pages-'));
 fs.cpSync(dist, tmp, { recursive: true });
@@ -46,12 +41,11 @@ sh('git init', tmp);
 sh('git checkout -b gh-pages', tmp);
 sh('git add -A', tmp);
 sh(
-  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: installer PWA style BTP Pro + QR"',
+  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: app index + telecharger PWA (fix page blanche)"',
   tmp,
 );
 sh('git remote add origin https://github.com/hingantmael-gif/azimut.git', tmp);
 sh('git push -f origin gh-pages', tmp);
 
-console.log('\nOK — Installer : https://hingantmael-gif.github.io/azimut/');
-console.log('     (ou) https://hingantmael-gif.github.io/azimut/telecharger.html');
-console.log('App   : https://hingantmael-gif.github.io/azimut/app.html');
+console.log('\nOK — App      : https://hingantmael-gif.github.io/azimut/');
+console.log('     Installer : https://hingantmael-gif.github.io/azimut/telecharger.html');

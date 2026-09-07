@@ -2,27 +2,19 @@
 
 Application de coaching multi-sport — **indépendante de BTP Pro**.
 
-## Installer (comme BTP Pro)
+## Liens
 
 | | URL |
 |---|---|
-| **Page Installer** | https://hingantmael-gif.github.io/azimut/ |
-| Application (après install) | s’ouvre avec l’icône **logo Azimut** |
+| **Installer** (PC / téléphone) | https://hingantmael-gif.github.io/azimut/telecharger.html |
+| **Application** | https://hingantmael-gif.github.io/azimut/ |
 
-Sur **Chrome / Edge** (PC ou Android) : ouvrir le lien → **Installer l’application** → l’app apparaît sur l’écran d’accueil / menu Démarrer (pas un fichier .apk à ouvrir avec Adobe ou VLC).
-
+Sur **Chrome / Edge** : ouvrir **Installer** → **Installer l’application** → icône logo Azimut (menu Démarrer / écran d’accueil).  
 Sur **iPhone** : Safari → Partager → Sur l’écran d’accueil.
 
-Un **QR code** est affiché sur la page pour ouvrir l’install depuis un autre appareil.
-
-## Publier le site
+## Publier
 
 ```powershell
 cd C:\Users\Utilisateur\Documents\azimut
 npm run deploy:install-site
 ```
-
-## APK Android (optionnel)
-
-Build CI → https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk  
-(à installer **uniquement sur un téléphone Android**, pas sur Windows.)

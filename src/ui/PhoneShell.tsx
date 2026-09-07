@@ -1,19 +1,20 @@
 import { Platform, StyleSheet, useWindowDimensions, View, type ViewProps } from 'react-native';
 import { usePathname } from 'expo-router';
 import { colors } from '../theme/tokens';
-
-const PHONE_MAX = 480;
-const TABLET_MAX = 1024;
+import { useDeviceKind } from './platformExperience';
 
 /**
- * Sur web :
- * - page /install : plein écran responsive (PC / tablette / téléphone)
- * - téléphone (≤480) : plein écran, tactile
- * - tablette (≤1024) : cadre large adapté à l’écran
- * - PC : cadre centré type app mobile
+ * Cadre adaptatif :
+ * - téléphone : plein écran
+ * - tablette : grand cadre presque plein
+ * - PC : fenêtre app centrée (plus large, lisible)
+ * Évite width/height 0 au SSR (page blanche).
  */
 export function PhoneShell({ children, style, ...props }: ViewProps) {
-  const { width, height } = useWindowDimensions();
+  const { width: rawW, height: rawH } = useWindowDimensions();
+  const width = rawW > 0 ? rawW : 1024;
+  const height = rawH > 0 ? rawH : 768;
+  const kind = useDeviceKind();
   const pathname = usePathname();
   const installLanding =
     typeof pathname === 'string' &&
@@ -30,45 +31,49 @@ export function PhoneShell({ children, style, ...props }: ViewProps) {
   if (installLanding) {
     return (
       <View style={[styles.desktop, styles.desktopTight, styles.installBleed]} {...props}>
-        <View style={[{ flex: 1, width: '100%', height: '100%' }, style]}>{children}</View>
+        <View style={[{ flex: 1, width: '100%', height: '100%', minHeight: height }, style]}>
+          {children}
+        </View>
       </View>
     );
   }
 
-  const phoneLike = width <= PHONE_MAX;
-  const tabletLike = !phoneLike && width <= TABLET_MAX;
-
   let frameWidth: number;
   let frameHeight: number;
-  if (phoneLike) {
+  if (kind === 'phone') {
     frameWidth = width;
     frameHeight = height;
-  } else if (tabletLike) {
-    frameWidth = Math.min(width - 24, Math.max(520, Math.round(width * 0.92)));
-    frameHeight = Math.min(height - 24, Math.max(680, Math.round(height * 0.96)));
+  } else if (kind === 'tablet') {
+    frameWidth = Math.min(width - 20, Math.max(640, Math.round(width * 0.94)));
+    frameHeight = Math.min(height - 20, Math.max(720, Math.round(height * 0.96)));
   } else {
-    frameWidth = Math.min(430, width - 48);
-    frameHeight = Math.min(900, Math.max(680, height - 40));
+    // PC : plus large qu’un “faux téléphone”, confort lecture / clavier
+    frameWidth = Math.min(920, Math.max(720, width - 64));
+    frameHeight = Math.min(height - 32, Math.max(700, height - 48));
   }
 
   return (
     <View
       style={[
         styles.desktop,
-        phoneLike && styles.desktopTight,
-        tabletLike && styles.desktopTablet,
+        kind === 'phone' && styles.desktopTight,
+        kind === 'tablet' && styles.desktopTablet,
+        kind === 'desktop' && styles.desktopPc,
       ]}
     >
       <View
         style={[
           styles.phone,
-          phoneLike && styles.phoneFlush,
-          tabletLike && styles.phoneTablet,
+          kind === 'phone' && styles.phoneFlush,
+          kind === 'tablet' && styles.phoneTablet,
+          kind === 'desktop' && styles.phoneDesktop,
           {
             width: frameWidth,
             height: frameHeight,
+            maxWidth: '100%' as unknown as number,
             maxHeight: frameHeight,
-            flex: 1,
+            flexGrow: 1,
+            flexShrink: 1,
           },
           style,
         ]}
@@ -84,6 +89,7 @@ const styles = StyleSheet.create({
   desktop: {
     flex: 1,
     minHeight: '100%' as unknown as number,
+    width: '100%' as unknown as number,
     backgroundColor: '#ECECF0',
     alignItems: 'center',
     justifyContent: 'center',
@@ -96,8 +102,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   desktopTablet: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#E4E6EC',
+  },
+  desktopPc: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#DDE1E8',
   },
   phone: {
     position: 'relative',
@@ -112,7 +124,15 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   phoneTablet: {
-    borderRadius: 20,
+    borderRadius: 18,
+  },
+  phoneDesktop: {
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
   },
   installBleed: {
     backgroundColor: '#07111F',

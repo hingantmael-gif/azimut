@@ -2,7 +2,7 @@
   "name": "Azimut",
   "short_name": "Azimut",
   "description": "Coaching multi-sport — installe Azimut comme une application.",
-  "start_url": "./app.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
