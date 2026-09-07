@@ -8,6 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web --port 8082 --clear",
     "build:web": "expo export --platform web",
+    "deploy:install-site": "node scripts/deploy-install-site.mjs",
     "rank-badges": "node scripts/process-rank-frames.mjs",
     "api": "npm run start --prefix backend",
     "api:dev": "npm run dev --prefix backend"

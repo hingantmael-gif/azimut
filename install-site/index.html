@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111F" />
+    <meta name="description" content="Télécharge Azimut — application Android indépendante de coaching multi-sport." />
+    <link rel="icon" href="./icon.png" />
+    <title>Azimut — Installer l’application</title>
+    <style>
+      :root {
+        --ink: #07111f;
+        --mint: #3dff9a;
+        --text: #f4f7fa;
+        --muted: rgba(244, 247, 250, 0.72);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(ellipse 80% 50% at 85% -5%, rgba(14, 143, 111, 0.4), transparent 55%),
+          radial-gradient(ellipse 55% 40% at 0% 100%, rgba(212, 255, 63, 0.12), transparent 50%),
+          var(--ink);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      main {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+      }
+      .card {
+        width: min(400px, 100%);
+        text-align: center;
+      }
+      .icon {
+        width: 112px;
+        height: 112px;
+        border-radius: 26px;
+        display: block;
+        margin: 0 auto 22px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+      }
+      h1 {
+        margin: 0;
+        font-size: 2.6rem;
+        font-weight: 900;
+        letter-spacing: -0.045em;
+      }
+      .tag {
+        margin: 10px 0 0;
+        color: var(--mint);
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+      .pitch {
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+      #btn {
+        margin-top: 32px;
+        width: 100%;
+        border: 0;
+        border-radius: 16px;
+        padding: 18px 20px;
+        background: var(--mint);
+        color: var(--ink);
+        font-size: 1.15rem;
+        font-weight: 900;
+        cursor: pointer;
+        letter-spacing: 0.01em;
+      }
+      #btn[aria-busy="true"] {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      .hint {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.45;
+        min-height: 2.6em;
+      }
+      .meta {
+        margin-top: 28px;
+        color: rgba(244, 247, 250, 0.4);
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <img class="icon" src="./icon.png" width="112" height="112" alt="Logo Azimut" />
+        <h1>Azimut</h1>
+        <p class="tag">Application Android</p>
+        <p class="pitch">
+          Application native indépendante — pas un site web.
+          Clique sur Installer pour télécharger Azimut sur ton téléphone.
+        </p>
+        <button type="button" id="btn">Installer l’application</button>
+        <p class="hint" id="hint">Le fichier Azimut.apk se télécharge, puis ouvre-le pour l’installer.</p>
+        <p class="meta">
+          Application autonome · Icône = logo Azimut<br />
+          Cette page sert uniquement au téléchargement.
+        </p>
+      </div>
+    </main>
+    <script>
+      (function () {
+        var APK = 'https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk';
+        var btn = document.getElementById('btn');
+        var hint = document.getElementById('hint');
+        var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+        if (isIOS) {
+          hint.textContent =
+            'Azimut est une app Android pour l’instant. Ouvre ce lien sur un téléphone Android pour l’installer.';
+        }
+
+        btn.addEventListener('click', function () {
+          if (isIOS) {
+            hint.textContent =
+              'Sur iPhone, l’installation hors App Store n’est pas possible. Utilise un Android, ou dis-nous quand tu veux la version App Store.';
+            return;
+          }
+          btn.setAttribute('aria-busy', 'true');
+          btn.textContent = 'Téléchargement…';
+          hint.textContent =
+            'Téléchargement de l’application… Ouvre ensuite le fichier azimut.apk → Installer.';
+          window.location.href = APK;
+          setTimeout(function () {
+            btn.removeAttribute('aria-busy');
+            btn.textContent = 'Installer l’application';
+          }, 2800);
+        });
+      })();
+    </script>
+  </body>
+</html>

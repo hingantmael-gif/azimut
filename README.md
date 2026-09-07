@@ -1,18 +1,21 @@
 # Azimut
 
-Application de coaching multi-sport — **100 % indépendante de BTP Pro**.
+Application Android **native** de coaching multi-sport — **100 % indépendante** (pas un site web).
 
-## Liens à partager
+## Ce que tu partages aux amis
 
 | | URL |
 |---|---|
-| **Installer l’app (1 clic)** | https://hingantmael-gif.github.io/azimut/get.html |
-| Accueil du site | https://hingantmael-gif.github.io/azimut/ |
-| APK Android | https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk |
-| Code source GitHub | https://github.com/hingantmael-gif/azimut |
+| **Page Installer** (seule page web) | https://hingantmael-gif.github.io/azimut/ |
+| **APK natif** (l’application) | https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk |
+| Code source | https://github.com/hingantmael-gif/azimut |
 
-Sur Android : ouvre le lien → **Télécharger & installer** → l’icône **logo Azimut** apparaît comme une app Play Store.  
-Sur iPhone : Safari → Partager → Sur l’écran d’accueil.
+### Architecture
+
+1. **L’application** = fichier Android `azimut.apk` (comme une app Play Store : icône logo, écran d’accueil, pas de navigateur).
+2. **La page web** = uniquement un bouton **Installer l’application** qui télécharge cet APK. Aucune version web de l’app n’est publiée.
+
+Sur Android : ouvrir le lien → **Installer l’application** → ouvrir `azimut.apk` → Installer.
 
 ## Dossier local
 
@@ -20,20 +23,24 @@ Sur iPhone : Safari → Partager → Sur l’écran d’accueil.
 C:\Users\Utilisateur\Documents\azimut
 ```
 
-Aucun lien avec `btp-pro-app` (autre dossier, autre dépôt Git).
+- Code de l’app native : projet Expo (build APK via GitHub Actions)
+- Page web isolée : dossier `install-site/`
 
-## Dev
+## Dev app (téléphone / émulateur)
 
 ```powershell
 cd C:\Users\Utilisateur\Documents\azimut
 npm install
-npm run web
+npm start
 ```
 
-## Build & déploiement web
+## Publier la page Installer
 
 ```powershell
-npm run build:web
+npm run deploy:install-site
 ```
 
-Le site public est servi via **GitHub Pages** (branche `gh-pages`).
+## Build APK
+
+Automatique sur push `main` (workflow **Build Android APK**), ou manuellement dans l’onglet Actions GitHub.  
+L’APK est publié sur la release `android-latest`.
