@@ -1,9 +1,9 @@
 {
-  "id": "/azimut/app-v8",
+  "id": "/azimut/app-v9",
   "name": "Azimut",
   "short_name": "Azimut",
   "description": "Coaching multi-sport — application Azimut.",
-  "start_url": "/azimut/?source=pwa",
+  "start_url": "/azimut/?source=pwa&v=9",
   "scope": "/azimut/",
   "display": "standalone",
   "orientation": "any",

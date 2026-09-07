@@ -1,5 +1,5 @@
 /* Service worker Azimut — scope /azimut/ (GitHub Pages). */
-const CACHE = 'azimut-shell-v8';
+const CACHE = 'azimut-shell-v9';
 const PRECACHE = [
   '/azimut/telecharger.html',
   '/azimut/manifest.webmanifest',
