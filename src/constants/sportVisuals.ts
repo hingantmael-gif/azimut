@@ -79,7 +79,7 @@ const PROGRAM_IMAGES: Record<string, ImageSourcePropType> = {
  * Valeurs CSS object-position — visage / athlète au centre du cadre.
  */
 export const PROGRAM_IMAGE_FOCUS: Record<string, string> = {
-  'prog-5k': '50% 30%',
+  'prog-5k': '50% 38%',
   /** Visage + queueue bien visibles */
   'prog-semi': '45% 35%',
 };
