@@ -22,7 +22,7 @@ export const GOAL_OPTIONS: Record<
   run: [
     { value: '5k', label: '5 km' },
     { value: '10k', label: '10 km' },
-    { value: 'semi', label: 'Semi-marathon' },
+    { value: 'semi', label: 'Semi' },
     { value: 'marathon', label: 'Marathon' },
     { value: 'trail', label: 'Trail' },
     { value: 'vma', label: 'VMA / vitesse' },

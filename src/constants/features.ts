@@ -14,7 +14,7 @@ export const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 export const GOAL_LABELS: Record<string, string> = {
   '5k': '5 km',
   '10k': '10 km',
-  semi: 'Semi marathon',
+  semi: 'Semi',
   marathon: 'Marathon',
   trail: 'Trail',
   triathlon_sprint: 'Triathlon sprint',

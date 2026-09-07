@@ -17,7 +17,7 @@ export const RUN_DISTANCES: SportDistanceDef[] = [
   { key: '5k', label: '5 km', km: 5 },
   { key: '10k', label: '10 km', km: 10 },
   { key: '20k', label: '20 km', km: 20 },
-  { key: 'semi', label: 'Semi-marathon (21,1 km)', km: 21.0975 },
+  { key: 'semi', label: 'Semi (21,1 km)', km: 21.0975 },
   { key: 'marathon', label: 'Marathon (42,2 km)', km: 42.195 },
 ];
 

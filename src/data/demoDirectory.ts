@@ -173,7 +173,7 @@ export function demoAthleteEvolution(member: DemoDirectoryMember): DemoEvolution
       pushRun('10k', '10 km', 'Programme 10 km', base5 * 2.12, 0.06);
     }
     if (member.km >= 500) {
-      pushRun('semi', 'semi', 'Semi marathon', base5 * 4.7, 0.05);
+      pushRun('semi', 'semi', 'Semi', base5 * 4.7, 0.05);
     }
   }
 
@@ -184,7 +184,7 @@ const FINISHED_CATALOG_BY_SPORT: Record<string, Array<{ catalogId: string; title
   course: [
     { catalogId: 'prog-5k', title: 'Programme 5 km' },
     { catalogId: 'prog-10k', title: 'Programme 10 km' },
-    { catalogId: 'prog-semi', title: 'Semi marathon' },
+    { catalogId: 'prog-semi', title: 'Semi' },
   ],
   trail: [
     { catalogId: 'prog-trail-50', title: 'Trail 50 km' },

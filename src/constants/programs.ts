@@ -66,14 +66,14 @@ export const PROGRAM_CATALOG: TrainingProgramTemplate[] = [
   },
   {
     id: 'prog-semi',
-    title: 'Semi marathon',
+    title: 'Semi',
     subtitle: '12 semaines · sortie longue progressive',
     weeks: 12,
     disciplines: ['run'],
     level: 'intermediaire',
     sportCategory: 'run',
     goal: 'semi',
-    keywords: ['semi', 'semi-marathon', '21 km', 'marathon'],
+    keywords: ['semi', 'semi-marathon', '21 km', '21.1'],
     distanceKm: 21.1,
   },
   {

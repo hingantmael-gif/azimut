@@ -105,7 +105,7 @@ function formatDistanceQuestion(km?: number, sport?: ProgramSportCategory | null
   }
   if (Math.abs(km - 5) < 0.3) return '5 kilomètres';
   if (Math.abs(km - 10) < 0.3) return '10 kilomètres';
-  if (Math.abs(km - 21.1) < 0.4) return 'semi-marathon (21,1 km)';
+  if (Math.abs(km - 21.1) < 0.4) return 'Semi (21,1 km)';
   if (Math.abs(km - 42.195) < 0.5) return 'marathon (42,2 km)';
   const rounded = Math.round(km * 10) / 10;
   return `${String(rounded).replace('.', ',')} kilomètres`;

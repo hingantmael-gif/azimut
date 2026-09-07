@@ -80,8 +80,8 @@ const PROGRAM_IMAGES: Record<string, ImageSourcePropType> = {
  */
 export const PROGRAM_IMAGE_FOCUS: Record<string, string> = {
   'prog-5k': '50% 30%',
-  /** Visage à droite du cadre bannière */
-  'prog-semi': '72% 38%',
+  /** Visage + queueue bien visibles */
+  'prog-semi': '45% 35%',
 };
 
 export function programImageFocus(catalogId?: string | null): string {

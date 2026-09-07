@@ -245,7 +245,7 @@ export type ReferenceRace = { label: string; km: number };
 export const REFERENCE_RACES: ReferenceRace[] = [
   { label: '5 km', km: 5 },
   { label: '10 km', km: 10 },
-  { label: 'Semi marathon', km: 21.1 },
+  { label: 'Semi', km: 21.1 },
   { label: 'Marathon', km: 42.195 },
 ];
 

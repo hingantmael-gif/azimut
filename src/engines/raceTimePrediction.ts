@@ -36,7 +36,7 @@ const TARGETS: { label: string; km: number; key: '5k' | '10k' | '20k' | 'semi' |
   { label: '5 km', km: 5, key: '5k' },
   { label: '10 km', km: 10, key: '10k' },
   { label: '20 km', km: 20, key: '20k' },
-  { label: 'Semi marathon', km: 21.0975, key: 'semi' },
+  { label: 'Semi', km: 21.0975, key: 'semi' },
   { label: 'Marathon', km: 42.195, key: 'marathon' },
 ];
 
@@ -197,7 +197,7 @@ export function predictRaceTimesSecMap(
     '5k': byLabel['5 km'],
     '10k': byLabel['10 km'],
     '20k': byLabel['20 km'],
-    semi: byLabel['Semi marathon'],
+    semi: byLabel['Semi'],
     marathon: byLabel['Marathon'],
   };
 }
