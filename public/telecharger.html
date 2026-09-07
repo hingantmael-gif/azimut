@@ -6,10 +6,9 @@
     <meta name="theme-color" content="#07111F" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Azimut" />
-    <meta name="description" content="Installer Azimut — coaching multi-sport." />
     <link rel="icon" href="/azimut/icon.png" />
     <link rel="apple-touch-icon" href="/azimut/icon-192.png" />
-    <link rel="manifest" href="/azimut/manifest.webmanifest" />
+    <link rel="manifest" href="/azimut/manifest.webmanifest?v=8" />
     <title>Télécharger Azimut</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,62 +23,40 @@
         padding: 24px;
       }
       .card {
-        max-width: 420px;
+        max-width: 440px;
         width: 100%;
         background: #0f1c2e;
         border: 1px solid #252b36;
         border-radius: 16px;
-        padding: 32px 28px;
+        padding: 28px 24px;
         text-align: center;
       }
-      .logo {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-        display: block;
-        margin: 0 auto 20px;
-      }
+      .logo { width: 72px; height: 72px; border-radius: 18px; display: block; margin: 0 auto 16px; }
       h1 { font-size: 1.5rem; margin-bottom: 8px; font-weight: 800; }
-      p.desc { color: #8892a4; font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
-      .qr {
-        width: 160px;
-        height: 160px;
-        border-radius: 12px;
-        background: #fff;
-        padding: 8px;
-        margin: 0 auto 8px;
-        display: block;
-      }
-      .qr-caption { color: #8892a4; font-size: 0.75rem; margin-bottom: 20px; }
+      .desc { color: #8892a4; font-size: 0.9rem; line-height: 1.5; margin-bottom: 18px; }
+      .qr { width: 140px; height: 140px; border-radius: 12px; background: #fff; padding: 8px; margin: 0 auto 6px; display: block; }
+      .qr-caption { color: #8892a4; font-size: 0.72rem; margin-bottom: 16px; }
       .btn {
-        display: block;
-        width: 100%;
-        padding: 14px 20px;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 700;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        margin-bottom: 12px;
+        display: block; width: 100%; padding: 14px 18px; border-radius: 10px;
+        font-size: 1rem; font-weight: 700; text-decoration: none; border: none; cursor: pointer; margin-bottom: 10px;
       }
       .btn-primary { background: #3dff9a; color: #07111f; }
       .btn-secondary { background: #111318; color: #f1f5f9; border: 1px solid #252b36; }
+      .btn-warn { background: #2a2110; color: #ffd27a; border: 1px solid rgba(255,210,122,0.35); }
       .btn:disabled { opacity: 0.55; cursor: default; }
-      .hint { font-size: 0.75rem; color: #8892a4; margin-top: 16px; line-height: 1.45; }
-      #ios-guide, #menu-guide {
-        display: none;
-        text-align: left;
-        margin-top: 16px;
-        padding: 16px;
-        background: #111318;
-        border-radius: 10px;
-        font-size: 0.8rem;
-        color: #8892a4;
+      .hint { font-size: 0.75rem; color: #8892a4; margin-top: 12px; line-height: 1.45; }
+      .diag {
+        margin-top: 16px; text-align: left; padding: 12px 14px; border-radius: 10px;
+        background: #111318; font-size: 0.72rem; color: #a8b0bf; line-height: 1.55;
+        font-family: ui-monospace, Consolas, monospace; white-space: pre-wrap; word-break: break-word;
       }
-      #ios-guide strong, #menu-guide strong { color: #fff; }
-      #ios-guide ol, #menu-guide ol { margin: 8px 0 0 18px; }
-      #ios-guide li, #menu-guide li { margin-bottom: 4px; }
+      .diag .ok { color: #3dff9a; }
+      .diag .bad { color: #ff7b7b; }
+      .diag .warn { color: #ffd27a; }
+      .guide { display: none; text-align: left; margin-top: 12px; padding: 12px; background: #111318; border-radius: 10px; font-size: 0.8rem; color: #8892a4; }
+      .guide strong { color: #fff; }
+      .guide ol { margin: 8px 0 0 18px; }
+      .guide li { margin-bottom: 4px; }
     </style>
   </head>
   <body>
@@ -87,106 +64,257 @@
       <img class="logo" src="/azimut/icon.png" width="72" height="72" alt="Azimut" />
       <h1>Azimut</h1>
       <p class="desc">
-        Coaching multi-sport — ouvre l’app, ou installe-la sur cet appareil
-        (icône logo Azimut, comme BTP Pro).
+        Ouvre l’app tout de suite, ou installe-la (icône logo).
+        Si tu l’as déjà installée puis désinstallée, utilise <strong>Réparer pour réinstaller</strong>.
       </p>
 
-      <img class="qr" src="/azimut/qr-install.png" width="160" height="160" alt="QR Azimut" />
-      <p class="qr-caption">Scanne pour ouvrir cette page sur un téléphone</p>
+      <img class="qr" src="/azimut/qr-install.png" width="140" height="140" alt="QR" />
+      <p class="qr-caption">QR → cette page sur un autre appareil</p>
 
-      <!-- Comme BTP Pro : Ouvrir en premier (toujours marche), Installer en second -->
-      <a href="/azimut/" class="btn btn-primary" id="open-app">Ouvrir l’application</a>
+      <a class="btn btn-primary" id="open-app" href="/azimut/?v=8">Ouvrir l’application</a>
       <button type="button" class="btn btn-secondary" id="install-btn">Installer sur cet appareil</button>
+      <button type="button" class="btn btn-warn" id="repair-btn">Réparer pour réinstaller</button>
+      <a class="btn btn-secondary" id="apk-btn" href="https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk" style="display:none">
+        Télécharger l’APK Android
+      </a>
 
-      <div id="ios-guide">
-        <strong>iPhone / iPad</strong>
+      <div class="guide" id="ios-guide">
+        <strong>iPhone / iPad (Safari)</strong>
         <ol>
-          <li>Ouvre cette page dans <strong>Safari</strong></li>
-          <li>Appuie sur <strong>Partager</strong></li>
-          <li>Choisis <strong>Sur l’écran d’accueil</strong></li>
+          <li>Partager → Sur l’écran d’accueil</li>
         </ol>
       </div>
 
-      <div id="menu-guide">
-        <strong>Chrome / Edge</strong>
-        <ol>
-          <li>Clique d’abord <strong>Ouvrir l’application</strong> une fois</li>
-          <li>Reviens ici, puis menu <strong>⋮</strong> → <strong>Installer Azimut</strong></li>
-          <li>Ou icône <strong>⊕ / Installer</strong> dans la barre d’adresse</li>
-        </ol>
-      </div>
-
-      <p class="hint" id="status">Lien : https://hingantmael-gif.github.io/azimut/telecharger.html</p>
+      <p class="hint" id="status">Diagnostic en cours…</p>
+      <div class="diag" id="diag">Chargement du diagnostic…</div>
     </div>
 
     <script>
       (function () {
         var installBtn = document.getElementById('install-btn');
+        var repairBtn = document.getElementById('repair-btn');
         var statusEl = document.getElementById('status');
+        var diagEl = document.getElementById('diag');
         var iosGuide = document.getElementById('ios-guide');
-        var menuGuide = document.getElementById('menu-guide');
-        var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
-        var isStandalone =
-          window.matchMedia('(display-mode: standalone)').matches ||
-          window.matchMedia('(display-mode: fullscreen)').matches ||
-          Boolean(navigator.standalone);
-
+        var apkBtn = document.getElementById('apk-btn');
+        var lines = [];
         var deferredPrompt = null;
+        var lastError = null;
 
-        // Enregistrer le SW une seule fois — ne JAMAIS unregister (sinon pas d’install Chrome)
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker
-            .register('/azimut/sw.js', { scope: '/azimut/' })
-            .then(function () {
-              return navigator.serviceWorker.ready;
-            })
-            .then(function () {
-              // Premier passage : le SW doit contrôler la page pour proposer l’install
-              if (!navigator.serviceWorker.controller && !sessionStorage.getItem('azimut-sw-reload')) {
-                sessionStorage.setItem('azimut-sw-reload', '1');
-                window.location.reload();
-              }
-            })
-            .catch(function () {});
+        var ua = navigator.userAgent || '';
+        var isIos = /iphone|ipad|ipod/i.test(ua);
+        var isAndroid = /Android/i.test(ua);
+
+        if (isAndroid) apkBtn.style.display = 'block';
+
+        function isStandalone() {
+          return (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.matchMedia('(display-mode: fullscreen)').matches ||
+            Boolean(navigator.standalone)
+          );
+        }
+
+        function log(msg, kind) {
+          var cls = kind === 'ok' ? 'ok' : kind === 'bad' ? 'bad' : kind === 'warn' ? 'warn' : '';
+          lines.push(cls ? '<span class="' + cls + '">' + msg + '</span>' : msg);
+          diagEl.innerHTML = lines.join('\n');
+        }
+
+        function setStatus(t) {
+          statusEl.textContent = t;
+        }
+
+        async function runDiagnostics() {
+          lines = [];
+          log('— Diagnostic installateur Azimut —');
+          log('URL: ' + location.href);
+          log('Navigateur: ' + (ua.slice(0, 72) || '?'));
+
+          if (isStandalone()) {
+            log('Mode: déjà en application (standalone)', 'ok');
+            installBtn.textContent = 'Application installée ✓';
+            installBtn.disabled = true;
+            setStatus('Déjà installé — utilise « Ouvrir l’application ».');
+          } else {
+            log('Mode: navigateur (pas encore installé en app)', 'warn');
+          }
+
+          if (!('serviceWorker' in navigator)) {
+            log('Service Worker: NON supporté → install PWA impossible ici', 'bad');
+            lastError = 'Service Worker non supporté par ce navigateur';
+            setStatus('Erreur: ' + lastError + '. Utilise Chrome ou Edge.');
+            return;
+          }
+          log('Service Worker: API OK', 'ok');
+
+          try {
+            var regs = await navigator.serviceWorker.getRegistrations();
+            log('SW enregistrés: ' + regs.length, regs.length ? 'ok' : 'warn');
+            regs.forEach(function (r, i) {
+              log('  [' + i + '] scope=' + r.scope + ' active=' + !!(r.active));
+            });
+            log(
+              'SW contrôle cette page: ' + (navigator.serviceWorker.controller ? 'OUI' : 'NON'),
+              navigator.serviceWorker.controller ? 'ok' : 'warn',
+            );
+          } catch (e) {
+            lastError = 'Lecture SW: ' + (e && e.message ? e.message : e);
+            log(lastError, 'bad');
+          }
+
+          try {
+            var man = await fetch('/azimut/manifest.webmanifest?v=8', { cache: 'no-store' });
+            if (!man.ok) throw new Error('HTTP ' + man.status);
+            var json = await man.json();
+            log('Manifest: OK name=' + json.name + ' start=' + json.start_url, 'ok');
+            if (!json.icons || !json.icons.length) {
+              log('Manifest: pas d’icônes', 'bad');
+              lastError = 'Manifest sans icônes';
+            }
+          } catch (e) {
+            lastError = 'Manifest: ' + (e && e.message ? e.message : e);
+            log(lastError, 'bad');
+          }
+
+          if (deferredPrompt) {
+            log('beforeinstallprompt: PRÊT (fenêtre native dispo)', 'ok');
+            setStatus('Prêt — clique « Installer sur cet appareil ».');
+          } else {
+            log('beforeinstallprompt: pas encore reçu', 'warn');
+            if (!isStandalone()) {
+              log(
+                'Cause fréquente: déjà installé une fois puis désinstallé, ou invite refusée (Chrome bloque un moment).',
+                'warn',
+              );
+              log('Solution: bouton « Réparer pour réinstaller », puis réessaie.', 'warn');
+              setStatus(
+                lastError
+                  ? 'Erreur: ' + lastError
+                  : 'Installateur pas prêt — clique « Réparer pour réinstaller », ou « Ouvrir l’application ».',
+              );
+            }
+          }
+
+          if (isAndroid) {
+            log('Android: secours APK disponible (toujours réinstallable)', 'ok');
+          }
+        }
+
+        async function ensureSw() {
+          try {
+            var reg = await navigator.serviceWorker.register('/azimut/sw.js?v=8', {
+              scope: '/azimut/',
+              updateViaCache: 'none',
+            });
+            await navigator.serviceWorker.ready;
+            log('SW register: OK scope=/azimut/', 'ok');
+            if (!navigator.serviceWorker.controller && !sessionStorage.getItem('azimut-sw-reload')) {
+              sessionStorage.setItem('azimut-sw-reload', '1');
+              log('Rechargement une fois pour activer le SW…', 'warn');
+              location.reload();
+              return;
+            }
+            return reg;
+          } catch (e) {
+            lastError = 'SW register: ' + (e && e.message ? e.message : e);
+            log(lastError, 'bad');
+            setStatus('Erreur installateur: ' + lastError);
+          }
         }
 
         window.addEventListener('beforeinstallprompt', function (e) {
           e.preventDefault();
           deferredPrompt = e;
-          statusEl.textContent = 'Prêt à installer — clique « Installer sur cet appareil ».';
+          log('Événement beforeinstallprompt reçu', 'ok');
+          setStatus('Prêt — clique « Installer sur cet appareil ».');
+          installBtn.disabled = false;
+          installBtn.textContent = 'Installer sur cet appareil';
         });
 
         window.addEventListener('appinstalled', function () {
           deferredPrompt = null;
           installBtn.textContent = 'Application installée ✓';
           installBtn.disabled = true;
-          statusEl.textContent = 'Installé. Tu peux ouvrir Azimut depuis le menu Démarrer / l’écran d’accueil.';
-          menuGuide.style.display = 'none';
+          setStatus('Installé avec succès.');
+          log('appinstalled: OK', 'ok');
         });
 
-        if (isStandalone) {
-          installBtn.textContent = 'Application installée ✓';
-          installBtn.disabled = true;
-          statusEl.textContent = 'Azimut est déjà installé sur cet appareil.';
-        }
-
         installBtn.addEventListener('click', async function () {
+          if (isStandalone()) {
+            location.href = '/azimut/?v=8';
+            return;
+          }
           if (deferredPrompt) {
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
+            try {
+              setStatus('Ouverture de la fenêtre native…');
+              await deferredPrompt.prompt();
+              var choice = await deferredPrompt.userChoice;
+              log('Choix utilisateur: ' + choice.outcome, choice.outcome === 'accepted' ? 'ok' : 'warn');
+              deferredPrompt = null;
+              if (choice.outcome !== 'accepted') {
+                setStatus('Installation annulée. Tu peux réessayer ou Ouvrir l’application.');
+              }
+            } catch (e) {
+              lastError = 'prompt(): ' + (e && e.message ? e.message : e);
+              log(lastError, 'bad');
+              setStatus('Erreur: ' + lastError);
+            }
             return;
           }
           if (isIos) {
             iosGuide.style.display = 'block';
-            menuGuide.style.display = 'none';
+            setStatus('Sur iPhone: Partager → Sur l’écran d’accueil.');
             return;
           }
-          // Pas d’alerte, pas de boucle : guide + ouvrir l’app (comme BTP, sans bloquer)
-          menuGuide.style.display = 'block';
-          statusEl.textContent =
-            'Ouvre d’abord l’application, puis réessaie Installer — ou utilise le menu ⋮ du navigateur.';
+          setStatus(
+            'Erreur: le navigateur n’envoie pas beforeinstallprompt (souvent après une 1ère install). Clique « Réparer pour réinstaller ».',
+          );
+          log('Clic Installer sans prompt natif → réinstall bloquée par Chrome', 'bad');
         });
+
+        repairBtn.addEventListener('click', async function () {
+          repairBtn.disabled = true;
+          setStatus('Réparation en cours (caches + service worker)…');
+          lines = [];
+          log('— Réparation —');
+          try {
+            if ('serviceWorker' in navigator) {
+              var regs = await navigator.serviceWorker.getRegistrations();
+              for (var i = 0; i < regs.length; i++) {
+                await regs[i].unregister();
+                log('Unregister SW: ' + regs[i].scope, 'ok');
+              }
+            }
+            if ('caches' in window) {
+              var keys = await caches.keys();
+              for (var j = 0; j < keys.length; j++) {
+                await caches.delete(keys[j]);
+                log('Cache supprimé: ' + keys[j], 'ok');
+              }
+            }
+            sessionStorage.clear();
+            try {
+              localStorage.removeItem('azimut-sw-reload');
+            } catch (e) {}
+            log('OK — rechargement propre…', 'ok');
+            setStatus('Réparation OK — rechargement…');
+            setTimeout(function () {
+              location.href = '/azimut/telecharger.html?repaired=' + Date.now();
+            }, 400);
+          } catch (e) {
+            lastError = 'Réparation: ' + (e && e.message ? e.message : e);
+            log(lastError, 'bad');
+            setStatus('Erreur: ' + lastError);
+            repairBtn.disabled = false;
+          }
+        });
+
+        (async function boot() {
+          await runDiagnostics();
+          await ensureSw();
+          await runDiagnostics();
+        })();
       })();
     </script>
   </body>
