@@ -1,13 +1,13 @@
-/* Service worker Azimut — network-first HTML (évite cache cassé / page blanche). */
-const CACHE = 'azimut-shell-v6';
+/* Service worker Azimut — scope /azimut/ (GitHub Pages). */
+const CACHE = 'azimut-shell-v7';
 const PRECACHE = [
-  './telecharger.html',
-  './manifest.webmanifest',
-  './icon.png',
-  './icon-192.png',
-  './icon-512.png',
-  './favicon.png',
-  './qr-install.png',
+  '/azimut/telecharger.html',
+  '/azimut/manifest.webmanifest',
+  '/azimut/icon.png',
+  '/azimut/icon-192.png',
+  '/azimut/icon-512.png',
+  '/azimut/favicon.png',
+  '/azimut/qr-install.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -32,11 +32,6 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
-  if (event.data && event.data.type === 'CLEAR_CACHES') {
-    event.waitUntil(
-      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))),
-    );
-  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -44,18 +39,17 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-
-  // Ne jamais servir le JS Expo depuis un vieux cache
+  if (!url.pathname.startsWith('/azimut/')) return;
   if (url.pathname.includes('/_expo/') || url.pathname.endsWith('.js')) return;
 
   const isHtml =
     req.mode === 'navigate' ||
     url.pathname.endsWith('.html') ||
-    url.pathname.endsWith('/') ||
+    url.pathname === '/azimut/' ||
+    url.pathname === '/azimut' ||
     (req.headers.get('accept') || '').includes('text/html');
 
   if (isHtml) {
-    // Network-first : après désinstall/réinstall, toujours la dernière app
     event.respondWith(
       fetch(req)
         .then((res) => {
@@ -63,12 +57,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(function () {});
           return res;
         })
-        .catch(() => caches.match(req).then((c) => c || caches.match('./index.html'))),
+        .catch(() => caches.match(req).then((c) => c || caches.match('/azimut/index.html'))),
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req)),
-  );
+  event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
 });

@@ -3,8 +3,8 @@
   "name": "Azimut",
   "short_name": "Azimut",
   "description": "Coaching multi-sport — application Azimut.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/azimut/",
+  "scope": "/azimut/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#07111F",
@@ -12,19 +12,19 @@
   "lang": "fr",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/azimut/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/azimut/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/azimut/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

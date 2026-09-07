@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from '../src/store/AppContext';
 import { ThemeProvider, useThemeColors } from '../src/theme/ThemeContext';
 import { PhoneShell } from '../src/ui/PhoneShell';
+import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
 import { PendingProgramReviewModal } from '../src/ui/program/PendingProgramReviewModal';
 import { GlobalLevelUpHost } from '../src/ui/ranked/GlobalLevelUpHost';
@@ -71,6 +72,7 @@ function AppShell() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <WebPwaBootstrap />
       <PhoneShell>
         <AuthGate>
           <NotificationBootstrap />
