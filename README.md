@@ -1,13 +1,26 @@
-# Azimut — coaching multi-sport (indépendant de BTP Pro)
+# Azimut
 
-Application Expo (web + mobile) **Azimut**.  
-Dépôt et dossier **100 % séparés** de BTP Pro App.
+Application de coaching multi-sport — **100 % indépendante de BTP Pro**.
 
-## Lien public (après déploiement)
+## Liens à partager
 
-Voir le workflow GitHub Pages, ou Render — le lien à partager apparaît dans les Actions / le dashboard.
+| | URL |
+|---|---|
+| **Page d’installation** (amis) | https://hingantmael-gif.github.io/azimut/install |
+| Accueil du site | https://hingantmael-gif.github.io/azimut/ |
+| Code source GitHub | https://github.com/hingantmael-gif/azimut |
 
-## Dev local
+Sur la page d’installation : logo **Azimut**, animation, bouton **Installer l’application** (PWA sur Chrome / Edge / Android ; consignes pour iPhone Safari).
+
+## Dossier local
+
+```
+C:\Users\Utilisateur\Documents\azimut
+```
+
+Aucun lien avec `btp-pro-app` (autre dossier, autre dépôt Git).
+
+## Dev
 
 ```powershell
 cd C:\Users\Utilisateur\Documents\azimut
@@ -15,17 +28,10 @@ npm install
 npm run web
 ```
 
-Ouvre **http://localhost:8082** — page d’accueil / installation.
-
-## Build web (PWA)
+## Build & déploiement web
 
 ```powershell
 npm run build:web
 ```
 
-Sortie dans `dist/`.
-
-## Page d’installation
-
-Route : `/install`  
-Marque Azimut + logo + bouton **Installer l’application** (PWA).
+Le site public est servi via **GitHub Pages** (branche `gh-pages`).
