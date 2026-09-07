@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111F" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Azimut" />
+    <meta name="description" content="Installer Azimut sur téléphone ou PC — comme une vraie application." />
+    <link rel="icon" href="./icon.png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>Installer Azimut</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background:
+          radial-gradient(ellipse 80% 50% at 85% -5%, rgba(14, 143, 111, 0.35), transparent 55%),
+          #07111f;
+        color: #f4f7fa;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        max-width: 420px;
+        width: 100%;
+        background: rgba(15, 28, 46, 0.92);
+        border: 1px solid rgba(61, 255, 154, 0.2);
+        border-radius: 20px;
+        padding: 32px 28px;
+        text-align: center;
+      }
+      .logo {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        display: block;
+        margin: 0 auto 18px;
+        box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+      }
+      h1 { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; }
+      .tag { color: #3dff9a; font-weight: 700; font-size: 0.95rem; margin-bottom: 12px; }
+      p.desc { color: rgba(244,247,250,0.72); font-size: 0.92rem; line-height: 1.5; margin-bottom: 20px; }
+      .qr {
+        width: 180px;
+        height: 180px;
+        border-radius: 14px;
+        background: #fff;
+        padding: 10px;
+        margin: 0 auto 8px;
+        display: block;
+      }
+      .qr-caption {
+        color: rgba(244,247,250,0.45);
+        font-size: 0.75rem;
+        margin-bottom: 20px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 15px 20px;
+        border-radius: 14px;
+        font-size: 1.05rem;
+        font-weight: 800;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      .btn-primary { background: #3dff9a; color: #07111f; }
+      .btn-primary:disabled { opacity: 0.55; cursor: default; }
+      .btn-secondary {
+        background: transparent;
+        color: #f4f7fa;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+      .hint { font-size: 0.78rem; color: rgba(244,247,250,0.5); margin-top: 14px; line-height: 1.45; }
+      #ios-guide {
+        display: none;
+        text-align: left;
+        margin-top: 14px;
+        padding: 14px;
+        background: rgba(0,0,0,0.28);
+        border-radius: 12px;
+        font-size: 0.82rem;
+        color: rgba(244,247,250,0.7);
+      }
+      #ios-guide strong { color: #fff; }
+      #ios-guide ol { margin: 8px 0 0 18px; }
+      #ios-guide li { margin-bottom: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img class="logo" src="./icon.png" width="84" height="84" alt="Logo Azimut" />
+      <h1>Azimut</h1>
+      <p class="tag">Coaching multi-sport</p>
+      <p class="desc">
+        Installe Azimut sur cet appareil (téléphone ou PC).
+        Une icône <strong>logo Azimut</strong> apparaît comme une application classique — pas un fichier à ouvrir avec Adobe ou VLC.
+      </p>
+
+      <img class="qr" src="./qr-install.png" width="180" height="180" alt="QR code — ouvrir la page d’installation Azimut" />
+      <p class="qr-caption">Scanne pour ouvrir cette page sur un autre appareil</p>
+
+      <button type="button" class="btn btn-primary" id="install-btn">Installer l’application</button>
+      <a href="./app.html" class="btn btn-secondary" id="open-app">Ouvrir Azimut</a>
+
+      <div id="ios-guide">
+        <strong>iPhone / iPad (Safari)</strong>
+        <ol>
+          <li>Appuie sur <strong>Partager</strong></li>
+          <li>Choisis <strong>Sur l’écran d’accueil</strong></li>
+          <li>Valide — l’icône logo Azimut apparaît</li>
+        </ol>
+      </div>
+
+      <p class="hint" id="status">Comme BTP Pro : installation navigateur → application sur l’écran d’accueil / menu Démarrer.</p>
+    </div>
+
+    <script>
+      (function () {
+        var statusEl = document.getElementById('status');
+        var installBtn = document.getElementById('install-btn');
+        var iosGuide = document.getElementById('ios-guide');
+        var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+        var isStandalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.matchMedia('(display-mode: fullscreen)').matches ||
+          Boolean(navigator.standalone);
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./sw.js').catch(function () {});
+        }
+
+        if (isStandalone) {
+          installBtn.textContent = 'Application installée ✓';
+          installBtn.disabled = true;
+          statusEl.textContent = 'Azimut est déjà installé sur cet appareil.';
+        }
+
+        var deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          statusEl.textContent = 'Prêt : un clic installe Azimut avec l’icône logo.';
+        });
+
+        window.addEventListener('appinstalled', function () {
+          deferredPrompt = null;
+          installBtn.textContent = 'Application installée ✓';
+          installBtn.disabled = true;
+          statusEl.textContent = 'Installé. Cherche Azimut sur ton écran d’accueil ou dans le menu Démarrer.';
+        });
+
+        installBtn.addEventListener('click', async function () {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            var choice = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (choice.outcome === 'accepted') {
+              installBtn.textContent = 'Application installée ✓';
+              installBtn.disabled = true;
+            }
+            return;
+          }
+          if (isIos) {
+            iosGuide.style.display = 'block';
+            statusEl.textContent = 'Sur iPhone, utilise Partager → Sur l’écran d’accueil.';
+            return;
+          }
+          // Edge / Chrome desktop sometimes need the browser menu if BIP not fired yet
+          statusEl.textContent =
+            'Menu du navigateur (⋮ ou ⊕) → « Installer Azimut » / « Applications » → Installer. L’icône logo apparaît ensuite.';
+          alert(
+            'Utilise le menu du navigateur → « Installer l’application » ou « Installer Azimut ».\n\nSur PC (Chrome / Edge), Azimut s’ajoute au menu Démarrer avec le logo — sans fichier .apk.',
+          );
+        });
+      })();
+    </script>
+  </body>
+</html>

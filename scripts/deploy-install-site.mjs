@@ -1,6 +1,7 @@
 /**
- * Déploie UNIQUEMENT la page d’installation (pas l’app Expo web).
- * L’app produit = APK Android natif. Le site public = cette page seule.
+ * Déploie l’app web Azimut + page Installer (style BTP Pro PWA).
+ * Bouton « Installer l’application » → installation navigateur (icône logo),
+ * pas un .apk à ouvrir avec Adobe/VLC.
  */
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -9,27 +10,48 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const site = path.join(root, 'install-site');
-const iconSrc = path.join(root, 'assets', 'icon.png');
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'azimut-install-site-'));
+const sh = (cmd, cwd = root) => execSync(cmd, { cwd, stdio: 'inherit', shell: true });
 
-fs.copyFileSync(path.join(site, 'index.html'), path.join(tmp, 'index.html'));
-fs.copyFileSync(iconSrc, path.join(tmp, 'icon.png'));
-// Compat anciens liens
-fs.copyFileSync(path.join(tmp, 'index.html'), path.join(tmp, 'get.html'));
-fs.writeFileSync(
-  path.join(tmp, '404.html'),
-  '<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./"><title>Azimut</title>',
+sh('node scripts/generate-install-qr.mjs');
+sh('npx expo export --platform web');
+
+const dist = path.join(root, 'dist');
+for (const f of [
+  'manifest.webmanifest',
+  'sw.js',
+  'icon.png',
+  'favicon.png',
+  'telecharger.html',
+  'qr-install.png',
+  'get.html',
+]) {
+  const src = path.join(root, 'public', f);
+  if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
+}
+
+// Entrée partageable : racine = page Installer (comme BTP /telecharger)
+fs.copyFileSync(path.join(dist, 'telecharger.html'), path.join(dist, 'index-install.html'));
+const appIndex = path.join(dist, 'index.html');
+const installIndex = path.join(dist, 'telecharger.html');
+if (fs.existsSync(appIndex) && fs.existsSync(installIndex)) {
+  fs.copyFileSync(appIndex, path.join(dist, 'app.html'));
+  fs.copyFileSync(installIndex, appIndex);
+}
+fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'azimut-pages-'));
+fs.cpSync(dist, tmp, { recursive: true });
+
+sh('git init', tmp);
+sh('git checkout -b gh-pages', tmp);
+sh('git add -A', tmp);
+sh(
+  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: installer PWA style BTP Pro + QR"',
+  tmp,
 );
+sh('git remote add origin https://github.com/hingantmael-gif/azimut.git', tmp);
+sh('git push -f origin gh-pages', tmp);
 
-const sh = (cmd) => execSync(cmd, { cwd: tmp, stdio: 'inherit', shell: true });
-
-sh('git init');
-sh('git checkout -b gh-pages');
-sh('git add -A');
-sh('git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: page install isolee (APK natif)"');
-sh('git remote add origin https://github.com/hingantmael-gif/azimut.git');
-sh('git push -f origin gh-pages');
-
-console.log('\nOK — page install seule : https://hingantmael-gif.github.io/azimut/');
-console.log('APK : https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk');
+console.log('\nOK — Installer : https://hingantmael-gif.github.io/azimut/');
+console.log('     (ou) https://hingantmael-gif.github.io/azimut/telecharger.html');
+console.log('App   : https://hingantmael-gif.github.io/azimut/app.html');

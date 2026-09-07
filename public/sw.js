@@ -1,6 +1,14 @@
-/* Service worker minimal — rend Azimut installable (PWA). */
-const CACHE = 'azimut-shell-v1';
-const PRECACHE = ['./', './manifest.webmanifest', './icon.png', './favicon.png'];
+/* Service worker — Azimut installable (PWA), style BTP Pro. */
+const CACHE = 'azimut-shell-v3';
+const PRECACHE = [
+  './',
+  './telecharger.html',
+  './app.html',
+  './manifest.webmanifest',
+  './icon.png',
+  './favicon.png',
+  './qr-install.png',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -20,6 +28,6 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).catch(() => caches.match('./'))),
+    caches.match(req).then((cached) => cached || fetch(req).catch(() => caches.match('./telecharger.html'))),
   );
 });

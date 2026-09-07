@@ -1,15 +1,21 @@
 {
-  "name": "azimut",
+  "name": "Azimut",
   "short_name": "Azimut",
-  "description": "Azimut — coaching multi-sport. Installe l’app sur téléphone, tablette ou PC.",
-  "start_url": "./",
+  "description": "Coaching multi-sport — installe Azimut comme une application.",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "background_color": "#07111F",
   "theme_color": "#0E8F6F",
   "lang": "fr",
   "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icon.png",
       "sizes": "512x512",
@@ -18,15 +24,9 @@
     },
     {
       "src": "icon.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "icon.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any"
     }
   ]
 }
