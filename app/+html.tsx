@@ -23,9 +23,9 @@ export default function Root({ children }: PropsWithChildren) {
           name="description"
           content="Azimut — coaching multi-sport. Installe l’application sur téléphone, tablette ou PC."
         />
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="manifest" href="manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="icon.png" />
+        <link rel="icon" type="image/png" href="favicon.png" />
         <title>Azimut — Installer l’application</title>
         <ScrollViewStyleReset />
         <style
