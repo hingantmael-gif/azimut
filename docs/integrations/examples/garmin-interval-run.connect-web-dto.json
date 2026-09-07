@@ -1,0 +1,59 @@
+{
+  "_comment": "Format Connect Web DTO (référence communautaire / workout-service) — NON utilisé par Azimut aujourd'hui",
+  "workoutName": "Fractionné VMA · 6 × 1 min",
+  "description": "Azimut · 2026-08-29",
+  "sportType": { "sportTypeId": 1, "sportTypeKey": "running" },
+  "workoutSegments": [
+    {
+      "segmentOrder": 1,
+      "sportType": { "sportTypeId": 1, "sportTypeKey": "running" },
+      "workoutSteps": [
+        {
+          "type": "ExecutableStepDTO",
+          "stepOrder": 1,
+          "stepType": { "stepTypeId": 1, "stepTypeKey": "warmup" },
+          "endCondition": { "conditionTypeId": 2, "conditionTypeKey": "time" },
+          "endConditionValue": 600.0,
+          "targetType": { "workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target" },
+          "description": "Footing progressif"
+        },
+        {
+          "type": "RepeatGroupDTO",
+          "stepOrder": 2,
+          "numberOfIterations": 6,
+          "workoutSteps": [
+            {
+              "type": "ExecutableStepDTO",
+              "stepOrder": 1,
+              "stepType": { "stepTypeId": 3, "stepTypeKey": "interval" },
+              "endCondition": { "conditionTypeId": 2, "conditionTypeKey": "time" },
+              "endConditionValue": 60.0,
+              "targetType": { "workoutTargetTypeId": 6, "workoutTargetTypeKey": "pace.zone" },
+              "targetValueOne": 4.0,
+              "targetValueTwo": 4.4,
+              "description": "1 min VMA (~3'40–4'24/km en m/s approximatif — vérifier unités)"
+            },
+            {
+              "type": "ExecutableStepDTO",
+              "stepOrder": 2,
+              "stepType": { "stepTypeId": 4, "stepTypeKey": "recovery" },
+              "endCondition": { "conditionTypeId": 2, "conditionTypeKey": "time" },
+              "endConditionValue": 90.0,
+              "targetType": { "workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target" },
+              "description": "Récupération trot"
+            }
+          ]
+        },
+        {
+          "type": "ExecutableStepDTO",
+          "stepOrder": 3,
+          "stepType": { "stepTypeId": 2, "stepTypeKey": "cooldown" },
+          "endCondition": { "conditionTypeId": 2, "conditionTypeKey": "time" },
+          "endConditionValue": 600.0,
+          "targetType": { "workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target" },
+          "description": "Retour au calme"
+        }
+      ]
+    }
+  ]
+}

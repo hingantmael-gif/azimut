@@ -1,0 +1,86 @@
+import { ScrollViewStyleReset } from 'expo-router/html';
+import type { PropsWithChildren } from 'react';
+
+/**
+ * Document HTML web — PWA Azimut + pas de scrollbar visible.
+ */
+export default function Root({ children }: PropsWithChildren) {
+  return (
+    <html lang="fr">
+      <head>
+        <meta charSet="utf-8" />
+        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+        />
+        <meta name="theme-color" content="#0E8F6F" />
+        <meta name="application-name" content="Azimut" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Azimut" />
+        <meta
+          name="description"
+          content="Azimut — coaching multi-sport. Installe l’application sur téléphone, tablette ou PC."
+        />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <title>Azimut — Installer l’application</title>
+        <ScrollViewStyleReset />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              html, body, #root {
+                height: 100%;
+                margin: 0;
+                overscroll-behavior: none;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+                background: #07111F;
+              }
+              *::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+              }
+              * {
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+              }
+              input:focus,
+              textarea:focus,
+              [contenteditable]:focus {
+                outline: none !important;
+                box-shadow: none !important;
+              }
+              input,
+              textarea,
+              [contenteditable="true"] {
+                cursor: text !important;
+                caret-color: #1a1a1a;
+              }
+              input[type="password"] {
+                cursor: text !important;
+              }
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                  var base = document.querySelector('base');
+                  var prefix = (base && base.href) ? new URL(base.href).pathname.replace(/\\/?$/, '/') : '/';
+                  navigator.serviceWorker.register(prefix + 'sw.js').catch(function () {});
+                });
+              }
+            `,
+          }}
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}

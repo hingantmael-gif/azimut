@@ -1,0 +1,14 @@
+# Azimut — service web indépendant (option Render)
+# Brancher ce dépôt sur Render → Static Site ou Web Service Node.
+
+services:
+  - type: web
+    name: azimut
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npx expo export --platform web && cp -f public/manifest.webmanifest public/sw.js public/icon.png public/favicon.png dist/ 2>/dev/null || true
+    startCommand: npx serve dist -s -l $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

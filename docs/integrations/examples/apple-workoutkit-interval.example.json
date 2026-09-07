@@ -1,0 +1,46 @@
+{
+  "_comment": "Structure conceptuelle WorkoutKit CustomWorkout — config exportable par react-native-workouts (plan.export()). Nécessite module natif iOS.",
+  "kind": "custom",
+  "displayName": "Fractionné VMA · 6 × 1 min",
+  "activity": "running",
+  "scheduledDate": "2026-08-29",
+  "warmup": {
+    "purpose": "warmup",
+    "goal": { "type": "time", "value": 600, "unit": "seconds" },
+    "alert": { "type": "none" }
+  },
+  "blocks": [
+    {
+      "iterations": 6,
+      "steps": [
+        {
+          "purpose": "work",
+          "goal": { "type": "time", "value": 60, "unit": "seconds" },
+          "target": {
+            "type": "pace",
+            "min": "3:40",
+            "max": "4:00",
+            "unit": "min/km"
+          },
+          "alert": { "type": "zone", "onExit": "soundAndHaptic" }
+        },
+        {
+          "purpose": "recovery",
+          "goal": { "type": "time", "value": 90, "unit": "seconds" },
+          "target": { "type": "open" }
+        }
+      ]
+    }
+  ],
+  "cooldown": {
+    "purpose": "cooldown",
+    "goal": { "type": "time", "value": 600, "unit": "seconds" }
+  },
+  "syncMethods": [
+    "WorkoutScheduler.schedule(plan, at: date)",
+    "plan.preview() → UI « Ajouter à la montre »",
+    "Fichier .workout binaire (AirDrop) — spec non publique"
+  ],
+  "permissions": ["WorkoutPlan.requestAuthorization()"],
+  "platform": "iOS 17+ / watchOS 10+ uniquement"
+}

@@ -1,0 +1,51 @@
+{
+  "_comment": "Exemple séance vélo avec cible puissance — Training API Garmin",
+  "workoutName": "Sweet spot · 3 × 12 min",
+  "description": "Azimut · vélo",
+  "sport": "CYCLING",
+  "steps": [
+    {
+      "type": "WorkoutStep",
+      "stepOrder": 1,
+      "stepType": "WARMUP",
+      "intensity": "WARMUP",
+      "durationType": "TIME",
+      "durationValue": 900
+    },
+    {
+      "type": "WorkoutRepeatStep",
+      "stepOrder": 2,
+      "repeatType": "REPEAT_UNTIL_STEPS_CMPLT",
+      "repeatValue": 3,
+      "steps": [
+        {
+          "type": "WorkoutStep",
+          "stepType": "ACTIVE",
+          "intensity": "ACTIVE",
+          "durationType": "TIME",
+          "durationValue": 720,
+          "targetType": "POWER",
+          "targetValueLow": 210,
+          "targetValueHigh": 230,
+          "description": "Sweet spot 88–94% FTP"
+        },
+        {
+          "type": "WorkoutStep",
+          "stepType": "REST",
+          "intensity": "REST",
+          "durationType": "TIME",
+          "durationValue": 300,
+          "description": "Récupération easy"
+        }
+      ]
+    },
+    {
+      "type": "WorkoutStep",
+      "stepOrder": 3,
+      "stepType": "COOLDOWN",
+      "intensity": "COOLDOWN",
+      "durationType": "TIME",
+      "durationValue": 600
+    }
+  ]
+}

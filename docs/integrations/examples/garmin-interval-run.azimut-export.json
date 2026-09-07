@@ -1,0 +1,57 @@
+{
+  "_comment": "Sortie de buildGarminWorkoutExport() — enveloppe envoyée au backend Azimut",
+  "scheduleDate": "2026-08-29",
+  "summary": "Fractionné VMA · 6 × 1 min · 55 min",
+  "workout": {
+    "workoutName": "Fractionné VMA · 6 × 1 min",
+    "description": "Azimut · 2026-08-29",
+    "sport": "RUNNING",
+    "steps": [
+      {
+        "type": "WorkoutStep",
+        "stepOrder": 1,
+        "stepType": "WARMUP",
+        "intensity": "WARMUP",
+        "durationType": "TIME",
+        "durationValue": 600,
+        "description": "Footing progressif"
+      },
+      {
+        "type": "WorkoutRepeatStep",
+        "stepOrder": 2,
+        "repeatType": "REPEAT_UNTIL_STEPS_CMPLT",
+        "repeatValue": 6,
+        "steps": [
+          {
+            "type": "WorkoutStep",
+            "stepType": "ACTIVE",
+            "intensity": "ACTIVE",
+            "durationType": "TIME",
+            "durationValue": 60,
+            "targetType": "PACE",
+            "targetValueLow": 220,
+            "targetValueHigh": 240,
+            "description": "1 min VMA"
+          },
+          {
+            "type": "WorkoutStep",
+            "stepType": "REST",
+            "intensity": "REST",
+            "durationType": "TIME",
+            "durationValue": 90,
+            "description": "Récupération trot"
+          }
+        ]
+      },
+      {
+        "type": "WorkoutStep",
+        "stepOrder": 3,
+        "stepType": "COOLDOWN",
+        "intensity": "COOLDOWN",
+        "durationType": "TIME",
+        "durationValue": 600,
+        "description": "Retour au calme"
+      }
+    ]
+  }
+}

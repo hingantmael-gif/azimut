@@ -1,0 +1,135 @@
+{
+  "expo": {
+    "name": "Azimut",
+    "slug": "azimut",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07111F",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#07111F"
+      }
+    },
+    "userInterfaceStyle": "automatic",
+    "scheme": "azimut",
+    "newArchEnabled": true,
+    "android": {
+      "package": "app.azimut.training",
+      "adaptiveIcon": {
+        "backgroundColor": "#07111F",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "azimut",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "text/plain"
+            },
+            {
+              "mimeType": "application/gpx+xml"
+            },
+            {
+              "mimeType": "application/vnd.garmin.tcx+xml"
+            }
+          ]
+        },
+        {
+          "action": "SEND_MULTIPLE",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "mimeType": "text/plain"
+            },
+            {
+              "mimeType": "*/*"
+            }
+          ]
+        }
+      ]
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.azimut.training",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "strava",
+          "connect"
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Workout",
+            "LSItemContentTypes": [
+              "public.plain-text",
+              "com.topografixix.gpx",
+              "public.xml"
+            ]
+          }
+        ]
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "name": "Azimut",
+      "shortName": "Azimut",
+      "description": "Coaching multi-sport — installe Azimut sur téléphone, tablette ou PC.",
+      "themeColor": "#0E8F6F",
+      "backgroundColor": "#07111F"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0E8F6F",
+          "defaultChannel": "training",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autorise l’accès à tes photos pour définir ta photo de profil.",
+          "cameraPermission": "Autorise l’accès à la caméra pour prendre ta photo de profil.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/azimut"
+    }
+  }
+}

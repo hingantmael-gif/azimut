@@ -1,0 +1,43 @@
+{
+  "id": "pw_demo_interval_vma",
+  "title": "Fractionné VMA · 6 × 1 min",
+  "date": "2026-08-29",
+  "discipline": "run",
+  "plannedDurationSec": 3300,
+  "plannedDistanceM": 8500,
+  "expectedRpe": 8,
+  "periodization": "build",
+  "steps": [
+    {
+      "id": "s1",
+      "type": "warmup",
+      "label": "Footing progressif",
+      "endCondition": "duration",
+      "durationSec": 600
+    },
+    {
+      "id": "s2",
+      "type": "active",
+      "label": "1 min VMA",
+      "endCondition": "duration",
+      "durationSec": 60,
+      "target": { "type": "pace", "minSecPerKm": 220, "maxSecPerKm": 240 },
+      "repeat": 6
+    },
+    {
+      "id": "s3",
+      "type": "rest",
+      "label": "Récupération trot",
+      "endCondition": "duration",
+      "durationSec": 90,
+      "repeat": 6
+    },
+    {
+      "id": "s4",
+      "type": "cooldown",
+      "label": "Retour au calme",
+      "endCondition": "duration",
+      "durationSec": 600
+    }
+  ]
+}

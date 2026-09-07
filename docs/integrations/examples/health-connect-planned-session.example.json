@@ -1,0 +1,72 @@
+{
+  "_comment": "Représentation JSON lisible — équivalent PlannedExerciseSessionRecord Health Connect (Android). Les noms de champs réels sont ceux de l'API Kotlin/Java.",
+  "recordType": "PlannedExerciseSessionRecord",
+  "title": "Fractionné VMA · 6 × 1 min",
+  "notes": "Généré par Azimut · 2026-08-29",
+  "exerciseType": "EXERCISE_TYPE_RUNNING",
+  "startDate": "2026-08-29",
+  "durationMinutes": 55,
+  "hasExplicitTime": false,
+  "blocks": [
+    {
+      "repetitions": 1,
+      "steps": [
+        {
+          "description": "Footing progressif",
+          "exerciseType": "EXERCISE_TYPE_RUNNING",
+          "completionTarget": {
+            "type": "EXERCISE_COMPLETION_TARGET_TYPE_TIME",
+            "durationSeconds": 600
+          },
+          "performanceTarget": null
+        }
+      ]
+    },
+    {
+      "repetitions": 6,
+      "steps": [
+        {
+          "description": "1 min VMA",
+          "exerciseType": "EXERCISE_TYPE_RUNNING",
+          "completionTarget": {
+            "type": "EXERCISE_COMPLETION_TARGET_TYPE_TIME",
+            "durationSeconds": 60
+          },
+          "performanceTarget": {
+            "type": "PACE",
+            "minSpeedMetersPerSecond": 4.17,
+            "maxSpeedMetersPerSecond": 4.55,
+            "_note": "220–240 sec/km → ~4.17–4.55 m/s"
+          }
+        },
+        {
+          "description": "Récupération trot",
+          "exerciseType": "EXERCISE_TYPE_RUNNING",
+          "completionTarget": {
+            "type": "EXERCISE_COMPLETION_TARGET_TYPE_TIME",
+            "durationSeconds": 90
+          },
+          "performanceTarget": null
+        }
+      ]
+    },
+    {
+      "repetitions": 1,
+      "steps": [
+        {
+          "description": "Retour au calme",
+          "exerciseType": "EXERCISE_TYPE_RUNNING",
+          "completionTarget": {
+            "type": "EXERCISE_COMPLETION_TARGET_TYPE_TIME",
+            "durationSeconds": 600
+          },
+          "performanceTarget": null
+        }
+      ]
+    }
+  ],
+  "permissionsRequired": [
+    "android.permission.health.WRITE_PLANNED_EXERCISE"
+  ],
+  "insertMethod": "healthConnectClient.insertRecords([plannedSession])"
+}
