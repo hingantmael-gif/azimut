@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#07111F" />
-    <meta name="description" content="Télécharge Azimut — application Android indépendante de coaching multi-sport." />
+    <meta name="description" content="Installer Azimut — application Android native (logo Azimut)." />
     <link rel="icon" href="./icon.png" />
     <title>Azimut — Installer l’application</title>
     <style>
@@ -13,6 +13,7 @@
         --mint: #3dff9a;
         --text: #f4f7fa;
         --muted: rgba(244, 247, 250, 0.72);
+        --warn: #ffd27a;
       }
       * { box-sizing: border-box; }
       html, body {
@@ -30,23 +31,23 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 32px 20px;
+        padding: 28px 18px;
       }
       .card {
-        width: min(400px, 100%);
+        width: min(420px, 100%);
         text-align: center;
       }
       .icon {
-        width: 112px;
-        height: 112px;
-        border-radius: 26px;
+        width: 104px;
+        height: 104px;
+        border-radius: 24px;
         display: block;
-        margin: 0 auto 22px;
+        margin: 0 auto 18px;
         box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
       }
       h1 {
         margin: 0;
-        font-size: 2.6rem;
+        font-size: 2.45rem;
         font-weight: 900;
         letter-spacing: -0.045em;
       }
@@ -54,42 +55,103 @@
         margin: 10px 0 0;
         color: var(--mint);
         font-weight: 700;
-        font-size: 1.05rem;
+        font-size: 1.02rem;
       }
       .pitch {
-        margin: 18px 0 0;
+        margin: 16px 0 0;
         color: var(--muted);
-        font-size: 1rem;
+        font-size: 0.98rem;
         line-height: 1.5;
       }
-      #btn {
-        margin-top: 32px;
+      .alert {
+        display: none;
+        margin-top: 18px;
+        padding: 14px 14px;
+        border-radius: 14px;
+        background: rgba(255, 210, 122, 0.12);
+        border: 1px solid rgba(255, 210, 122, 0.35);
+        color: var(--warn);
+        font-size: 0.9rem;
+        line-height: 1.45;
+        text-align: left;
+      }
+      .alert strong { color: #ffe6b0; }
+      .qr-wrap {
+        display: none;
+        margin-top: 18px;
+      }
+      .qr-wrap img {
+        width: 180px;
+        height: 180px;
+        border-radius: 16px;
+        background: #fff;
+        padding: 10px;
+      }
+      .steps {
+        display: none;
+        margin-top: 18px;
+        text-align: left;
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.55;
+        padding: 0;
+        list-style: none;
+      }
+      .steps li {
+        margin: 0 0 10px;
+        padding-left: 28px;
+        position: relative;
+      }
+      .steps li::before {
+        content: attr(data-n);
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: rgba(61, 255, 154, 0.2);
+        color: var(--mint);
+        font-size: 0.72rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 20px;
+        text-align: center;
+      }
+      #btn, #copy {
+        margin-top: 14px;
         width: 100%;
         border: 0;
         border-radius: 16px;
-        padding: 18px 20px;
-        background: var(--mint);
-        color: var(--ink);
-        font-size: 1.15rem;
+        padding: 16px 18px;
+        font-size: 1.08rem;
         font-weight: 900;
         cursor: pointer;
-        letter-spacing: 0.01em;
       }
-      #btn[aria-busy="true"] {
-        opacity: 0.6;
-        cursor: wait;
+      #btn {
+        margin-top: 26px;
+        background: var(--mint);
+        color: var(--ink);
+      }
+      #btn[aria-busy="true"] { opacity: 0.6; cursor: wait; }
+      #btn[hidden], #copy[hidden] { display: none; }
+      #copy {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.22);
       }
       .hint {
-        margin-top: 16px;
+        margin-top: 14px;
         color: var(--muted);
-        font-size: 0.88rem;
+        font-size: 0.86rem;
         line-height: 1.45;
-        min-height: 2.6em;
       }
       .meta {
-        margin-top: 28px;
+        margin-top: 24px;
         color: rgba(244, 247, 250, 0.4);
-        font-size: 0.75rem;
+        font-size: 0.74rem;
         font-weight: 600;
         line-height: 1.5;
       }
@@ -98,48 +160,118 @@
   <body>
     <main>
       <div class="card">
-        <img class="icon" src="./icon.png" width="112" height="112" alt="Logo Azimut" />
+        <img class="icon" src="./icon.png" width="104" height="104" alt="Logo Azimut" />
         <h1>Azimut</h1>
-        <p class="tag">Application Android</p>
-        <p class="pitch">
-          Application native indépendante — pas un site web.
-          Clique sur Installer pour télécharger Azimut sur ton téléphone.
+        <p class="tag">Application Android native</p>
+        <p class="pitch" id="pitch">
+          Une vraie app (icône logo Azimut sur l’écran d’accueil) — pas un site web.
         </p>
+
+        <div class="alert" id="pcAlert" role="status">
+          <strong>Tu es sur un PC.</strong> Un fichier Android (.apk) ne s’installe pas sous Windows
+          (Adobe / Firefox / Lecteur ne serviront à rien).<br /><br />
+          Scanne le QR avec ton <strong>téléphone Android</strong>, ou envoie-toi ce lien, puis
+          appuie sur <strong>Installer l’application</strong> <em>depuis le téléphone</em>.
+        </div>
+
+        <div class="qr-wrap" id="qrWrap">
+          <img id="qr" alt="QR code vers la page d’installation Azimut" width="180" height="180" />
+        </div>
+
+        <ol class="steps" id="androidSteps">
+          <li data-n="1">Appuie sur <strong>Installer l’application</strong> (ci-dessous).</li>
+          <li data-n="2">Quand le téléchargement est fini, ouvre la notification ou le dossier Téléchargements → <strong>azimut.apk</strong>.</li>
+          <li data-n="3">Si Android demande, autorise l’installation (sources inconnues / Chrome).</li>
+          <li data-n="4">Appuie sur <strong>Installer</strong> — l’icône <strong>logo Azimut</strong> apparaît sur l’écran d’accueil.</li>
+        </ol>
+
         <button type="button" id="btn">Installer l’application</button>
-        <p class="hint" id="hint">Le fichier Azimut.apk se télécharge, puis ouvre-le pour l’installer.</p>
+        <button type="button" id="copy" hidden>Copier le lien téléphone</button>
+        <p class="hint" id="hint"></p>
         <p class="meta">
-          Application autonome · Icône = logo Azimut<br />
-          Cette page sert uniquement au téléchargement.
+          Page web = téléchargement uniquement<br />
+          Application = APK Android autonome
         </p>
       </div>
     </main>
     <script>
       (function () {
         var APK = 'https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk';
-        var btn = document.getElementById('btn');
-        var hint = document.getElementById('hint');
-        var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        var PAGE = 'https://hingantmael-gif.github.io/azimut/';
+        var ua = navigator.userAgent || '';
+        var isAndroid = /Android/i.test(ua);
+        var isIOS = /iPhone|iPad|iPod/i.test(ua);
+        var isMobile = isAndroid || isIOS || /Mobile/i.test(ua);
+        var isPC = !isMobile;
 
-        if (isIOS) {
+        var btn = document.getElementById('btn');
+        var copy = document.getElementById('copy');
+        var hint = document.getElementById('hint');
+        var pitch = document.getElementById('pitch');
+        var pcAlert = document.getElementById('pcAlert');
+        var qrWrap = document.getElementById('qrWrap');
+        var qr = document.getElementById('qr');
+        var steps = document.getElementById('androidSteps');
+
+        if (isPC) {
+          pcAlert.style.display = 'block';
+          qrWrap.style.display = 'block';
+          qr.src =
+            'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=' +
+            encodeURIComponent(PAGE);
+          copy.hidden = false;
+          btn.textContent = 'Ouvrir le téléchargement (réservé Android)';
+          pitch.textContent =
+            'Pour avoir Azimut sur l’écran d’accueil, installe-la depuis un téléphone Android.';
           hint.textContent =
-            'Azimut est une app Android pour l’instant. Ouvre ce lien sur un téléphone Android pour l’installer.';
+            'Sur PC, le fichier .apk ne peut pas s’ouvrir. Utilise le QR ou copie le lien vers ton téléphone.';
+        } else if (isIOS) {
+          btn.hidden = true;
+          pitch.textContent =
+            'Azimut est une application Android pour l’instant (hors App Store Apple).';
+          hint.textContent =
+            'Ouvre cette page sur un téléphone Android pour installer l’app avec l’icône logo.';
+        } else if (isAndroid) {
+          steps.style.display = 'block';
+          pitch.textContent =
+            'Sur ce téléphone : télécharge, puis installe. L’icône logo Azimut arrive sur l’écran d’accueil.';
+          hint.textContent =
+            'Après Installer, cherche « Azimut » dans tes applications — ce n’est plus un site.';
         }
 
+        copy.addEventListener('click', function () {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(PAGE).then(function () {
+              copy.textContent = 'Lien copié';
+              setTimeout(function () {
+                copy.textContent = 'Copier le lien téléphone';
+              }, 2000);
+            });
+          } else {
+            prompt('Copie ce lien et ouvre-le sur ton Android :', PAGE);
+          }
+        });
+
         btn.addEventListener('click', function () {
-          if (isIOS) {
-            hint.textContent =
-              'Sur iPhone, l’installation hors App Store n’est pas possible. Utilise un Android, ou dis-nous quand tu veux la version App Store.';
+          if (isIOS) return;
+          if (isPC) {
+            hint.innerHTML =
+              'Le téléchargement PC ne permet <strong>pas</strong> d’installer Azimut. Scanne le QR avec ton Android, puis appuie sur Installer <em>sur le téléphone</em>.';
+            // Still allow download if they insist (USB transfer to phone later)
+            window.open(APK, '_blank');
             return;
           }
           btn.setAttribute('aria-busy', 'true');
           btn.textContent = 'Téléchargement…';
           hint.textContent =
-            'Téléchargement de l’application… Ouvre ensuite le fichier azimut.apk → Installer.';
+            'Téléchargement en cours… Ensuite : notification ou Téléchargements → azimut.apk → Installer.';
           window.location.href = APK;
           setTimeout(function () {
             btn.removeAttribute('aria-busy');
             btn.textContent = 'Installer l’application';
-          }, 2800);
+            hint.textContent =
+              'Fichier reçu ? Ouvre azimut.apk → Installer. L’icône logo Azimut apparaît ensuite.';
+          }, 2500);
         });
       })();
     </script>
