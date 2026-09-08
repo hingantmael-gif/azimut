@@ -1,5 +1,5 @@
 /* Service worker Azimut — scope / (comme BTP Pro). */
-const CACHE = 'azimut-shell-v12';
+const CACHE = 'azimut-shell-v13';
 const PRECACHE = [
   '/',
   '/index.html',

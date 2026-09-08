@@ -28,7 +28,10 @@ import {
   validateUsernameFormat,
 } from '../../src/utils/username';
 import { apiGoogleAuth, apiSignup } from '../../src/services/api';
-import { validateRegistrationEmail } from '../../src/utils/demoAuth';
+import {
+  normalizeEmailInput,
+  validateRegistrationEmail,
+} from '../../src/utils/demoAuth';
 import {
   getPasswordRules,
   passwordsMatch,
@@ -126,11 +129,13 @@ export default function RegisterScreen() {
       setError(emailCheck.error);
       return;
     }
+    const normalized = emailCheck.email;
+    setEmail(normalized);
     setBusy(true);
     try {
-      const emailTaken = await isEmailTaken(email.trim());
+      const emailTaken = await isEmailTaken(normalized);
       if (emailTaken) {
-        setError('Cet e-mail est déjà utilisé.');
+        setError('Cet e-mail est déjà utilisé sur cet appareil.');
         return;
       }
       setStep('password');
@@ -154,10 +159,11 @@ export default function RegisterScreen() {
   };
 
   const finishLocalAccount = async (handle: string) => {
+    const emailNorm = normalizeEmailInput(email);
     await clearSession();
-    await clearOnboardingCompleted(email.trim(), handle);
+    await clearOnboardingCompleted(emailNorm, handle);
     await saveLocalCredential({
-      email: email.trim(),
+      email: emailNorm,
       username: handle,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -167,7 +173,7 @@ export default function RegisterScreen() {
     await upsertRegistryUser(
       profileToRegistryUser({
         id,
-        email: email.trim().toLowerCase(),
+        email: emailNorm,
         username: handle,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -177,7 +183,7 @@ export default function RegisterScreen() {
       type: 'AUTH_WITH_PROVIDER',
       payload: {
         token: `local_${id}`,
-        email: email.trim().toLowerCase(),
+        email: emailNorm,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: handle,
@@ -209,9 +215,10 @@ export default function RegisterScreen() {
     }
     setBusy(true);
     setError('');
+    const emailNorm = normalizeEmailInput(email);
     try {
       const res = await apiSignup({
-        email: email.trim(),
+        email: emailNorm,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: handle,
@@ -219,7 +226,7 @@ export default function RegisterScreen() {
       });
       if (res.token && res.user) {
         await clearSession();
-        await clearOnboardingCompleted(email.trim(), handle);
+        await clearOnboardingCompleted(emailNorm, handle);
         await saveLocalCredential({
           email: res.user.email,
           username: res.user.username || handle,
@@ -312,15 +319,20 @@ export default function RegisterScreen() {
     return (
       <AuthScreen>
         <AuthTitle>Quelle est votre adresse e-mail ?</AuthTitle>
-        <AuthSubtitle>Utilise n’importe quelle adresse e-mail valide.</AuthSubtitle>
+        <AuthSubtitle>
+          Gmail, Outlook, Orange, Free, Yahoo… n’importe quelle adresse avec un @.
+        </AuthSubtitle>
         <StravaInput
           label="E-mail"
           value={email}
           onChangeText={setEmail}
           autoFocus
           autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
           keyboardType="email-address"
-          placeholder="votre@email.com"
+          textContentType="emailAddress"
+          placeholder="toi@orange.fr"
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <OrangeButton

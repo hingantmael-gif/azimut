@@ -1,0 +1,43 @@
+# Deploy Render Blueprint when RENDER_API_KEY is set (optional).
+# Docs: https://api-docs.render.com/reference/create-blueprint
+name: Deploy Render API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'render.yaml'
+      - '.github/workflows/deploy-render.yml'
+
+jobs:
+  sync-blueprint:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.RENDER_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply Render Blueprint
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -euo pipefail
+          OWNER_ID=$(curl -sS -H "Authorization: Bearer $RENDER_API_KEY" \
+            https://api.render.com/v1/owners?limit=1 | jq -r '.[0].owner.id // empty')
+          if [ -z "$OWNER_ID" ]; then
+            echo "Impossible de récupérer le owner Render — vérifie RENDER_API_KEY"
+            exit 1
+          fi
+          # Trigger auto-deploy of existing services linked to this repo (if any)
+          curl -sS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Accept: application/json" \
+            "https://api.render.com/v1/services?limit=20" | jq -r '.[]?.service | select(.repo=="https://github.com/hingantmael-gif/azimut") | .id' \
+            | while read -r sid; do
+                [ -n "$sid" ] || continue
+                echo "Trigger deploy $sid"
+                curl -sS -X POST -H "Authorization: Bearer $RENDER_API_KEY" \
+                  "https://api.render.com/v1/services/$sid/deploys" || true
+              done
+          echo "OK — si aucun service n’existe encore, crée le Blueprint une fois :"
+          echo "https://dashboard.render.com/select-repo?type=blueprint"

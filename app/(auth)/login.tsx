@@ -16,7 +16,7 @@ import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { clearSession } from '../../src/storage/sessionPersistence';
 import { apiGoogleAuth, apiLogin } from '../../src/services/api';
-import { isTrialCredentials, loginTrialAccount } from '../../src/utils/demoAuth';
+import { isTrialCredentials, loginTrialAccount, normalizeEmailInput } from '../../src/utils/demoAuth';
 import { verifyLocalCredentials } from '../../src/storage/localCredentials';
 import { markOnboardingCompleted } from '../../src/storage/onboardingPersistence';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
@@ -101,19 +101,22 @@ export default function LoginScreen() {
   const submit = async () => {
     setError('');
     setBusy(true);
+    const idRaw = email.trim();
+    const id = idRaw.includes('@') ? normalizeEmailInput(idRaw) : idRaw.toLowerCase();
+    if (id.includes('@')) setEmail(id);
     try {
-      if (isTrialCredentials(email, password)) {
+      if (isTrialCredentials(idRaw, password) || isTrialCredentials(id, password)) {
         await loginTrialAccount(clearSession, dispatch);
         return;
       }
 
-      const res = await apiLogin(email.trim(), password);
+      const res = await apiLogin(id, password);
       if (res.token && res.user) {
         await clearSession();
         await markOnboardingCompleted(
           res.user.email,
           res.user.username,
-          email.trim(),
+          id,
         );
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
@@ -129,7 +132,7 @@ export default function LoginScreen() {
         return;
       }
 
-      const local = await verifyLocalCredentials(email.trim(), password);
+      const local = await verifyLocalCredentials(id, password);
       if (local) {
         await clearSession();
         await markOnboardingCompleted(local.email, local.username);
@@ -147,15 +150,17 @@ export default function LoginScreen() {
         return;
       }
 
-      setError(res.error && !/injoignable/i.test(res.error)
-        ? res.error
-        : 'E-mail ou mot de passe incorrect.');
+      setError(
+        res.error && !/injoignable/i.test(res.error)
+          ? res.error
+          : 'E-mail ou mot de passe incorrect. Pas encore de compte ? Inscris-toi.',
+      );
     } catch {
-      if (isTrialCredentials(email, password)) {
+      if (isTrialCredentials(idRaw, password) || isTrialCredentials(id, password)) {
         await loginTrialAccount(clearSession, dispatch);
         return;
       }
-      const local = await verifyLocalCredentials(email.trim(), password);
+      const local = await verifyLocalCredentials(id, password);
       if (local) {
         await clearSession();
         await markOnboardingCompleted(local.email, local.username);
@@ -172,7 +177,7 @@ export default function LoginScreen() {
         });
         return;
       }
-      setError('E-mail ou mot de passe incorrect.');
+      setError('E-mail ou mot de passe incorrect. Pas encore de compte ? Inscris-toi.');
     } finally {
       setBusy(false);
     }
@@ -200,8 +205,11 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
         keyboardType="email-address"
-        placeholder="votre@email.com"
+        textContentType="emailAddress"
+        placeholder="toi@orange.fr"
       />
       <StravaInput
         label="Mot de passe"

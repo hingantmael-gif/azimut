@@ -33,27 +33,61 @@ export function isTrialAccount(profile: {
   );
 }
 
-/** E-mail inscription : format classique uniquement (pas de raccourci essai). */
+/**
+ * Normalise une saisie e-mail (espaces, @ pleine chasse, casse).
+ * Accepte Gmail, Outlook, Orange, Free, Yahoo, univ, etc.
+ */
+export function normalizeEmailInput(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/\uFF20/g, '@') // ＠ pleine chasse → @
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+/**
+ * Format e-mail large : local@domaine (tous FAI : gmail, outlook, orange.fr, free.fr…).
+ * Pas de liste blanche. Accepte aussi domaines à un seul label rare (ex. intranet).
+ */
+export function isValidEmailFormat(raw: string): boolean {
+  const value = normalizeEmailInput(raw);
+  if (!value || value.length > 254) return false;
+  const at = value.indexOf('@');
+  if (at < 1 || at !== value.lastIndexOf('@')) return false;
+  const local = value.slice(0, at);
+  const domain = value.slice(at + 1);
+  if (!local || !domain || local.length > 64) return false;
+  if (/\s/.test(local) || /\s/.test(domain)) return false;
+  // Domaine avec au moins un point (orange.fr) OU label DNS simple
+  return /^[^\s@]+$/.test(domain) && (domain.includes('.') ? /\.[^\s@.]{2,}$/.test(domain) : domain.length >= 2);
+}
+
+/** E-mail inscription : tout fournisseur (gmail, outlook, orange.fr, …). */
 export function validateRegistrationEmail(
   raw: string,
-): { ok: true } | { ok: false; error: string } {
-  const value = raw.trim();
+): { ok: true; email: string } | { ok: false; error: string } {
+  const value = normalizeEmailInput(raw);
   if (!value) {
-    return { ok: false, error: 'Entrez une adresse e-mail valide.' };
+    return { ok: false, error: 'Entrez une adresse e-mail (ex. toi@orange.fr).' };
   }
-  if (value === TRIAL_EMAIL_INPUT || value.toLowerCase() === TRIAL_ACCOUNT_EMAIL) {
+  if (value === TRIAL_EMAIL_INPUT || value === TRIAL_ACCOUNT_EMAIL) {
     return { ok: false, error: 'Cet e-mail est déjà utilisé.' };
   }
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-    return { ok: true };
+  if (!value.includes('@')) {
+    return {
+      ok: false,
+      error: 'Il manque le @ — ex. prenom@gmail.com ou toi@orange.fr.',
+    };
   }
-  if (/[a-zA-Z]{2,}/.test(value)) {
-    return { ok: false, error: 'E-mail incorrect.' };
+  if (isValidEmailFormat(value)) {
+    return { ok: true, email: value };
   }
-  if (/^\d{2,}$/.test(value) || (/\d/.test(value) && !value.includes('@'))) {
-    return { ok: false, error: 'E-mail incorrect.' };
-  }
-  return { ok: false, error: 'E-mail incorrect.' };
+  return {
+    ok: false,
+    error:
+      'Adresse incomplète. Exemples : toi@gmail.com, toi@outlook.com, toi@orange.fr',
+  };
 }
 
 export async function loginTrialAccount(

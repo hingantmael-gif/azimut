@@ -1,14 +1,34 @@
-# Azimut — Web Service racine (comme BTP Pro)
-# URL : https://azimut.onrender.com  (après branchement Render)
+# Azimut — front web + API auth (comme BTP Pro)
+# Front : https://azimut.onrender.com (optionnel)
+# API  : https://azimut-api.onrender.com
 
 services:
   - type: web
-    name: azimut
+    name: azimut-auth-api
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm ci && npm run build:web && node -e "const fs=require('fs');const p=require('path');['manifest.webmanifest','sw.js','icon.png','icon-192.png','icon-512.png','favicon.png','telecharger.html','qr-install.png'].forEach(f=>{const s=p.join('public',f);if(fs.existsSync(s))fs.copyFileSync(s,p.join('dist',f));});fs.copyFileSync('dist/index.html','dist/404.html');fs.writeFileSync('dist/.nojekyll','');"
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: AUTH_ALLOW_DEMO_CODE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+
+  - type: web
+    name: azimut-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build:web && node -e "const fs=require('fs');const p=require('path');['manifest.webmanifest','sw.js','icon.png','icon-192.png','icon-512.png','favicon.png','telecharger.html','qr-install.png','apropos.html','privacy.html','terms.html','get.html'].forEach(f=>{const s=p.join('public',f);if(fs.existsSync(s))fs.copyFileSync(s,p.join('dist',f));});if(fs.existsSync('dist/index.html')){fs.copyFileSync('dist/index.html','dist/404.html');fs.copyFileSync('dist/index.html','dist/app.html');}if(fs.existsSync('dist/apropos.html'))fs.copyFileSync('dist/apropos.html','dist/index.html');fs.writeFileSync('dist/.nojekyll','');"
     startCommand: npx --yes serve dist -s -l $PORT
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: EXPO_PUBLIC_API_URL
+        value: https://azimut-auth-api.onrender.com

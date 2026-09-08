@@ -168,6 +168,25 @@ function storeOtp(email, code) {
 const TRIAL_LOGIN_ID = '1';
 const TRIAL_EMAIL = '1@demo.local';
 
+function normalizeEmail(email) {
+  return String(email ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\uFF20/g, '@')
+    .replace(/\s+/g, '');
+}
+
+function isValidEmail(email) {
+  const e = normalizeEmail(email);
+  if (!e || e.length > 254) return false;
+  const at = e.indexOf('@');
+  if (at < 1 || at !== e.lastIndexOf('@')) return false;
+  const local = e.slice(0, at);
+  const domain = e.slice(at + 1);
+  if (!local || !domain || /\s/.test(local) || /\s/.test(domain)) return false;
+  return domain.includes('.') ? /\.[^\s@.]{2,}$/.test(domain) : domain.length >= 2;
+}
+
 function isTrialLogin(id, password) {
   const normalized = String(id ?? '').trim().toLowerCase();
   return (
@@ -224,14 +243,11 @@ app.get('/health', (_req, res) => {
 });
 
 async function handleRequestOtp(req, res) {
-  const email = String(req.body?.email ?? '')
-    .trim()
-    .toLowerCase();
-  if (!email) {
-    return res.status(400).json({ error: 'E-mail invalide' });
-  }
-  if (!email.includes('@')) {
-    return res.status(400).json({ error: 'E-mail incorrect' });
+  const email = normalizeEmail(req.body?.email);
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({
+      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+    });
   }
   // Compte essai réservé + comptes déjà finalisés → pas de nouvelle inscription
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
@@ -338,12 +354,12 @@ app.post('/auth/verify-2fa', (req, res) => {
 
 /** Inscription directe (e-mail + mot de passe) — sans OTP */
 app.post('/auth/signup', (req, res) => {
-  const email = String(req.body?.email ?? '')
-    .trim()
-    .toLowerCase();
+  const email = normalizeEmail(req.body?.email);
   const { firstName, lastName, username, password } = req.body ?? {};
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'E-mail invalide' });
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({
+      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+    });
   }
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
     return res.status(409).json({ error: 'Cet e-mail est déjà utilisé.' });
