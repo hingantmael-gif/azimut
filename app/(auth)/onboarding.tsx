@@ -251,6 +251,13 @@ export default function OnboardingScreen() {
     if (intent === 'race_trail') setTerrain('trail');
     if (intent === 'return_injury') setInjured(true);
     if (intent === 'start') setLevel('debutant');
+    // Comme le sport : un tap avance — pas besoin de chercher « Continuer » hors écran
+    setStepIndex((i) => i + 1);
+  };
+
+  const pickAndAdvance = (apply: () => void) => {
+    apply();
+    setStepIndex((i) => i + 1);
   };
 
   const goNext = () => {
@@ -483,9 +490,29 @@ export default function OnboardingScreen() {
           ? 'Continuer'
           : 'Terminer';
 
+  /** Étapes où un tap sur une carte avance déjà — pas de CTA hors écran. */
+  const choiceAutoAdvances =
+    currentStepId === 'run_goal' ||
+    currentStepId === 'terrain' ||
+    currentStepId === 'training_type' ||
+    currentStepId === 'experience' ||
+    currentStepId === 'injury' ||
+    currentStepId === 'usual_volume' ||
+    currentStepId === 'weekly_rhythm';
+
+  const showContinueFooter =
+    currentStepId !== 'sport' &&
+    currentStepId !== 'relay' &&
+    currentStepId !== 'plan_preview' &&
+    !choiceAutoAdvances;
+
   return (
-    <Screen>
-      <AppScrollView contentContainerStyle={{ paddingBottom: 56 }}>
+    <Screen style={styles.screenFlex}>
+      <AppScrollView
+        style={styles.scrollFlex}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: showContinueFooter ? 24 : 56 }}
+      >
         <IntakeHeader
           title={headerTitle}
           subtitle={headerSubtitle}
@@ -575,7 +602,7 @@ export default function OnboardingScreen() {
               title={opt.label}
               image={opt.image}
               selected={terrain === opt.id}
-              onPress={() => setTerrain(opt.id)}
+              onPress={() => pickAndAdvance(() => setTerrain(opt.id))}
             />
           ))}
 
@@ -586,7 +613,7 @@ export default function OnboardingScreen() {
               title={opt.title}
               subtitle={opt.subtitle}
               selected={trainingTerrain === opt.id}
-              onPress={() => setTrainingTerrain(opt.id)}
+              onPress={() => pickAndAdvance(() => setTrainingTerrain(opt.id))}
             />
           ))}
 
@@ -596,7 +623,12 @@ export default function OnboardingScreen() {
               key={opt.id}
               title={opt.label}
               selected={experience === opt.id}
-              onPress={() => setExperience(opt.id)}
+              onPress={() =>
+                pickAndAdvance(() => {
+                  setExperience(opt.id);
+                  setLevel(opt.level);
+                })
+              }
             />
           ))}
 
@@ -605,12 +637,12 @@ export default function OnboardingScreen() {
             <IntakeChoiceCard
               title={INJURY_COPY.no}
               selected={injured === false}
-              onPress={() => setInjured(false)}
+              onPress={() => pickAndAdvance(() => setInjured(false))}
             />
             <IntakeChoiceCard
               title={INJURY_COPY.yes}
               selected={injured === true}
-              onPress={() => setInjured(true)}
+              onPress={() => pickAndAdvance(() => setInjured(true))}
             />
           </>
         )}
@@ -621,10 +653,12 @@ export default function OnboardingScreen() {
               key={opt.id}
               title={opt.label}
               selected={volumeBand === opt.id}
-              onPress={() => {
-                setVolumeBand(opt.id);
-                setWeeklyKmInput(String(opt.weeklyKm));
-              }}
+              onPress={() =>
+                pickAndAdvance(() => {
+                  setVolumeBand(opt.id);
+                  setWeeklyKmInput(String(opt.weeklyKm));
+                })
+              }
             />
           ))}
 
@@ -636,7 +670,12 @@ export default function OnboardingScreen() {
               subtitle={opt.kmLabel}
               badge={opt.recommended ? 'RECOMMANDÉ' : undefined}
               selected={sessionsTarget === opt.sessions}
-              onPress={() => setSessionsTarget(opt.sessions)}
+              onPress={() =>
+                pickAndAdvance(() => {
+                  setSessionsTarget(opt.sessions);
+                  setTrainingDays(defaultTrainingDaysForSessions(opt.sessions));
+                })
+              }
             />
           ))}
 
@@ -863,23 +902,40 @@ export default function OnboardingScreen() {
         )}
 
         {currentStepId === 'devices' && null}
-        {currentStepId !== 'sport' &&
-        currentStepId !== 'relay' &&
-        currentStepId !== 'plan_preview' ? (
-          <View style={{ marginTop: spacing.lg }}>
-            <PrimaryButton
-              label={continueLabel}
-              disabled={!canContinue}
-              onPress={goNext}
-            />
-          </View>
-        ) : null}
       </AppScrollView>
+      {showContinueFooter ? (
+        <View style={styles.continueFooter}>
+          {!canContinue ? (
+            <Muted style={{ marginBottom: spacing.sm, textAlign: 'center' }}>
+              Complète cette étape pour activer Continuer.
+            </Muted>
+          ) : null}
+          <PrimaryButton
+            label={continueLabel}
+            disabled={!canContinue}
+            onPress={goNext}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screenFlex: {
+    flex: 1,
+    paddingBottom: 0,
+  },
+  scrollFlex: {
+    flex: 1,
+  },
+  continueFooter: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.bgSecondary,
+  },
   row: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md },
   input: {
     marginTop: spacing.md,
@@ -900,6 +956,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.bgElevated,
+    // @ts-expect-error web cursor
+    cursor: 'pointer',
   },
   sportDot: {
     width: 12,

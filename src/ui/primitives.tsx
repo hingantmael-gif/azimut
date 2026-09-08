@@ -1,4 +1,5 @@
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -53,8 +54,10 @@ export function PrimaryButton({
     <Pressable
       disabled={disabled}
       onPress={onPress}
-      style={[styles.btn, disabled && styles.btnDisabled]}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled) }}
       accessibilityLabel={plain}
+      style={[styles.btn, disabled && styles.btnDisabled]}
     >
       <Text style={styles.btnText}>{plain}</Text>
     </Pressable>
@@ -142,8 +145,12 @@ function makeStyles(colors: ColorPalette) {
       paddingHorizontal: spacing.lg,
       borderRadius: radii.md,
       alignItems: 'center',
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
     },
-    btnDisabled: { opacity: 0.45 },
+    btnDisabled: {
+      opacity: 0.45,
+      ...(Platform.OS === 'web' ? ({ cursor: 'not-allowed' } as object) : null),
+    },
     btnText: {
       color: colors.white,
       fontWeight: '700',

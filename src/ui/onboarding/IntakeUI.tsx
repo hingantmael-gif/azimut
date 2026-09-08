@@ -118,6 +118,8 @@ export function IntakeChoiceCard({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
       style={[
         styles.choiceCard,
         {
@@ -125,6 +127,7 @@ export function IntakeChoiceCard({
           borderColor: selected ? BRAND.accent : colors.border,
           borderWidth: selected ? 2 : 1,
         },
+        Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null,
       ]}
     >
       {image ? (
@@ -258,7 +261,12 @@ export function RelayHero({
         <View style={styles.signalBlob} />
         <Text style={styles.relayHeadline}>{RELAY_COPY.headline}</Text>
         <Text style={styles.relayBody}>{RELAY_COPY.body}</Text>
-        <Pressable style={[styles.relayCta, { marginTop: spacing.lg }]} onPress={onStart}>
+        <Pressable
+          style={[styles.relayCta, { marginTop: spacing.lg }]}
+          onPress={onStart}
+          accessibilityRole="button"
+          accessibilityLabel={RELAY_COPY.cta}
+        >
           <Text style={styles.relayCtaText}>{RELAY_COPY.cta}</Text>
         </Pressable>
       </View>
@@ -323,6 +331,8 @@ export function PlanPreviewCard({ onContinue }: { onContinue: () => void }) {
       <Pressable
         style={[styles.planCta, { backgroundColor: colors.text }]}
         onPress={onContinue}
+        accessibilityRole="button"
+        accessibilityLabel={PLAN_PREVIEW_COPY.cta}
       >
         <Text style={[styles.planCtaText, { color: colors.bg }]}>{PLAN_PREVIEW_COPY.cta}</Text>
       </Pressable>
@@ -526,6 +536,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
   relayCtaText: { color: BRAND.ink, fontWeight: '800', fontSize: 16 },
   planWrap: { marginTop: spacing.sm },
@@ -584,6 +595,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingVertical: 16,
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
   planCtaText: { fontWeight: '800', fontSize: 16 },
   refCard: {

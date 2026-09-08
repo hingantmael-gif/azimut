@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Platform, StyleSheet, Text, View } from 'react-native';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 
 /** Uniquement Google — Apple / Facebook retirés (pas de faux comptes). */
@@ -14,6 +14,9 @@ export function SocialAuthButtons({
       <Pressable
         onPress={onGoogle}
         disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? 'Connexion Google…' : 'Continuer avec Google'}
+        accessibilityState={{ disabled: Boolean(loading) }}
         style={[styles.btn, styles.google, loading && styles.disabled]}
       >
         <Text style={[styles.label, styles.labelDark]}>
@@ -32,6 +35,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: 'center',
     borderWidth: 1,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
   google: {
     backgroundColor: colors.white,

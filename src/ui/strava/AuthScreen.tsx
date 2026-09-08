@@ -199,13 +199,17 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: radii.pill,
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
   orangeBtnOutline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: colors.accent,
   },
-  orangeBtnDisabled: { opacity: 0.45 },
+  orangeBtnDisabled: {
+    opacity: 0.45,
+    ...(Platform.OS === 'web' ? ({ cursor: 'not-allowed' } as object) : null),
+  },
   orangeBtnText: {
     ...typography.button,
     color: colors.white,
