@@ -17,6 +17,7 @@ const sh = (cmd, cwd = root, env = {}) =>
   execSync(cmd, { cwd, stdio: 'inherit', shell: true, env: { ...process.env, ...env } });
 
 sh('node scripts/generate-install-qr.mjs');
+sh('npx --yes tsx scripts/generate-terms-html.mjs');
 
 /** Expo charge `.env` et peut écraser l’env shell → on force l’URL prod le temps du build. */
 const envPath = path.join(root, '.env');
