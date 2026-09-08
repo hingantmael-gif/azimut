@@ -38,10 +38,14 @@ export function useGoogleAuth(
   onSuccessRef.current = onSuccess;
   onErrorRef.current = onError;
 
-  const redirectUri = makeRedirectUri({
-    scheme: 'azimut',
-    path: 'oauth',
-  });
+  // Web PWA : origine du site (GitHub Pages). Natif : schéma azimut://oauth
+  const redirectUri =
+    Platform.OS === 'web'
+      ? makeRedirectUri()
+      : makeRedirectUri({
+          scheme: 'azimut',
+          path: 'oauth',
+        });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: webClientId || SAFE_PLACEHOLDER,
