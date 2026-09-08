@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import {
   Image,
-  ImageBackground,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../../constants/brand';
 import { COVER_CROP_CENTER, coverCropImageStyle } from '../../constants/sportVisuals';
+import { formatDuration, formatPace } from '../../engines/core';
+import { resolvePaceZones } from '../../engines/paceZones';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
@@ -274,67 +275,103 @@ export function RelayHero({
   );
 }
 
-/** Aperçu plan — graph barres Azimut. */
-export function PlanPreviewCard({ onContinue }: { onContinue: () => void }) {
+/** Aperçu des allures — design Azimut (pas de clone Campus). */
+export function PlanPreviewCard({
+  onContinue,
+  recentTimeSec,
+  recentDistanceKm = 5,
+  weeklyKmAvg,
+  level = 'intermediaire',
+}: {
+  onContinue: () => void;
+  recentTimeSec?: number;
+  recentDistanceKm?: number;
+  weeklyKmAvg?: number;
+  level?: 'debutant' | 'intermediaire' | 'confirme';
+}) {
   const { colors } = useThemeColors();
+  const zones = resolvePaceZones({
+    level,
+    weeklyKmAvg,
+    recentDistanceKm: recentTimeSec ? recentDistanceKm : undefined,
+    recentTimeSec,
+  });
+
+  const fmtRange = (b: { minSecPerKm: number; maxSecPerKm: number }) =>
+    `${formatPace(b.minSecPerKm)} – ${formatPace(b.maxSecPerKm)}/km`;
+
+  const raceLabel =
+    recentTimeSec && recentTimeSec > 0
+      ? `Basé sur ton ${recentDistanceKm} km en ${formatDuration(recentTimeSec)}`
+      : `Estimé selon ton niveau · VMA ~${zones.vmaKmh.toFixed(1)} km/h`;
+
+  const rows = [
+    {
+      key: 'easy',
+      label: PLAN_PREVIEW_COPY.easy,
+      value: fmtRange(zones.easy),
+      hint: 'Sorties cool — tu peux parler facilement',
+      accent: BRAND.accent,
+    },
+    {
+      key: 'fast',
+      label: PLAN_PREVIEW_COPY.fast,
+      value: fmtRange(zones.threshold),
+      hint: 'Séances seuil / qualité',
+      accent: BRAND.ink,
+    },
+    {
+      key: 'rec',
+      label: PLAN_PREVIEW_COPY.recover,
+      value: fmtRange(zones.recovery),
+      hint: 'Jog très facile entre les répétitions',
+      accent: BRAND.accentDark,
+    },
+  ];
+
   return (
     <View style={styles.planWrap}>
-      <ImageBackground
-        source={ONBOARDING_IMAGES.planTeaser}
-        style={styles.planHero}
-        imageStyle={[{ borderRadius: radii.lg }, coverCropImageStyle(COVER_CROP_CENTER)]}
-        resizeMode="cover"
+      <View
+        style={[
+          styles.azimutPreview,
+          { backgroundColor: colors.bgElevated, borderColor: colors.border },
+        ]}
       >
-        <View style={styles.planScrim} />
-        <Text style={styles.planTitle}>{PLAN_PREVIEW_COPY.title}</Text>
-        <Text style={styles.planBody}>{PLAN_PREVIEW_COPY.body}</Text>
+        <View style={styles.azimutPreviewTop}>
+          <View style={[styles.azimutMark, { backgroundColor: BRAND.signal }]} />
+          <Text style={[styles.azimutPreviewTitle, { color: colors.text }]}>
+            {PLAN_PREVIEW_COPY.title}
+          </Text>
+        </View>
+        <Text style={[styles.azimutPreviewBody, { color: colors.textMuted }]}>
+          {PLAN_PREVIEW_COPY.body}
+        </Text>
+        <Text style={[styles.azimutRaceHint, { color: BRAND.accentDark }]}>{raceLabel}</Text>
 
-        <View style={styles.bars}>
-          <View style={[styles.bar, { height: 28, width: 72, backgroundColor: BRAND.signal }]} />
-          {[0, 1, 2, 3, 4].map((i) => (
-            <View key={i} style={styles.barPair}>
-              <View style={[styles.bar, { height: 56, width: 14, backgroundColor: BRAND.accent }]} />
-              <View
-                style={[
-                  styles.bar,
-                  { height: 22, width: 14, backgroundColor: 'rgba(61,255,154,0.55)' },
-                ]}
-              />
+        {rows.map((row) => (
+          <View
+            key={row.key}
+            style={[styles.azimutPaceRow, { borderColor: colors.border }]}
+          >
+            <View style={[styles.azimutPaceRail, { backgroundColor: row.accent }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.azimutPaceLabel, { color: colors.textMuted }]}>
+                {row.label}
+              </Text>
+              <Text style={[styles.azimutPaceValue, { color: colors.text }]}>{row.value}</Text>
+              <Text style={[styles.azimutPaceHint, { color: colors.textMuted }]}>{row.hint}</Text>
             </View>
-          ))}
-        </View>
-
-        <View style={[styles.paceCard, { backgroundColor: 'rgba(7,17,31,0.82)' }]}>
-          <View style={[styles.paceAccent, { backgroundColor: BRAND.signal }]} />
-          <View>
-            <Text style={styles.paceLabel}>{PLAN_PREVIEW_COPY.easy}</Text>
-            <Text style={styles.paceValue}>{PLAN_PREVIEW_COPY.easyDetail}</Text>
           </View>
-        </View>
-        <View style={[styles.paceCard, { backgroundColor: 'rgba(7,17,31,0.82)', marginTop: 8 }]}>
-          <View style={styles.paceAccentStack}>
-            <View style={[styles.paceAccent, { backgroundColor: BRAND.accent, height: 18 }]} />
-            <View style={[styles.paceAccent, { backgroundColor: BRAND.signalMint, height: 18 }]} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.paceLabel}>{PLAN_PREVIEW_COPY.fast}</Text>
-            <Text style={styles.paceValue}>{PLAN_PREVIEW_COPY.fastDetail}</Text>
-            <Text style={[styles.paceLabel, { marginTop: 6 }]}>{PLAN_PREVIEW_COPY.slow}</Text>
-            <Text style={styles.paceValue}>{PLAN_PREVIEW_COPY.slowDetail}</Text>
-          </View>
-          <View style={styles.repeatBadge}>
-            <Text style={styles.repeatText}>↻ 5</Text>
-          </View>
-        </View>
-      </ImageBackground>
+        ))}
+      </View>
 
       <Pressable
-        style={[styles.planCta, { backgroundColor: colors.text }]}
+        style={[styles.planCta, { backgroundColor: BRAND.accent }]}
         onPress={onContinue}
         accessibilityRole="button"
         accessibilityLabel={PLAN_PREVIEW_COPY.cta}
       >
-        <Text style={[styles.planCtaText, { color: colors.bg }]}>{PLAN_PREVIEW_COPY.cta}</Text>
+        <Text style={[styles.planCtaText, { color: '#fff' }]}>{PLAN_PREVIEW_COPY.cta}</Text>
       </Pressable>
     </View>
   );
@@ -540,56 +577,68 @@ const styles = StyleSheet.create({
   },
   relayCtaText: { color: BRAND.ink, fontWeight: '800', fontSize: 16 },
   planWrap: { marginTop: spacing.sm },
-  planHero: {
+  azimutPreview: {
     borderRadius: radii.lg,
-    overflow: 'hidden',
+    borderWidth: 1,
     padding: spacing.lg,
-    minHeight: 360,
-    justifyContent: 'flex-end',
   },
-  planScrim: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(7,17,31,0.45)',
-  },
-  planTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  planBody: {
-    color: 'rgba(255,255,255,0.88)',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  bars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 6,
-    marginBottom: spacing.md,
-  },
-  bar: { borderRadius: 4 },
-  barPair: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-  paceCard: {
+  azimutPreviewTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: radii.md,
-    padding: spacing.md,
     gap: 10,
+    marginBottom: spacing.sm,
   },
-  paceAccent: { width: 3, borderRadius: 2, alignSelf: 'stretch' },
-  paceAccentStack: { gap: 4 },
-  paceLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 12 },
-  paceValue: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  repeatBadge: {
+  azimutMark: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+    transform: [{ rotate: '12deg' }],
+  },
+  azimutPreviewTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  azimutPreviewBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  azimutRaceHint: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: spacing.md,
+  },
+  azimutPaceRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
   },
-  repeatText: { color: '#fff', fontWeight: '700' },
+  azimutPaceRail: {
+    width: 4,
+    borderRadius: 2,
+  },
+  azimutPaceLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  azimutPaceValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  azimutPaceHint: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
+  },
   planCta: {
     marginTop: spacing.md,
     borderRadius: radii.lg,

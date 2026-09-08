@@ -211,15 +211,12 @@ export const REFERENCE_COPY = {
 } as const;
 
 export const PLAN_PREVIEW_COPY = {
-  title: 'Ton plan',
-  body: '',
-  easy: 'Allure EF',
-  easyDetail: '15 min à 6:25 - 6:55 /km',
-  fast: 'Allure Rapide',
-  fastDetail: '4 min à 5:20 /km',
-  slow: 'Allure Lente',
-  slowDetail: '1:30 min de récupération',
-  cta: 'Voir mon plan',
+  title: 'Tes allures Azimut',
+  body: 'Calculées à partir de ton chrono — pas des valeurs génériques.',
+  easy: 'Endurance (EF)',
+  fast: 'Qualité',
+  recover: 'Récup entre séries',
+  cta: 'Continuer',
 } as const;
 
 export function buildCampusRunSteps(opts: {
@@ -335,7 +332,7 @@ export function campusStepTitle(
     case 'reference_time':
       return REFERENCE_COPY.title;
     case 'plan_preview':
-      return PLAN_PREVIEW_COPY.title;
+      return 'Tes allures';
     case 'program_pick':
       return 'Quel programme souhaitez-vous suivre ?';
     case 'program_weeks':

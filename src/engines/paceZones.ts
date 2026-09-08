@@ -41,10 +41,11 @@ function bandCenter(b: PaceBand): number {
 const WARMUP_EASIER_THAN_MAIN_SEC = 10;
 
 function band(center: number, spreadFast = 15, spreadSlow = 20): PaceBand {
-  const mid = clamp(Math.round(center), 240, 720);
+  // Plancher bas pour coureurs rapides (ex. 5 km en 17 min ≈ 3'24"/km)
+  const mid = clamp(Math.round(center), 150, 720);
   return {
-    minSecPerKm: clamp(mid - spreadFast, 210, 700),
-    maxSecPerKm: clamp(mid + spreadSlow, 230, 720),
+    minSecPerKm: clamp(mid - spreadFast, 140, 700),
+    maxSecPerKm: clamp(mid + spreadSlow, 155, 720),
   };
 }
 
@@ -81,16 +82,16 @@ function auxiliaryBandsFromVma(vmaKmh: number): Pick<PaceZones, 'warmup' | 'cool
 function auxiliaryBandsFromEasyLong(easy: PaceBand, long: PaceBand): Pick<PaceZones, 'warmup' | 'cooldown' | 'recovery'> {
   return {
     warmup: {
-      minSecPerKm: clamp(Math.round(easy.maxSecPerKm), 220, 700),
-      maxSecPerKm: clamp(Math.round(easy.maxSecPerKm + 18), 240, 720),
+      minSecPerKm: clamp(Math.round(easy.maxSecPerKm), 160, 700),
+      maxSecPerKm: clamp(Math.round(easy.maxSecPerKm + 18), 175, 720),
     },
     cooldown: {
-      minSecPerKm: clamp(Math.round(easy.maxSecPerKm + 5), 230, 720),
-      maxSecPerKm: clamp(Math.round(long.maxSecPerKm + 10), 240, 720),
+      minSecPerKm: clamp(Math.round(easy.maxSecPerKm + 5), 165, 720),
+      maxSecPerKm: clamp(Math.round(long.maxSecPerKm + 10), 180, 720),
     },
     recovery: {
-      minSecPerKm: clamp(Math.round(easy.maxSecPerKm), 220, 700),
-      maxSecPerKm: clamp(Math.round(easy.maxSecPerKm + 22), 240, 720),
+      minSecPerKm: clamp(Math.round(easy.maxSecPerKm), 160, 700),
+      maxSecPerKm: clamp(Math.round(easy.maxSecPerKm + 22), 175, 720),
     },
   };
 }
@@ -140,30 +141,33 @@ function zonesFromRace(
   let intervalFactor = 0.82;
 
   if (distanceKm <= 5.5) {
-    easyFastFactor = 1.26;
-    easySlowFactor = 1.38;
-    thresholdFactor = 0.93;
+    // EF : ~+18–28 % vs allure 5 km (bande resserrée, pas un fossé de 30 s+)
+    easyFastFactor = 1.18;
+    easySlowFactor = 1.28;
+    thresholdFactor = 0.95;
     intervalFactor = 0.88;
   } else if (distanceKm <= 11) {
-    easyFastFactor = 1.22;
-    easySlowFactor = 1.34;
-    thresholdFactor = 0.9;
-    intervalFactor = 0.84;
+    easyFastFactor = 1.2;
+    easySlowFactor = 1.3;
+    thresholdFactor = 0.92;
+    intervalFactor = 0.85;
   } else if (distanceKm <= 22) {
     easyFastFactor = 1.14;
     easySlowFactor = 1.24;
-    thresholdFactor = 0.88;
-    intervalFactor = 0.8;
+    thresholdFactor = 0.9;
+    intervalFactor = 0.82;
   } else {
     easyFastFactor = 1.1;
     easySlowFactor = 1.18;
-    thresholdFactor = 0.86;
-    intervalFactor = 0.78;
+    thresholdFactor = 0.88;
+    intervalFactor = 0.8;
   }
 
+  const easyCenter = racePace * ((easyFastFactor + easySlowFactor) / 2);
+  const easySpread = Math.round(racePace * ((easySlowFactor - easyFastFactor) / 2));
   const easy: PaceBand = {
-    minSecPerKm: Math.round(racePace * easyFastFactor),
-    maxSecPerKm: Math.round(racePace * easySlowFactor),
+    minSecPerKm: Math.round(easyCenter - Math.max(8, easySpread)),
+    maxSecPerKm: Math.round(easyCenter + Math.max(8, easySpread)),
   };
   const longCenter = racePace * (easySlowFactor + 0.06);
   const long = band(longCenter, 12, 20);

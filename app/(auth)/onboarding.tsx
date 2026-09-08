@@ -58,18 +58,20 @@ import {
 import {
   DEFAULT_GOAL,
   GOAL_OPTIONS,
+  getProgramsForSportGoal,
+  sportGoalTitle,
   stepCanContinue,
   stepTitle,
   type OnboardingStepId,
 } from '../../src/ui/onboarding/sportOnboardingConfig';
-import {
-  StrengthEquipmentPicker,
-  StrengthGoalPicker,
-} from '../../src/ui/onboarding/StrengthSetupFields';
+import { StrengthEquipmentPicker } from '../../src/ui/onboarding/StrengthSetupFields';
 import { Body, Chip, Muted, PrimaryButton, Screen } from '../../src/ui/primitives';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
-import type { StrengthEquipment, StrengthGoalFocus } from '../../src/engines/strengthProgramming';
+import type {
+  StrengthEquipment,
+  StrengthGoalFocus,
+} from '../../src/engines/strengthProgramming';
 import { BRAND } from '../../src/constants/brand';
 import { formatDateSlashInput } from '../../src/utils/dateInput';
 import { clearSession } from '../../src/storage/sessionPersistence';
@@ -124,6 +126,7 @@ export default function OnboardingScreen() {
   const [includePpg, setIncludePpg] = useState<boolean | null>(null);
   const [strengthEquipment, setStrengthEquipment] = useState<StrengthEquipment[]>([]);
   const [strengthGoal, setStrengthGoal] = useState<StrengthGoalFocus | null>(null);
+  const [sportGoalId, setSportGoalId] = useState<string | null>(null);
 
   const [gender, setGender] = useState<'femme' | 'homme' | null>(
     state.profile.bodyGender === 'femme' || state.profile.bodyGender === 'homme'
@@ -162,8 +165,11 @@ export default function OnboardingScreen() {
     if ((sport ?? 'run') === 'run' && runIntent) {
       return getProgramsForRunIntent(runIntent);
     }
+    if (sport && sportGoalId) {
+      return getProgramsForSportGoal(sport, sportGoalId);
+    }
     return getProgramsForSport(sport ?? 'run');
-  }, [sport, runIntent]);
+  }, [sport, runIntent, sportGoalId]);
 
   const selectedProgram: TrainingProgramTemplate | undefined = selectedProgramId
     ? findProgramById(selectedProgramId)
@@ -229,6 +235,10 @@ export default function OnboardingScreen() {
   const selectSport = (cat: ProgramSportCategory) => {
     setSport(cat);
     setGoal(DEFAULT_GOAL[cat]);
+    setSportGoalId(null);
+    setStrengthGoal(null);
+    setSelectedProgramId(null);
+    setProgramWeeks(null);
     if (cat === 'strength') {
       setIncludePpg(false);
     } else if (cat === 'triathlon' || cat === 'ironman') {
@@ -237,6 +247,24 @@ export default function OnboardingScreen() {
     if (cat !== 'run') {
       setRunIntent(null);
       setTerrain(null);
+    }
+    setStepIndex((i) => i + 1);
+  };
+
+  const selectSportGoal = (goalId: string) => {
+    if (!sport) return;
+    const opt = GOAL_OPTIONS[sport].find((o) => o.id === goalId);
+    if (!opt) return;
+    setSportGoalId(goalId);
+    setGoal(opt.goal);
+    setSelectedProgramId(null);
+    setProgramWeeks(null);
+    if (sport === 'strength') {
+      const focus =
+        goalId === 'hypertrophy' || goalId === 'power' || goalId === 'fitness'
+          ? (goalId as StrengthGoalFocus)
+          : 'fitness';
+      setStrengthGoal(focus);
     }
     setStepIndex((i) => i + 1);
   };
@@ -296,7 +324,11 @@ export default function OnboardingScreen() {
     const prevId = steps[stepIndex - 1];
     if (prevId === 'sport') setSport(null);
     if (prevId === 'run_goal') setRunIntent(null);
-    setStepIndex(stepIndex - 1);
+    if (prevId === 'goal' || prevId === 'strength_goal') {
+      setSportGoalId(null);
+      if (prevId === 'strength_goal') setStrengthGoal(null);
+    }
+    setStepIndex((i) => i - 1);
   };
 
   const finish = () => {
@@ -438,13 +470,17 @@ export default function OnboardingScreen() {
           strengthEquipment,
           strengthGoal,
           includePpg,
+          sportGoalId,
         });
 
+  const displayName = firstName || state.profile.firstName || '';
   const headerTitle = isCampusStep(currentStepId)
-    ? campusStepTitle(currentStepId, firstName || state.profile.firstName)
+    ? campusStepTitle(currentStepId, displayName)
     : currentStepId === 'sport'
       ? 'Quel sport pratiques-tu ?'
-      : stepTitle(currentStepId as OnboardingStepId, sport);
+      : currentStepId === 'goal' || currentStepId === 'strength_goal'
+        ? sportGoalTitle(displayName)
+        : stepTitle(currentStepId as OnboardingStepId, sport);
 
   const headerSubtitle =
     currentStepId === 'identity'
@@ -493,6 +529,8 @@ export default function OnboardingScreen() {
   /** Étapes où un tap sur une carte avance déjà — pas de CTA hors écran. */
   const choiceAutoAdvances =
     currentStepId === 'run_goal' ||
+    currentStepId === 'goal' ||
+    currentStepId === 'strength_goal' ||
     currentStepId === 'terrain' ||
     currentStepId === 'training_type' ||
     currentStepId === 'experience' ||
@@ -684,7 +722,13 @@ export default function OnboardingScreen() {
         )}
 
         {currentStepId === 'plan_preview' && (
-          <PlanPreviewCard onContinue={goNext} />
+          <PlanPreviewCard
+            onContinue={goNext}
+            recentTimeSec={parseDurationToSec(refDuration)}
+            recentDistanceKm={5}
+            weeklyKmAvg={weeklyKm > 0 ? weeklyKm : undefined}
+            level={derivedLevel}
+          />
         )}
 
         {currentStepId === 'program_pick' && (
@@ -744,18 +788,18 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {currentStepId === 'goal' && sport && (
-          <View style={styles.row}>
-            {GOAL_OPTIONS[sport].map(({ value, label }) => (
-              <Chip
-                key={value}
-                label={label}
-                selected={goal === value}
-                onPress={() => setGoal(value)}
-              />
-            ))}
-          </View>
-        )}
+        {currentStepId === 'goal' &&
+          sport &&
+          GOAL_OPTIONS[sport].map((opt) => (
+            <IntakeChoiceCard
+              key={opt.id}
+              title={opt.title}
+              subtitle={opt.subtitle}
+              image={opt.image}
+              selected={sportGoalId === opt.id}
+              onPress={() => selectSportGoal(opt.id)}
+            />
+          ))}
 
         {currentStepId === 'equipment' && (
           <StrengthEquipmentPicker
@@ -764,9 +808,17 @@ export default function OnboardingScreen() {
           />
         )}
 
-        {currentStepId === 'strength_goal' && (
-          <StrengthGoalPicker selected={strengthGoal} onSelect={setStrengthGoal} />
-        )}
+        {currentStepId === 'strength_goal' &&
+          GOAL_OPTIONS.strength.map((opt) => (
+            <IntakeChoiceCard
+              key={opt.id}
+              title={opt.title}
+              subtitle={opt.subtitle}
+              image={opt.image}
+              selected={sportGoalId === opt.id}
+              onPress={() => selectSportGoal(opt.id)}
+            />
+          ))}
 
         {currentStepId === 'days' && (
           <>
