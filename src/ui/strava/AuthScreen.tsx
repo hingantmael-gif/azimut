@@ -67,7 +67,7 @@ export function OrangeButton({
   disabled?: boolean;
   variant?: 'filled' | 'outline';
 }) {
-  const plain = label.replace(/[\u2066\u2069]/g, '');
+  const plain = String(label ?? '').replace(/[\u2066\u2069]/g, '');
   return (
     <Pressable
       disabled={disabled}
@@ -101,7 +101,7 @@ export function TextLink({
   onPress: () => void;
   accent?: boolean;
 }) {
-  const plain = label.replace(/[\u2066\u2069]/g, '');
+  const plain = String(label ?? '').replace(/[\u2066\u2069]/g, '');
   return (
     <Pressable
       onPress={onPress}

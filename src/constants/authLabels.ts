@@ -24,6 +24,7 @@ export const AUTH_PLAIN = {
   signIn: 'Se connecter',
   signInBusy: 'Connexion…',
   alreadyHaveAccount: 'Déjà un compte ? Se connecter',
+  needAccount: 'Pas encore de compte ? Inscription',
 } as const;
 
 /** Alias clairs — mêmes chaînes que AUTH_PLAIN (plus de forceLtrWords). */
@@ -31,6 +32,7 @@ export const AUTH_LABELS = {
   signIn: AUTH_PLAIN.signIn,
   signInBusy: AUTH_PLAIN.signInBusy,
   alreadyHaveAccount: AUTH_PLAIN.alreadyHaveAccount,
+  needAccount: AUTH_PLAIN.needAccount,
 } as const;
 
 export const UI_PLAIN = {
