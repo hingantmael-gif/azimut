@@ -23,6 +23,10 @@ export default function Root({ children }: PropsWithChildren) {
           name="description"
           content="Azimut — coaching multi-sport. Installe l’application sur téléphone, tablette ou PC."
         />
+        <meta
+          name="google-site-verification"
+          content="6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw"
+        />
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
