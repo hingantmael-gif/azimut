@@ -43,6 +43,8 @@ export interface ProgramBuildInput {
   strengthBodyFocus?: string;
   /** Musculation : pas de date limite — calendrier glissant */
   ongoing?: boolean;
+  /** Intention course (démarrage doux si start / reprise) */
+  runIntent?: OnboardingAnswers['runIntent'];
 }
 
 function weekStartIso(): string {
@@ -177,6 +179,7 @@ function resolveTemplate(input: ProgramBuildInput): {
     strengthBodyFocus: input.strengthBodyFocus,
     connectGarmin: true,
     connectStrava: true,
+    runIntent: input.runIntent,
   };
 
   return {

@@ -51,6 +51,7 @@ import { addShoeKm, defaultAchievementsFromCatalog, unlockAchievements } from '.
 import { claimAllKmOdysseyLevels } from '../engines/kmOdyssey';
 import { buildProgramPlan, type ProgramBuildInput } from '../engines/programBuilder';
 import { applySleepStartupRamp } from '../engines/sleepProgramRamp';
+import { applyIntentStartupRamp } from '../engines/intentStartupRamp';
 import {
   createProgramInstanceId,
   mergeProgramPlans,
@@ -554,7 +555,14 @@ function reducer(state: AppState, action: Action): AppState {
       const instanceId = createProgramInstanceId(catalogId);
       const programMeta = { ...meta, catalogId, id: instanceId };
       const tagged = tagPlanForProgram(newPlan, instanceId);
-      const sleepRamp = applySleepStartupRamp(tagged, state.health.sleepHistory, {
+      const intentRamp = applyIntentStartupRamp(
+        tagged,
+        action.input.runIntent ??
+          state.profile.onboarding?.runIntent ??
+          answers.runIntent,
+        { programId: instanceId },
+      );
+      const sleepRamp = applySleepStartupRamp(intentRamp.plan, state.health.sleepHistory, {
         brand: state.profile.watch?.brandId,
         startDateIso: programMeta.startedAt,
         programId: instanceId,
@@ -590,6 +598,7 @@ function reducer(state: AppState, action: Action): AppState {
             : null;
       const coachAdaptations = [
         scheduleNote,
+        intentRamp.message,
         sleepRamp.message,
         ...(state.coachAdaptations ?? []),
       ]

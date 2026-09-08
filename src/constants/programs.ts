@@ -484,6 +484,58 @@ export function getProgramsForSport(sport: ProgramSportCategory): TrainingProgra
   return PROGRAM_CATALOG.filter((p) => p.sportCategory === sport);
 }
 
+type RunIntentFilter =
+  | 'race_road'
+  | 'race_trail'
+  | 'start'
+  | 'progress'
+  | 'return_injury';
+
+/**
+ * Catalogue course ordonné / filtré selon l’objectif onboarding
+ * (le 1er item = suggestion principale).
+ */
+export function getProgramsForRunIntent(
+  intent: RunIntentFilter | null | undefined,
+): TrainingProgramTemplate[] {
+  const all = getProgramsForSport('run');
+  if (!intent) return all;
+
+  const byId = (ids: string[]) =>
+    ids
+      .map((id) => all.find((p) => p.id === id))
+      .filter((p): p is TrainingProgramTemplate => Boolean(p));
+
+  switch (intent) {
+    case 'race_road':
+      return byId([
+        'prog-5k',
+        'prog-10k',
+        'prog-semi',
+        'prog-marathon',
+        'prog-vma',
+      ]);
+    case 'race_trail':
+      return byId(['prog-trail-50', 'prog-semi', 'prog-10k', 'prog-vma', 'prog-5k']);
+    case 'start':
+      // Premiers pas : uniquement formats courts / accessibles
+      return byId(['prog-5k', 'prog-10k']);
+    case 'return_injury':
+      return byId(['prog-5k', 'prog-10k', 'prog-vma']);
+    case 'progress':
+      return byId([
+        'prog-vma',
+        'prog-10k',
+        'prog-semi',
+        'prog-5k',
+        'prog-marathon',
+        'prog-trail-50',
+      ]);
+    default:
+      return all;
+  }
+}
+
 export function searchPrograms(
   query: string,
   sport?: ProgramSportCategory,

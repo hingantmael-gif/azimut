@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import {
   POPULAR_SPORT_CATEGORIES,
   findProgramById,
+  getProgramsForRunIntent,
   getProgramsForSport,
   type ProgramSportCategory,
   type TrainingProgramTemplate,
@@ -157,10 +158,12 @@ export default function OnboardingScreen() {
   const weeklySwimM = Number(weeklySwimInput.replace(',', '.')) || 0;
   const derivedLevel = weeklyKm > 0 ? levelFromWeeklyKm(weeklyKm) : level;
 
-  const programCatalog = useMemo(
-    () => getProgramsForSport(sport ?? 'run'),
-    [sport],
-  );
+  const programCatalog = useMemo(() => {
+    if ((sport ?? 'run') === 'run' && runIntent) {
+      return getProgramsForRunIntent(runIntent);
+    }
+    return getProgramsForSport(sport ?? 'run');
+  }, [sport, runIntent]);
 
   const selectedProgram: TrainingProgramTemplate | undefined = selectedProgramId
     ? findProgramById(selectedProgramId)
@@ -202,6 +205,16 @@ export default function OnboardingScreen() {
   const stepCount = steps.length;
 
   useEffect(() => {
+    if (currentStepId !== 'program_pick') return;
+    if (selectedProgramId && programCatalog.some((p) => p.id === selectedProgramId)) {
+      return;
+    }
+    const first = programCatalog[0];
+    if (first) selectProgram(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- préselection unique à l’entrée
+  }, [currentStepId, programCatalog, selectedProgramId]);
+
+  useEffect(() => {
     if (stepIndex >= steps.length) {
       setStepIndex(Math.max(0, steps.length - 1));
     }
@@ -231,6 +244,8 @@ export default function OnboardingScreen() {
   const selectRunIntent = (intent: RunIntent) => {
     const opt = RUN_GOAL_OPTIONS.find((o) => o.id === intent);
     setRunIntent(intent);
+    setSelectedProgramId(null);
+    setProgramWeeks(null);
     if (opt) setGoal(opt.goal);
     if (intent === 'race_road') setTerrain('route');
     if (intent === 'race_trail') setTerrain('trail');
@@ -340,6 +355,10 @@ export default function OnboardingScreen() {
     );
 
     if (selectedProgramId && programWeeks && programWeeks > 0) {
+      const defaultKm =
+        runIntent === 'start' || runIntent === 'return_injury'
+          ? 10
+          : 20;
       const input: ProgramBuildInput = {
         templateId: selectedProgramId,
         customWeeks: programWeeks,
@@ -350,12 +369,13 @@ export default function OnboardingScreen() {
             ? weeklyKm
             : resolvedSport === 'swim'
               ? Math.max(1, weeklySwimM / 1000)
-              : 20,
+              : defaultKm,
         recentTimeSec: refSec,
         recentDistanceKm: refSec ? 5 : undefined,
         includePpg: answers.includePpg,
         strengthEquipment: answers.strengthEquipment as ProgramBuildInput['strengthEquipment'],
         strengthGoal: answers.strengthGoal,
+        runIntent: runIntent ?? undefined,
         isPremium: true,
       };
       dispatch({ type: 'CREATE_PROGRAM', input });
@@ -631,8 +651,13 @@ export default function OnboardingScreen() {
         {currentStepId === 'program_pick' && (
           <>
             <Muted style={{ marginTop: 4, marginBottom: spacing.sm, lineHeight: 20 }}>
-              Choisis le type de programme adapté à ton objectif. L’application générera ton
-              plan personnalisé à partir de tes réponses.
+              {runIntent === 'start'
+                ? 'Programmes courts pour démarrer en douceur — les premières séances seront allégées.'
+                : runIntent === 'return_injury'
+                  ? 'Programmes adaptés à une reprise — les premières séances seront plus tranquilles.'
+                  : runIntent === 'progress'
+                    ? 'Choisis ton programme : les séances démarrent au rythme classique.'
+                    : 'Choisis le type de programme adapté à ton objectif. L’application générera ton plan personnalisé à partir de tes réponses.'}
             </Muted>
             {programCatalog.map((tpl) => (
               <IntakeChoiceCard
