@@ -26,6 +26,7 @@ import { formatProgramDurationLabel } from '../../src/constants/programs';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { summarizeSportsData } from '../../src/engines/athleteProfile';
 import { GOAL_LABELS } from '../../src/constants/features';
+import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
 
 function programProgressPct(opts: {
   nonRestCount: number;
@@ -82,6 +83,8 @@ export default function ProfileScreen() {
   const followingN = p.followingUsernames?.length ?? p.following ?? 0;
 
   return (
+    <View style={{ flex: 1 }}>
+      <ScreenAtmosphere intensity={0.55} />
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 48 }}>
       <Pressable
         onPress={() => router.push('/settings/profile-cover')}
@@ -400,12 +403,13 @@ export default function ProfileScreen() {
         })
       )}
     </AppScrollView>
+    </View>
   );
 }
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     avatarWrap: {
       alignItems: 'center',
       marginTop: -36,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -16,25 +16,30 @@ import { SocialAuthButtons } from '../../src/ui/strava/SocialAuthButtons';
 import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { clearSession } from '../../src/storage/sessionPersistence';
-import { isEmailTaken, isUsernameTaken } from '../../src/storage/userRegistry';
+import {
+  isEmailTaken,
+  isUsernameTaken,
+  profileToRegistryUser,
+  upsertRegistryUser,
+} from '../../src/storage/userRegistry';
+import { saveLocalCredential } from '../../src/storage/localCredentials';
 import {
   limitUsernameInput,
   validateUsernameFormat,
 } from '../../src/utils/username';
-import {
-  apiCompleteProfile,
-  apiGoogleAuth,
-  apiRequestOtp,
-  apiResendOtp,
-  apiVerifyOtp,
-} from '../../src/services/api';
+import { apiGoogleAuth, apiSignup } from '../../src/services/api';
 import { validateRegistrationEmail } from '../../src/utils/demoAuth';
+import {
+  getPasswordRules,
+  passwordsMatch,
+  validatePassword,
+} from '../../src/utils/passwordPolicy';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
 import { clearOnboardingCompleted } from '../../src/storage/onboardingPersistence';
 import { colors, radii, spacing } from '../../src/theme/tokens';
 
-type Step = 'options' | 'email' | 'verify' | 'password' | 'profile';
+type Step = 'options' | 'email' | 'password' | 'profile';
 
 export default function RegisterScreen() {
   const { state, dispatch } = useApp();
@@ -42,18 +47,16 @@ export default function RegisterScreen() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('options');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [terms, setTerms] = useState(false);
-  const [seconds, setSeconds] = useState(600);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [devHint, setDevHint] = useState<string | null>(null);
-  const [mailSent, setMailSent] = useState(false);
+
+  const passwordRules = useMemo(() => getPasswordRules(password), [password]);
 
   const google = useGoogleAuth(
     async (profile) => {
@@ -63,7 +66,6 @@ export default function RegisterScreen() {
         await clearSession();
         const res = await apiGoogleAuth(profile.accessToken);
         if (res.error || !res.token || !res.user) {
-          // Fallback local si API down : compte Google réel quand même
           dispatch({
             type: 'AUTH_WITH_PROVIDER',
             payload: {
@@ -110,18 +112,12 @@ export default function RegisterScreen() {
   );
 
   useEffect(() => {
-    if (step !== 'verify') return;
-    const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [step]);
-
-  useEffect(() => {
     if (state.authToken && state.profile.onboardingCompleted) {
       router.replace('/(tabs)');
     } else if (state.authToken && state.profile.emailVerified && !state.profile.onboardingCompleted) {
       router.replace('/(auth)/onboarding');
     }
-  }, [state.authToken, state.profile.emailVerified, state.profile.onboardingCompleted]);
+  }, [state.authToken, state.profile.emailVerified, state.profile.onboardingCompleted, router]);
 
   const onEmailContinue = async () => {
     setError('');
@@ -137,72 +133,57 @@ export default function RegisterScreen() {
         setError('Cet e-mail est déjà utilisé.');
         return;
       }
-      const res = await apiRequestOtp(email.trim());
-      if (res.error) {
-        const err = res.error.toLowerCase();
-        if (
-          err.includes('already') ||
-          err.includes('existe') ||
-          err.includes('taken') ||
-          err.includes('utilisé')
-        ) {
-          setError('Cet e-mail est déjà utilisé.');
-        } else {
-          setError(res.error);
-        }
-        return;
-      }
-      setMailSent(Boolean(res.mailSent));
-      setDevHint(res.demoCode ? String(res.demoCode) : null);
-      dispatch({
-        type: 'REGISTER',
-        payload: { email: email.trim(), firstName: '', lastName: '', password: '' },
-      });
-      setSeconds(600);
-      setCode('');
-      setStep('verify');
-      if (!res.mailSent && !res.demoCode) {
-        Alert.alert(
-          'E-mail',
-          'Le serveur n’a pas pu envoyer le code. Réessaie dans un moment.',
-        );
-      }
-    } catch {
-      setError('Inscription temporairement indisponible. Réessaie plus tard.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onVerify = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const res = await apiVerifyOtp(email.trim(), code);
-      if (res.error || !res.ok) {
-        setError(res.error || 'Code incorrect');
-        return;
-      }
-      dispatch({ type: 'MARK_EMAIL_VERIFIED' });
       setStep('password');
-    } catch {
-      setError('Vérification impossible (API injoignable).');
     } finally {
       setBusy(false);
     }
   };
 
   const onPassword = () => {
-    if (password.length < 8) {
-      setError('8 caractères minimum.');
+    const check = validatePassword(password);
+    if (!check.ok) {
+      setError(check.error);
       return;
     }
-    if (password !== passwordConfirm) {
+    if (!passwordsMatch(password, passwordConfirm)) {
       setError('Les mots de passe ne correspondent pas.');
       return;
     }
     setError('');
     setStep('profile');
+  };
+
+  const finishLocalAccount = async (handle: string) => {
+    await clearSession();
+    await clearOnboardingCompleted(email.trim(), handle);
+    await saveLocalCredential({
+      email: email.trim(),
+      username: handle,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      password,
+    });
+    const id = `athlete-${Date.now()}`;
+    await upsertRegistryUser(
+      profileToRegistryUser({
+        id,
+        email: email.trim().toLowerCase(),
+        username: handle,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      }),
+    );
+    dispatch({
+      type: 'AUTH_WITH_PROVIDER',
+      payload: {
+        token: `local_${id}`,
+        email: email.trim().toLowerCase(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        username: handle,
+        onboardingCompleted: false,
+      },
+    });
   };
 
   const onJoin = async () => {
@@ -216,22 +197,62 @@ export default function RegisterScreen() {
       setError(format.error);
       return;
     }
+    const pwdCheck = validatePassword(password);
+    if (!pwdCheck.ok) {
+      setError(pwdCheck.error);
+      return;
+    }
     const taken = await isUsernameTaken(handle);
     if (taken) {
       setError('Cet identifiant est déjà utilisé.');
       return;
     }
     setBusy(true);
+    setError('');
     try {
-      await clearOnboardingCompleted(email.trim(), handle);
-      const res = await apiCompleteProfile({
+      const res = await apiSignup({
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: handle,
         password,
       });
-      if (res.error) {
+      if (res.token && res.user) {
+        await clearSession();
+        await clearOnboardingCompleted(email.trim(), handle);
+        await saveLocalCredential({
+          email: res.user.email,
+          username: res.user.username || handle,
+          firstName: res.user.firstName || firstName.trim(),
+          lastName: res.user.lastName || lastName.trim(),
+          password,
+        });
+        await upsertRegistryUser(
+          profileToRegistryUser({
+            id: res.user.id || `athlete-${Date.now()}`,
+            email: res.user.email,
+            username: res.user.username || handle,
+            firstName: res.user.firstName || firstName.trim(),
+            lastName: res.user.lastName || lastName.trim(),
+          }),
+        );
+        dispatch({
+          type: 'AUTH_WITH_PROVIDER',
+          payload: {
+            token: res.token,
+            email: res.user.email,
+            firstName: res.user.firstName || firstName.trim(),
+            lastName: res.user.lastName || lastName.trim(),
+            username: res.user.username || handle,
+            onboardingCompleted: false,
+          },
+        });
+        return;
+      }
+      if (
+        res.error &&
+        !/injoignable|network|fetch|failed|erreur 5/i.test(res.error)
+      ) {
         const err = res.error.toLowerCase();
         if (
           err.includes('already') ||
@@ -239,46 +260,18 @@ export default function RegisterScreen() {
           err.includes('taken') ||
           err.includes('utilisé')
         ) {
-          setError('Cet identifiant est déjà utilisé.');
-          return;
-        }
-      }
-      if (res.token && res.user) {
-        setError('');
-        dispatch({
-          type: 'AUTH_WITH_PROVIDER',
-          payload: {
-            token: res.token,
-            email: res.user.email,
-            firstName: res.user.firstName,
-            lastName: res.user.lastName,
-            username: res.user.username,
-            onboardingCompleted: false,
-          },
-        });
-      } else {
-        // Fallback local uniquement si l’API n’a pas refusé pour unicité
-        if (res.error && !/injoignable|network|fetch|failed/i.test(res.error)) {
           setError(res.error);
           return;
         }
-        setError('');
-        dispatch({
-          type: 'UPDATE_PROFILE',
-          patch: { firstName, lastName, username: handle },
-        });
-        dispatch({ type: 'FINALIZE_ACCOUNT', password });
-        if (res.error) {
-          Alert.alert('Compte local', 'Profil enregistré sur l’appareil (API : ' + res.error + ').');
+        if (err.includes('mot de passe') || err.includes('password')) {
+          setError(res.error);
+          return;
         }
       }
+      // API absente ou erreur réseau → compte local (fonctionne hors ligne / PWA)
+      await finishLocalAccount(handle);
     } catch {
-      setError('');
-      dispatch({
-        type: 'UPDATE_PROFILE',
-        patch: { firstName, lastName, username: handle },
-      });
-      dispatch({ type: 'FINALIZE_ACCOUNT', password });
+      await finishLocalAccount(handle);
     } finally {
       setBusy(false);
     }
@@ -289,7 +282,7 @@ export default function RegisterScreen() {
       <AuthScreen>
         <BrandMark size="md" surfaceColor={themeColors.bg} />
         <AuthTitle>Inscription</AuthTitle>
-        <AuthSubtitle>Compte Google ou e-mail avec code à 6 chiffres.</AuthSubtitle>
+        <AuthSubtitle>Crée ton compte avec Google ou ton e-mail.</AuthSubtitle>
 
         <SocialAuthButtons
           loading={busy}
@@ -319,7 +312,7 @@ export default function RegisterScreen() {
     return (
       <AuthScreen>
         <AuthTitle>Quelle est votre adresse e-mail ?</AuthTitle>
-        <AuthSubtitle>Nous vous enverrons un code de vérification à 6 chiffres.</AuthSubtitle>
+        <AuthSubtitle>Utilise n’importe quelle adresse e-mail valide.</AuthSubtitle>
         <StravaInput
           label="E-mail"
           value={email}
@@ -331,7 +324,7 @@ export default function RegisterScreen() {
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <OrangeButton
-          label={busy ? 'Envoi…' : 'Continuer'}
+          label={busy ? 'Vérification…' : 'Continuer'}
           disabled={!email.trim() || busy}
           onPress={() => void onEmailContinue()}
         />
@@ -340,58 +333,13 @@ export default function RegisterScreen() {
     );
   }
 
-  if (step === 'verify') {
-    return (
-      <AuthScreen>
-        <AuthTitle>Vérifiez votre e-mail</AuthTitle>
-        <AuthSubtitle>
-          {mailSent
-            ? `Code envoyé à ${email}.`
-            : `Saisissez le code pour ${email}.`}{' '}
-          Expire dans {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}.
-        </AuthSubtitle>
-        {devHint ? (
-          <View style={styles.codeBox}>
-            <Text style={styles.codeHint}>Mode dev (e-mail non configuré) :</Text>
-            <Text style={styles.codeValue}>{devHint}</Text>
-          </View>
-        ) : null}
-        <StravaInput
-          label="Code à 6 chiffres"
-          value={code}
-          onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
-          keyboardType="number-pad"
-          maxLength={6}
-          placeholder="000000"
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <OrangeButton
-          label={busy ? 'Vérification…' : 'Continuer'}
-          disabled={code.length !== 6 || seconds === 0 || busy}
-          onPress={() => void onVerify()}
-        />
-        <TextLink
-          label="Renvoyer le code"
-          onPress={() => {
-            void (async () => {
-              const res = await apiResendOtp(email.trim());
-              setMailSent(Boolean(res.mailSent));
-              setDevHint(res.demoCode ? String(res.demoCode) : null);
-              setSeconds(600);
-              setCode('');
-            })();
-          }}
-        />
-        <TextLink label="Retour" onPress={() => setStep('email')} />
-      </AuthScreen>
-    );
-  }
-
   if (step === 'password') {
     return (
       <AuthScreen>
-        <AuthTitle>Mot de passe</AuthTitle>
-        <AuthSubtitle>8 caractères minimum.</AuthSubtitle>
+        <AuthTitle>Crée ton mot de passe</AuthTitle>
+        <AuthSubtitle>
+          Majuscule, minuscule, chiffre et caractère spécial (. , - _ ! …).
+        </AuthSubtitle>
         <StravaInput
           label="Mot de passe"
           value={password}
@@ -400,8 +348,18 @@ export default function RegisterScreen() {
           autoFocus
           placeholder="••••••••"
         />
+        <View style={styles.rulesBox}>
+          {passwordRules.map((rule) => (
+            <Text
+              key={rule.id}
+              style={[styles.ruleLine, rule.ok ? styles.ruleOk : styles.rulePending]}
+            >
+              {rule.ok ? '✓' : '○'} {rule.label}
+            </Text>
+          ))}
+        </View>
         <StravaInput
-          label="Confirmez votre mot de passe"
+          label="Confirme ton mot de passe"
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry
@@ -413,7 +371,7 @@ export default function RegisterScreen() {
           disabled={!password.trim() || !passwordConfirm.trim() || busy}
           onPress={onPassword}
         />
-        <TextLink label="Retour" onPress={() => setStep('verify')} />
+        <TextLink label="Retour" onPress={() => setStep('email')} />
       </AuthScreen>
     );
   }
@@ -455,20 +413,16 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   error: { color: colors.danger, marginTop: 8, fontSize: 14 },
-  codeBox: {
+  rulesBox: {
     backgroundColor: colors.accentLight,
-    padding: spacing.md,
     borderRadius: radii.md,
-    marginBottom: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: 6,
   },
-  codeHint: { color: colors.textSecondary, fontSize: 13 },
-  codeValue: {
-    color: colors.accent,
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 6,
-    marginTop: 4,
-  },
+  ruleLine: { fontSize: 13, fontWeight: '600' },
+  ruleOk: { color: colors.success },
+  rulePending: { color: colors.textMuted },
   usernameHint: {
     color: colors.textMuted,
     fontSize: 12,

@@ -203,6 +203,18 @@ function ensureTrialUser(users) {
   return user;
 }
 
+/** Politique alignée app : majuscule, minuscule, chiffre, spécial (longueur libre). */
+function validatePasswordPolicy(password) {
+  const pwd = String(password ?? '');
+  if (!/[a-z]/.test(pwd)) return 'Le mot de passe doit contenir une minuscule.';
+  if (!/[A-Z]/.test(pwd)) return 'Le mot de passe doit contenir une majuscule.';
+  if (!/\d/.test(pwd)) return 'Le mot de passe doit contenir un chiffre.';
+  if (!/[!@#$%^&*()_+\-=[\]{}|;:'",.<>/?\\`~]/.test(pwd)) {
+    return 'Le mot de passe doit contenir un caractère spécial (. , - _ ! …).';
+  }
+  return null;
+}
+
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -324,14 +336,83 @@ app.post('/auth/verify-2fa', (req, res) => {
   });
 });
 
+/** Inscription directe (e-mail + mot de passe) — sans OTP */
+app.post('/auth/signup', (req, res) => {
+  const email = String(req.body?.email ?? '')
+    .trim()
+    .toLowerCase();
+  const { firstName, lastName, username, password } = req.body ?? {};
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'E-mail invalide' });
+  }
+  if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
+    return res.status(409).json({ error: 'Cet e-mail est déjà utilisé.' });
+  }
+  const pwdError = validatePasswordPolicy(password);
+  if (pwdError) return res.status(400).json({ error: pwdError });
+  const handle = String(username ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@+/, '');
+  if (!handle || handle.length < 3) {
+    return res.status(400).json({ error: 'Identifiant invalide (3 caractères minimum).' });
+  }
+  if (handle === TRIAL_LOGIN_ID) {
+    return res.status(409).json({ error: 'Cet identifiant est déjà utilisé.' });
+  }
+  const users = loadUsers();
+  if (users.some((u) => String(u.email ?? '').toLowerCase() === email && u.passwordHash)) {
+    return res.status(409).json({ error: 'Cet e-mail est déjà utilisé.' });
+  }
+  if (
+    users.some(
+      (u) =>
+        String(u.username ?? '').toLowerCase() === handle &&
+        String(u.email ?? '').toLowerCase() !== email,
+    )
+  ) {
+    return res.status(409).json({ error: 'Cet identifiant est déjà utilisé.' });
+  }
+  let user = users.find((u) => String(u.email ?? '').toLowerCase() === email);
+  if (!user) {
+    user = {
+      id: `u_${Date.now()}`,
+      email,
+      createdAt: new Date().toISOString(),
+      provider: 'email',
+    };
+    users.push(user);
+  }
+  user.emailVerified = true;
+  user.firstName = String(firstName ?? '').trim();
+  user.lastName = String(lastName ?? '').trim();
+  user.username = handle;
+  user.passwordHash = hashPassword(String(password));
+  user.updatedAt = new Date().toISOString();
+  saveUsers(users);
+  res.json({
+    ok: true,
+    token: issueToken(email),
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      emailVerified: true,
+    },
+  });
+});
+
 /** Finalise profil + mot de passe après OTP */
 app.post('/auth/complete-profile', (req, res) => {
   const email = String(req.body?.email ?? '')
     .trim()
     .toLowerCase();
   const { firstName, lastName, username, password } = req.body ?? {};
-  if (!email || !password || String(password).length < 8) {
-    return res.status(400).json({ error: 'E-mail et mot de passe (8+) requis' });
+  const pwdError = validatePasswordPolicy(password);
+  if (!email || !password || pwdError) {
+    return res.status(400).json({ error: pwdError || 'E-mail et mot de passe requis' });
   }
   const handle = String(username ?? '')
     .trim()

@@ -13,6 +13,7 @@ import { hasRpeFeedbackForSession } from '../../src/engines/subscription';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
 import { FocusTarget } from '../../src/ui/FocusTarget';
 import { AppScrollView } from '../../src/ui/scrolling';
+import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
 
 /** Entraînement — module coaching intégré */
 export default function TrainingScreen() {
@@ -57,7 +58,8 @@ export default function TrainingScreen() {
   const workoutSummary = workout ? summarizeWorkout(workout) : null;
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
+      <ScreenAtmosphere intensity={0.7} />
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 32 }}>
       <Text style={styles.greeting}>
         Bonjour {state.profile.firstName || 'athlète'}
@@ -153,13 +155,13 @@ export default function TrainingScreen() {
       </Pressable>
     </AppScrollView>
     {WatchPicker}
-    </>
+    </View>
   );
 }
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     greeting: {
       fontSize: 22,
       fontWeight: '800',

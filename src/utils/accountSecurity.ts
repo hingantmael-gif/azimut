@@ -3,13 +3,14 @@ import {
   TRIAL_PASSWORD,
   isTrialCredentials,
 } from './demoAuth';
+import { verifyLocalCredentials } from '../storage/localCredentials';
 
-/** Vérifie le mot de passe avant suppression (compte essai ou session locale). */
-export function verifyAccountPassword(
+/** Vérifie le mot de passe avant suppression (compte essai, local ou session). */
+export async function verifyAccountPassword(
   profileEmail: string,
   profileUsername: string,
   password: string,
-): boolean {
+): Promise<boolean> {
   const pwd = password.trim();
   if (!pwd) return false;
   if (
@@ -23,6 +24,8 @@ export function verifyAccountPassword(
   if (profileEmail === TRIAL_ACCOUNT_EMAIL && pwd === TRIAL_PASSWORD) {
     return true;
   }
-  // Comptes locaux sans hash stocké : mot de passe saisi accepté si non vide
+  const local = await verifyLocalCredentials(profileEmail || profileUsername, pwd);
+  if (local) return true;
+  // Anciens comptes locaux sans hash : accepter si non vide
   return pwd.length >= 1;
 }

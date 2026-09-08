@@ -17,6 +17,7 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { clearSession } from '../../src/storage/sessionPersistence';
 import { apiGoogleAuth, apiLogin } from '../../src/services/api';
 import { isTrialCredentials, loginTrialAccount } from '../../src/utils/demoAuth';
+import { verifyLocalCredentials } from '../../src/storage/localCredentials';
 import { markOnboardingCompleted } from '../../src/storage/onboardingPersistence';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
@@ -92,11 +93,10 @@ export default function LoginScreen() {
   );
 
   useEffect(() => {
-    // Connexion = accueil direct (l’onboarding ne s’affiche qu’à l’inscription).
     if (state.authToken && state.profile.emailVerified) {
       router.replace('/(tabs)');
     }
-  }, [state.authToken, state.profile.emailVerified]);
+  }, [state.authToken, state.profile.emailVerified, router]);
 
   const submit = async () => {
     setError('');
@@ -128,31 +128,51 @@ export default function LoginScreen() {
         });
         return;
       }
-      await markOnboardingCompleted(email.trim());
-      dispatch({
-        type: 'LOGIN',
-        payload: {
-          emailOrUsername: email,
-          password,
-          onboardingCompleted: true,
-        },
-      });
-      const local =
-        (email.trim() === state.profile.email || email.trim() === state.profile.username) &&
-        state.profile.emailVerified;
-      if (!local && !isTrialCredentials(email, password)) {
-        setError(res.error || 'E-mail ou mot de passe incorrect.');
+
+      const local = await verifyLocalCredentials(email.trim(), password);
+      if (local) {
+        await clearSession();
+        await markOnboardingCompleted(local.email, local.username);
+        dispatch({
+          type: 'AUTH_WITH_PROVIDER',
+          payload: {
+            token: `local_${local.email}`,
+            email: local.email,
+            firstName: local.firstName,
+            lastName: local.lastName,
+            username: local.username,
+            onboardingCompleted: true,
+          },
+        });
+        return;
       }
+
+      setError(res.error && !/injoignable/i.test(res.error)
+        ? res.error
+        : 'E-mail ou mot de passe incorrect.');
     } catch {
       if (isTrialCredentials(email, password)) {
         await loginTrialAccount(clearSession, dispatch);
         return;
       }
-      dispatch({
-        type: 'LOGIN',
-        payload: { emailOrUsername: email, password, onboardingCompleted: true },
-      });
-      setError('API injoignable — vérifie tes identifiants locaux.');
+      const local = await verifyLocalCredentials(email.trim(), password);
+      if (local) {
+        await clearSession();
+        await markOnboardingCompleted(local.email, local.username);
+        dispatch({
+          type: 'AUTH_WITH_PROVIDER',
+          payload: {
+            token: `local_${local.email}`,
+            email: local.email,
+            firstName: local.firstName,
+            lastName: local.lastName,
+            username: local.username,
+            onboardingCompleted: true,
+          },
+        });
+        return;
+      }
+      setError('E-mail ou mot de passe incorrect.');
     } finally {
       setBusy(false);
     }

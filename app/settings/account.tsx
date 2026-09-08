@@ -112,8 +112,8 @@ export default function AccountScreen() {
     setDeleteStep('confirm1');
   };
 
-  const onDeletePasswordSubmit = (pwd: string) => {
-    const ok = verifyAccountPassword(
+  const onDeletePasswordSubmit = async (pwd: string) => {
+    const ok = await verifyAccountPassword(
       state.profile.email,
       state.profile.username,
       pwd,

@@ -1,5 +1,6 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useCallback, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
@@ -21,7 +22,7 @@ const androidClientId = (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? web
 const SAFE_PLACEHOLDER = '000000000000-azimut.apps.googleusercontent.com';
 
 export function isGoogleAuthConfigured(): boolean {
-  return Boolean(webClientId);
+  return Boolean(webClientId) && !webClientId.includes('azimut.apps.googleusercontent.com');
 }
 
 /**
@@ -37,11 +38,17 @@ export function useGoogleAuth(
   onSuccessRef.current = onSuccess;
   onErrorRef.current = onError;
 
+  const redirectUri = makeRedirectUri({
+    scheme: 'azimut',
+    path: 'oauth',
+  });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: webClientId || SAFE_PLACEHOLDER,
     iosClientId: iosClientId || SAFE_PLACEHOLDER,
     androidClientId: androidClientId || SAFE_PLACEHOLDER,
     scopes: ['openid', 'profile', 'email'],
+    redirectUri,
   });
 
   useEffect(() => {
@@ -84,7 +91,7 @@ export function useGoogleAuth(
   const signIn = useCallback(async () => {
     if (!isGoogleAuthConfigured()) {
       onErrorRef.current?.(
-        'Connexion Google indisponible pour le moment. Utilise l’e-mail, ou réessaie plus tard.',
+        'Google n’est pas encore configuré. Ajoute EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (voir checklist Google Cloud), puis redéploie.',
       );
       return;
     }
@@ -99,6 +106,7 @@ export function useGoogleAuth(
     signIn,
     ready: Boolean(request) && isGoogleAuthConfigured(),
     configured: isGoogleAuthConfigured(),
+    redirectUri,
     platform: Platform.OS,
   };
 }

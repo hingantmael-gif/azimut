@@ -1,5 +1,6 @@
 /**
- * Client auth Azimut → API (OTP e-mail + Google).
+ * Client auth Azimut → API (inscription e-mail + Google).
+ * En cas d’API injoignable, les écrans basculent sur le stockage local.
  */
 const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787').replace(/\/$/, '');
 
@@ -12,17 +13,24 @@ export type AuthUserDto = {
   emailVerified: boolean;
 };
 
-async function postJson<T>(path: string, body: unknown): Promise<T & { error?: string; ok?: boolean }> {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string; ok?: boolean };
-  if (!res.ok) {
-    return { ...data, error: data.error || `Erreur ${res.status}` };
+async function postJson<T>(
+  path: string,
+  body: unknown,
+): Promise<T & { error?: string; ok?: boolean }> {
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string; ok?: boolean };
+    if (!res.ok) {
+      return { ...data, error: data.error || `Erreur ${res.status}` };
+    }
+    return data;
+  } catch {
+    return { error: 'API injoignable' } as T & { error?: string; ok?: boolean };
   }
-  return data;
 }
 
 export async function apiRequestOtp(email: string) {
@@ -49,6 +57,17 @@ export async function apiCompleteProfile(body: {
   password: string;
 }) {
   return postJson<{ token?: string; user?: AuthUserDto }>('/auth/complete-profile', body);
+}
+
+/** Inscription directe e-mail + mot de passe (sans OTP). */
+export async function apiSignup(body: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string;
+}) {
+  return postJson<{ token?: string; user?: AuthUserDto; ok?: boolean }>('/auth/signup', body);
 }
 
 export async function apiLogin(emailOrUsername: string, password: string) {
@@ -81,7 +100,7 @@ export async function apiRegister(body: {
   username: string;
   password: string;
 }) {
-  return apiRequestOtp(body.email);
+  return apiSignup(body);
 }
 
 export async function apiVerify2fa(email: string, code: string) {

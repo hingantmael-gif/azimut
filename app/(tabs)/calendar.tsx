@@ -14,6 +14,7 @@ import {
 } from '../../src/engines/workoutPresentation';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
+import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
 
 function formatDayTitle(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -76,6 +77,8 @@ export default function PlanScreen() {
     setMoveMode(false);
   }
   return (
+    <View style={{ flex: 1 }}>
+      <ScreenAtmosphere intensity={0.75} />
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.header}>
         <Text style={styles.title}>Mon plan</Text>
@@ -236,12 +239,13 @@ export default function PlanScreen() {
         )}
       </View>
     </AppScrollView>
+    </View>
   );
 }
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     header: {
       padding: spacing.md,
       backgroundColor: colors.bg,
