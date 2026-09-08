@@ -117,19 +117,32 @@ export function TextLink({
 export function TermsCheckbox({
   checked,
   onToggle,
+  onOpenTerms,
 }: {
   checked: boolean;
   onToggle: () => void;
+  onOpenTerms?: () => void;
 }) {
   return (
-    <Pressable onPress={onToggle} style={styles.termsRow}>
-      <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-        {checked ? <Text style={styles.checkmark}>✓</Text> : null}
-      </View>
+    <View style={styles.termsRow}>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        hitSlop={8}
+      >
+        <View style={[styles.checkbox, checked && styles.checkboxOn]}>
+          {checked ? <Text style={styles.checkmark}>✓</Text> : null}
+        </View>
+      </Pressable>
       <Text style={styles.termsText}>
-        J&apos;accepte les Conditions d&apos;utilisation et la Politique de confidentialité.
+        J&apos;accepte les{' '}
+        <Text style={styles.termsLink} onPress={() => onOpenTerms?.()}>
+          Conditions d&apos;utilisation
+        </Text>
+        .
       </Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -235,5 +248,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
+  },
+  termsLink: {
+    color: colors.accent,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

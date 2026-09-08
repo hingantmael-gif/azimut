@@ -73,7 +73,6 @@ export default function HomeDashboard() {
           <Text style={styles.hello}>
             {hello}, {firstName}
           </Text>
-          <Text style={styles.helloSub}>Prêt pour la suite ?</Text>
         </View>
       </FadeInUp>
 
@@ -168,10 +167,7 @@ export default function HomeDashboard() {
         ) : (
           <>
             <Text style={styles.todayLabel}>AUCUNE SÉANCE</Text>
-            <Text style={styles.todayTitle}>Créez un programme</Text>
-            <Text style={styles.todayMeta}>
-              Aucune séance d&apos;entraînement à venir.
-            </Text>
+            <Text style={styles.todayTitle}>Créer un programme</Text>
             <Pressable
               style={styles.primaryBtn}
               onPress={() => router.push('/program/new')}

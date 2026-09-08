@@ -8,6 +8,7 @@ import {
   AuthTitle,
   OrangeButton,
   StravaInput,
+  TermsCheckbox,
   TextLink,
 } from '../../src/ui/strava/AuthScreen';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
@@ -18,7 +19,11 @@ import { clearSession } from '../../src/storage/sessionPersistence';
 import { apiGoogleAuth, apiLogin } from '../../src/services/api';
 import { isTrialCredentials, loginTrialAccount, normalizeEmailInput } from '../../src/utils/demoAuth';
 import { verifyLocalCredentials } from '../../src/storage/localCredentials';
-import { markOnboardingCompleted } from '../../src/storage/onboardingPersistence';
+import {
+  clearOnboardingCompleted,
+  hasCompletedOnboarding,
+  markOnboardingCompleted,
+} from '../../src/storage/onboardingPersistence';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
 import { colors } from '../../src/theme/tokens';
@@ -29,8 +34,36 @@ export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [terms, setTerms] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const finishGoogle = async (
+    payload: {
+      token: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      username?: string;
+    },
+    isNewAccount: boolean,
+  ) => {
+    const done =
+      !isNewAccount &&
+      (await hasCompletedOnboarding(payload.email, payload.username));
+    if (!done) {
+      await clearOnboardingCompleted(payload.email, payload.username);
+    } else {
+      await markOnboardingCompleted(payload.email, payload.username);
+    }
+    dispatch({
+      type: 'AUTH_WITH_PROVIDER',
+      payload: {
+        ...payload,
+        onboardingCompleted: done,
+      },
+    });
+  };
 
   const google = useGoogleAuth(
     async (profile) => {
@@ -40,47 +73,39 @@ export default function LoginScreen() {
         await clearSession();
         const res = await apiGoogleAuth(profile.accessToken);
         if (res.token && res.user) {
-          await markOnboardingCompleted(
-            res.user.email,
-            res.user.username,
-            profile.email,
-          );
-          dispatch({
-            type: 'AUTH_WITH_PROVIDER',
-            payload: {
+          await finishGoogle(
+            {
               token: res.token,
               email: res.user.email,
               firstName: res.user.firstName || profile.firstName,
               lastName: res.user.lastName || profile.lastName,
               username: res.user.username,
-              onboardingCompleted: true,
             },
-          });
+            Boolean(res.isNew),
+          );
         } else {
-          await markOnboardingCompleted(profile.email);
-          dispatch({
-            type: 'AUTH_WITH_PROVIDER',
-            payload: {
+          const known = await hasCompletedOnboarding(profile.email);
+          await finishGoogle(
+            {
               token: `google_${profile.accessToken.slice(0, 16)}`,
               email: profile.email,
               firstName: profile.firstName,
               lastName: profile.lastName,
-              onboardingCompleted: true,
             },
-          });
+            !known,
+          );
         }
       } catch {
-        await markOnboardingCompleted(profile.email);
-        dispatch({
-          type: 'AUTH_WITH_PROVIDER',
-          payload: {
+        const known = await hasCompletedOnboarding(profile.email);
+        await finishGoogle(
+          {
             token: `google_${Date.now()}`,
             email: profile.email,
             firstName: profile.firstName,
             lastName: profile.lastName,
-            onboardingCompleted: true,
           },
-        });
+          !known,
+        );
       } finally {
         setBusy(false);
       }
@@ -93,13 +118,30 @@ export default function LoginScreen() {
   );
 
   useEffect(() => {
-    if (state.authToken && state.profile.emailVerified) {
-      router.replace('/(tabs)');
+    if (!state.authToken || !state.profile.emailVerified) return;
+    if (!state.profile.onboardingCompleted) {
+      router.replace('/(auth)/onboarding');
+      return;
     }
-  }, [state.authToken, state.profile.emailVerified, router]);
+    router.replace('/(tabs)');
+  }, [
+    state.authToken,
+    state.profile.emailVerified,
+    state.profile.onboardingCompleted,
+    router,
+  ]);
+
+  const requireTerms = () => {
+    if (!terms) {
+      setError('Accepte les conditions pour continuer.');
+      return false;
+    }
+    return true;
+  };
 
   const submit = async () => {
     setError('');
+    if (!requireTerms()) return;
     setBusy(true);
     const idRaw = email.trim();
     const id = idRaw.includes('@') ? normalizeEmailInput(idRaw) : idRaw.toLowerCase();
@@ -113,11 +155,14 @@ export default function LoginScreen() {
       const res = await apiLogin(id, password);
       if (res.token && res.user) {
         await clearSession();
-        await markOnboardingCompleted(
+        const done = await hasCompletedOnboarding(
           res.user.email,
           res.user.username,
           id,
         );
+        if (done) {
+          await markOnboardingCompleted(res.user.email, res.user.username, id);
+        }
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
           payload: {
@@ -126,7 +171,7 @@ export default function LoginScreen() {
             firstName: res.user.firstName,
             lastName: res.user.lastName,
             username: res.user.username,
-            onboardingCompleted: true,
+            onboardingCompleted: done,
           },
         });
         return;
@@ -135,7 +180,10 @@ export default function LoginScreen() {
       const local = await verifyLocalCredentials(id, password);
       if (local) {
         await clearSession();
-        await markOnboardingCompleted(local.email, local.username);
+        const done = await hasCompletedOnboarding(local.email, local.username);
+        if (done) {
+          await markOnboardingCompleted(local.email, local.username);
+        }
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
           payload: {
@@ -144,7 +192,7 @@ export default function LoginScreen() {
             firstName: local.firstName,
             lastName: local.lastName,
             username: local.username,
-            onboardingCompleted: true,
+            onboardingCompleted: done,
           },
         });
         return;
@@ -163,7 +211,10 @@ export default function LoginScreen() {
       const local = await verifyLocalCredentials(id, password);
       if (local) {
         await clearSession();
-        await markOnboardingCompleted(local.email, local.username);
+        const done = await hasCompletedOnboarding(local.email, local.username);
+        if (done) {
+          await markOnboardingCompleted(local.email, local.username);
+        }
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
           payload: {
@@ -172,7 +223,7 @@ export default function LoginScreen() {
             firstName: local.firstName,
             lastName: local.lastName,
             username: local.username,
-            onboardingCompleted: true,
+            onboardingCompleted: done,
           },
         });
         return;
@@ -187,11 +238,21 @@ export default function LoginScreen() {
     <AuthScreen>
       <BrandMark size="md" surfaceColor={themeColors.bg} />
       <AuthTitle>{AUTH_LABELS.signIn}</AuthTitle>
-      <AuthSubtitle>Bienvenue sur Azimut.</AuthSubtitle>
+      <AuthSubtitle>Content de te revoir.</AuthSubtitle>
+
+      <TermsCheckbox
+        checked={terms}
+        onToggle={() => {
+          setTerms((v) => !v);
+          setError('');
+        }}
+        onOpenTerms={() => router.push('/settings/terms')}
+      />
 
       <SocialAuthButtons
         loading={busy}
         onGoogle={() => {
+          if (!requireTerms()) return;
           setError('');
           setBusy(true);
           void google.signIn().finally(() => setBusy(false));
@@ -218,19 +279,14 @@ export default function LoginScreen() {
         secureTextEntry
         placeholder="••••••••"
       />
-
-      <TextLink label="Mot de passe oublié ?" accent onPress={() => undefined} />
-
       {error ? <Text style={styles.error}>{error}</Text> : null}
-
       <OrangeButton
-        label={busy ? AUTH_LABELS.signInBusy : AUTH_LABELS.signIn}
-        disabled={!email.trim() || !password.trim() || busy}
+        label={busy ? 'Connexion…' : AUTH_LABELS.signIn}
+        disabled={busy}
         onPress={() => void submit()}
       />
-
       <TextLink
-        label="Pas encore de compte ? Inscription"
+        label={AUTH_LABELS.needAccount}
         accent
         onPress={() => router.push('/(auth)/register')}
       />

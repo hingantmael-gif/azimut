@@ -837,19 +837,7 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {currentStepId === 'devices' && (
-          <>
-            <Muted style={{ marginTop: 8 }}>
-              Tu pourras connecter Garmin Connect, Apple Santé ou Health Connect juste après,
-              dans Réglages → Appareils.
-            </Muted>
-            <Muted style={{ marginTop: 8 }}>
-              Garmin : sommeil et envoi de séances sur ta montre. Santé : récupération et
-              sommeil sur iPhone / Android.
-            </Muted>
-          </>
-        )}
-
+        {currentStepId === 'devices' && null}
         {currentStepId !== 'sport' &&
         currentStepId !== 'relay' &&
         currentStepId !== 'plan_preview' ? (

@@ -1,14 +1,26 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
-import { OrangeButton } from '../../src/ui/strava/AuthScreen';
+import { OrangeButton, TermsCheckbox } from '../../src/ui/strava/AuthScreen';
 import { BRAND } from '../../src/constants/brand';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { spacing } from '../../src/theme/tokens';
 
-/** Accueil Azimut — identité propre (hors look Strava) */
+/** Accueil Azimut — peu de texte, CGU obligatoires pour continuer */
 export default function WelcomeScreen() {
   const router = useRouter();
+  const [terms, setTerms] = useState(false);
+  const [hint, setHint] = useState('');
+
+  const go = (path: '/(auth)/register' | '/(auth)/login') => {
+    if (!terms) {
+      setHint('Accepte les conditions pour continuer.');
+      return;
+    }
+    setHint('');
+    router.push(path);
+  };
 
   return (
     <View style={styles.root}>
@@ -18,35 +30,27 @@ export default function WelcomeScreen() {
         <View style={styles.orbitB} />
         <View style={styles.orbitC} />
         <View style={styles.heroContent}>
-          <Text style={styles.eyebrow}>MULTI-SPORT · COACHING</Text>
+          <Text style={styles.eyebrow}>MULTI-SPORT</Text>
           <BrandMark size="lg" ink surfaceColor={BRAND.ink} />
           <Text style={styles.tagline}>{BRAND.taglineLines}</Text>
-          <Text style={styles.purpose}>
-            Azimut est une appli de coaching multi-sport : plans d’entraînement (course, vélo,
-            natation, triathlon…), récupération, sommeil et export vers ta montre. Tu peux
-            découvrir le service avant de créer un compte.
-          </Text>
-          <Text
-            style={styles.legalLink}
-            onPress={() => router.push('/settings/privacy-policy')}
-          >
-            Politique de confidentialité
-          </Text>
-          <Text style={styles.legalLink} onPress={() => router.push('/settings/terms')}>
-            Conditions d’utilisation
-          </Text>
         </View>
       </View>
 
       <View style={styles.actions}>
-        <OrangeButton
-          label="Inscription"
-          onPress={() => router.push('/(auth)/register')}
+        <TermsCheckbox
+          checked={terms}
+          onToggle={() => {
+            setTerms((v) => !v);
+            setHint('');
+          }}
+          onOpenTerms={() => router.push('/settings/terms')}
         />
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+        <OrangeButton label="Inscription" onPress={() => go('/(auth)/register')} />
         <OrangeButton
           label={AUTH_LABELS.signIn}
           variant="outline"
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => go('/(auth)/login')}
         />
       </View>
     </View>
@@ -120,25 +124,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     maxWidth: 300,
   },
-  purpose: {
-    color: 'rgba(244,247,250,0.82)',
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: spacing.md,
-    maxWidth: 340,
-  },
-  legalLink: {
-    color: BRAND.signalMint,
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 10,
-    textDecorationLine: 'underline',
-  },
   actions: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
     backgroundColor: '#F3F7F5',
     gap: spacing.sm,
+  },
+  hint: {
+    color: '#B42318',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

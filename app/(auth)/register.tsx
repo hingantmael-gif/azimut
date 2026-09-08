@@ -67,6 +67,7 @@ export default function RegisterScreen() {
       setError('');
       try {
         await clearSession();
+        await clearOnboardingCompleted(profile.email);
         const res = await apiGoogleAuth(profile.accessToken);
         if (res.error || !res.token || !res.user) {
           dispatch({
@@ -80,6 +81,7 @@ export default function RegisterScreen() {
             },
           });
         } else {
+          await clearOnboardingCompleted(res.user.email, res.user.username, profile.email);
           dispatch({
             type: 'AUTH_WITH_PROVIDER',
             payload: {
@@ -93,6 +95,7 @@ export default function RegisterScreen() {
           });
         }
       } catch {
+        await clearOnboardingCompleted(profile.email);
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
           payload: {
@@ -289,11 +292,24 @@ export default function RegisterScreen() {
       <AuthScreen>
         <BrandMark size="md" surfaceColor={themeColors.bg} />
         <AuthTitle>Inscription</AuthTitle>
-        <AuthSubtitle>Crée ton compte avec Google ou ton e-mail.</AuthSubtitle>
+        <AuthSubtitle>Google ou e-mail.</AuthSubtitle>
+
+        <TermsCheckbox
+          checked={terms}
+          onToggle={() => {
+            setTerms((v) => !v);
+            setError('');
+          }}
+          onOpenTerms={() => router.push('/settings/terms')}
+        />
 
         <SocialAuthButtons
           loading={busy}
           onGoogle={() => {
+            if (!terms) {
+              setError('Accepte les conditions pour continuer.');
+              return;
+            }
             setError('');
             setBusy(true);
             void google.signIn().finally(() => setBusy(false));
@@ -302,7 +318,16 @@ export default function RegisterScreen() {
 
         <AuthDivider />
 
-        <OrangeButton label="S'inscrire avec l'e-mail" onPress={() => setStep('email')} />
+        <OrangeButton
+          label="S'inscrire avec l'e-mail"
+          onPress={() => {
+            if (!terms) {
+              setError('Accepte les conditions pour continuer.');
+              return;
+            }
+            setStep('email');
+          }}
+        />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -318,10 +343,8 @@ export default function RegisterScreen() {
   if (step === 'email') {
     return (
       <AuthScreen>
-        <AuthTitle>Quelle est votre adresse e-mail ?</AuthTitle>
-        <AuthSubtitle>
-          Gmail, Outlook, Orange, Free, Yahoo… n’importe quelle adresse avec un @.
-        </AuthSubtitle>
+        <AuthTitle>Ton e-mail</AuthTitle>
+        <AuthSubtitle>Ex. toi@orange.fr</AuthSubtitle>
         <StravaInput
           label="E-mail"
           value={email}
@@ -348,10 +371,8 @@ export default function RegisterScreen() {
   if (step === 'password') {
     return (
       <AuthScreen>
-        <AuthTitle>Crée ton mot de passe</AuthTitle>
-        <AuthSubtitle>
-          Majuscule, minuscule, chiffre et caractère spécial (. , - _ ! …).
-        </AuthSubtitle>
+        <AuthTitle>Mot de passe</AuthTitle>
+        <AuthSubtitle>Majuscule, minuscule, chiffre, spécial.</AuthSubtitle>
         <StravaInput
           label="Mot de passe"
           value={password}
@@ -371,7 +392,7 @@ export default function RegisterScreen() {
           ))}
         </View>
         <StravaInput
-          label="Confirme ton mot de passe"
+          label="Confirmation"
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry
@@ -390,8 +411,8 @@ export default function RegisterScreen() {
 
   return (
     <AuthScreen>
-      <AuthTitle>Comment vous appelez-vous ?</AuthTitle>
-      <AuthSubtitle>Ces informations apparaîtront sur votre profil.</AuthSubtitle>
+      <AuthTitle>Ton profil</AuthTitle>
+      <AuthSubtitle>Prénom, nom, identifiant.</AuthSubtitle>
       <StravaInput
         label="Prénom"
         value={firstName}
@@ -408,10 +429,6 @@ export default function RegisterScreen() {
         autoCorrect={false}
         placeholder="nathan42"
       />
-      <Text style={styles.usernameHint}>
-        Unique · lettres minuscules et chiffres uniquement · longueur libre
-      </Text>
-      <TermsCheckbox checked={terms} onToggle={() => setTerms((v) => !v)} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <OrangeButton
         label={busy ? 'Création…' : 'Créer mon compte'}
@@ -435,11 +452,4 @@ const styles = StyleSheet.create({
   ruleLine: { fontSize: 13, fontWeight: '600' },
   ruleOk: { color: colors.success },
   rulePending: { color: colors.textMuted },
-  usernameHint: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginTop: -4,
-    marginBottom: spacing.sm,
-    lineHeight: 16,
-  },
 });

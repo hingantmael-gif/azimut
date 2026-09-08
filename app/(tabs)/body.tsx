@@ -129,10 +129,10 @@ export default function BodyScreen() {
       <AppScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 48 }}>
         <FadeInUp>
           <View style={styles.hero}>
-            <Text style={styles.heroEyebrow}>Corps · récupération</Text>
-            <Text style={styles.heroTitle}>Écoute ton corps</Text>
+            <Text style={styles.heroEyebrow}>Corps</Text>
+            <Text style={styles.heroTitle}>Récupération</Text>
             <Text style={styles.heroSub}>
-              Indice live · {readyCount}/{sortedMuscles.length} groupes prêts
+              {readyCount}/{sortedMuscles.length} prêts
             </Text>
           </View>
         </FadeInUp>
@@ -200,21 +200,18 @@ export default function BodyScreen() {
                 <Text style={styles.sleepBtnText}>
                   {watch
                     ? sleep
-                      ? 'Voir / importer manuellement'
-                      : 'Importer manuellement'
-                    : 'Configurer le sommeil'}
+                      ? 'Modifier'
+                      : 'Saisir'
+                    : 'Configurer'}
                 </Text>
               </View>
             </PressableScale>
-            <Text style={styles.sleepFoot}>
-              Choisis ta montre une fois, puis saisis le score et la durée affichés dessus.
-            </Text>
           </View>
         </FadeInUp>
 
         <SectionHeader
-          title="Groupes musculaires"
-          subtitle="Touche une ligne pour le détail · couleur = fraîcheur"
+          title="Muscles"
+          subtitle=""
           accentColor={colors.accent}
           delay={110}
         />

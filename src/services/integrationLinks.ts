@@ -162,6 +162,9 @@ export function filterVisibleIntegrations(
   return normalizeIntegrations(integrations).filter((item) => {
     if (item.provider === 'apple_health' && Platform.OS === 'android') return false;
     if (item.provider === 'health_connect' && Platform.OS === 'ios') return false;
+    // Health Connect : rien à faire sur le web / PWA
+    if (item.provider === 'health_connect' && Platform.OS === 'web') return false;
+    if (item.provider === 'apple_health' && Platform.OS === 'web') return false;
     return true;
   });
 }

@@ -32,7 +32,7 @@ export const WATCH_CATALOG: WatchCatalogEntry[] = [
   },
   {
     id: 'google_fitbit',
-    label: 'Google Pixel / Fitbit',
+    label: 'Pixel Watch / Fitbit',
     subtitle: 'Fitbit',
     scoreScaleHint: 'Score 0–100 (souvent 72–83 en moyenne)',
   },

@@ -1,7 +1,6 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { GoalType, AthleticLevel } from '../../types/domain';
 import type { ProgramSportCategory } from '../../constants/programs';
-import { BRAND } from '../../constants/brand';
 import { buildOnboardingSteps } from './sportOnboardingConfig';
 
 /** Intention course (parcours Azimut — textes originaux). */
@@ -45,18 +44,18 @@ export const ONBOARDING_IMAGES = {
 
 export const RELAY_COPY = {
   headline: 'TON CAP COMMENCE ICI',
-  body: "Pas besoin d'attendre le jour J pour avancer. Azimut construit un plan clair, adapté à ton endurance et à ton rythme — pour progresser sans perdre le plaisir.",
+  body: 'Un plan clair, à ton rythme.',
   cta: 'Démarrer',
 } as const;
 
 export const IDENTITY_COPY = {
-  title: `Bienvenue sur ${BRAND.name}.\nPrésente-toi en quelques mots.`,
-  subtitle: 'Ces infos servent uniquement à personnaliser ton espace et tes plans.',
+  title: 'Qui es-tu ?',
+  subtitle: '',
   genderWoman: 'Femme',
   genderMan: 'Homme',
   firstName: 'PRÉNOM',
-  lastName: 'NOM DE FAMILLE',
-  birthDate: 'DATE DE NAISSANCE',
+  lastName: 'NOM',
+  birthDate: 'NAISSANCE',
   city: 'VILLE',
   cta: 'Continuer',
 } as const;
@@ -70,44 +69,44 @@ export const RUN_GOAL_OPTIONS: ReadonlyArray<{
 }> = [
   {
     id: 'race_road',
-    title: 'Viser une course sur route',
-    subtitle: 'Un plan calé sur ta date et ta distance cible',
+    title: 'Course sur route',
+    subtitle: '',
     image: ONBOARDING_IMAGES.goalRoad,
     goal: '10k',
   },
   {
     id: 'race_trail',
-    title: 'Viser un trail',
-    subtitle: 'Du sentier court à la longue distance, selon ton niveau',
+    title: 'Trail',
+    subtitle: '',
     image: ONBOARDING_IMAGES.goalTrail,
     goal: 'trail',
   },
   {
     id: 'start',
-    title: 'Se mettre à la course',
-    subtitle: 'Des bases solides, sans précipitation',
+    title: 'Se mettre à courir',
+    subtitle: '',
     image: ONBOARDING_IMAGES.goalStart,
     goal: 'forme',
   },
   {
     id: 'progress',
-    title: 'Monter en régime',
-    subtitle: 'Gagner en aisance, en vitesse ou simplement en régularité',
+    title: 'Progresser',
+    subtitle: '',
     image: ONBOARDING_IMAGES.goalProgress,
     goal: 'forme',
   },
   {
     id: 'return_injury',
-    title: 'Revenir après une pause forcée',
-    subtitle: 'Une reprise progressive pour retrouver le rythme en sécurité',
+    title: 'Reprise',
+    subtitle: '',
     image: ONBOARDING_IMAGES.goalReturn,
     goal: 'forme',
   },
 ];
 
 export const TERRAIN_COPY = {
-  title: 'Où veux-tu surtout t’entraîner ?',
-  prompt: 'Plutôt…',
+  title: 'Où t’entraînes-tu ?',
+  prompt: '',
 } as const;
 
 export const TERRAIN_OPTIONS: ReadonlyArray<{
@@ -120,8 +119,8 @@ export const TERRAIN_OPTIONS: ReadonlyArray<{
 ];
 
 export const TRAINING_TYPE_COPY = {
-  title: 'Quel profil de parcours te correspond ?',
-  prompt: 'Je préfère…',
+  title: 'Type de parcours ?',
+  prompt: '',
 } as const;
 
 export const TRAINING_TYPE_OPTIONS: ReadonlyArray<{
@@ -131,25 +130,24 @@ export const TRAINING_TYPE_OPTIONS: ReadonlyArray<{
 }> = [
   {
     id: 'hills',
-    title: 'Travailler le dénivelé',
-    subtitle: 'Côtes et reliefs au cœur de ta prépa',
+    title: 'Dénivelé',
+    subtitle: '',
   },
   {
     id: 'mixed',
-    title: 'Mélanger plat et relief',
-    subtitle: 'Un peu de tout, comme en conditions réelles',
+    title: 'Mixte',
+    subtitle: '',
   },
   {
     id: 'flat',
-    title: 'Rester sur le plat',
-    subtitle: 'Parcours peu vallonnés, allure stable',
+    title: 'Plat',
+    subtitle: '',
   },
 ];
 
 export const EXPERIENCE_COPY = {
-  title: 'Depuis combien de temps cours-tu ?',
-  subtitle:
-    'Débutant ou habitué : on calibre la charge pour que tu progresses sans te cramer.',
+  title: 'Depuis combien de temps ?',
+  subtitle: '',
 } as const;
 
 export const EXPERIENCE_OPTIONS: ReadonlyArray<{
@@ -164,17 +162,15 @@ export const EXPERIENCE_OPTIONS: ReadonlyArray<{
 ];
 
 export const INJURY_COPY = {
-  title: 'As-tu eu une blessure ces 12 derniers mois ?',
-  subtitle:
-    'On en tient compte pour doser l’intensité et protéger ta reprise.',
-  no: 'Non, rien à signaler',
-  yes: 'Oui, au moins une fois',
+  title: 'Blessure ces 12 derniers mois ?',
+  subtitle: '',
+  no: 'Non',
+  yes: 'Oui',
 } as const;
 
 export const VOLUME_COPY = {
-  title: 'Quel volume cours-tu en moyenne chaque semaine ?',
-  subtitle:
-    'Choisis la fourchette la plus proche de ton habitude actuelle — c’est ton point de départ.',
+  title: 'Volume hebdo actuel ?',
+  subtitle: '',
 } as const;
 
 export const VOLUME_OPTIONS: ReadonlyArray<{
@@ -190,10 +186,9 @@ export const VOLUME_OPTIONS: ReadonlyArray<{
 ];
 
 export const RHYTHM_COPY = {
-  title: 'Combien de séances par semaine veux-tu viser ?',
-  subtitle:
-    'Mise sur un rythme tenable sur la durée — mieux vaut régulier que trop ambitieux.',
-  cta: 'Valider mon rythme',
+  title: 'Séances par semaine ?',
+  subtitle: '',
+  cta: 'Continuer',
 } as const;
 
 export const RHYTHM_OPTIONS: ReadonlyArray<{
@@ -209,15 +204,15 @@ export const RHYTHM_OPTIONS: ReadonlyArray<{
 ];
 
 export const REFERENCE_COPY = {
-  title: 'Indique ton temps de référence',
+  title: 'Temps de référence',
   duration: 'Durée',
-  pace: 'Allure moyenne',
+  pace: 'Allure',
   cta: 'Continuer',
 } as const;
 
 export const PLAN_PREVIEW_COPY = {
-  title: 'Un plan qui a du sens',
-  body: 'Chaque séance a un rôle clair : endurance, qualité ou récup. Tu avances avec un fil conducteur, pas au hasard.',
+  title: 'Ton plan',
+  body: '',
   easy: 'Allure EF',
   easyDetail: '15 min à 6:25 - 6:55 /km',
   fast: 'Allure Rapide',

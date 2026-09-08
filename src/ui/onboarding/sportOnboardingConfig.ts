@@ -75,11 +75,11 @@ export function buildOnboardingSteps(
 
   switch (sport) {
     case 'strength':
-      return ['sport', 'equipment', 'strength_goal', 'level', 'days', 'devices'];
+      return ['sport', 'equipment', 'strength_goal', 'level', 'days'];
     case 'swim':
-      return ['sport', 'level', 'goal', 'days', 'swim_volume', 'references', 'devices'];
+      return ['sport', 'level', 'goal', 'days', 'swim_volume', 'references'];
     case 'bike':
-      return ['sport', 'level', 'goal', 'days', 'weekly_volume', 'references', 'devices'];
+      return ['sport', 'level', 'goal', 'days', 'weekly_volume', 'references'];
     case 'triathlon':
     case 'ironman': {
       const steps: OnboardingStepId[] = [
@@ -91,7 +91,7 @@ export function buildOnboardingSteps(
         'ppg',
       ];
       if (includePpg) steps.push('equipment');
-      steps.push('references', 'devices');
+      steps.push('references');
       return steps;
     }
     default:
@@ -102,7 +102,6 @@ export function buildOnboardingSteps(
         'days_with_long',
         'weekly_volume',
         'references',
-        'devices',
       ];
   }
 }
@@ -110,32 +109,32 @@ export function buildOnboardingSteps(
 export function stepTitle(id: OnboardingStepId, sport: ProgramSportCategory | null): string {
   switch (id) {
     case 'sport':
-      return 'Quel sport pratiquez-vous ?';
+      return 'Ton sport ?';
     case 'level':
-      return 'Votre niveau';
+      return 'Niveau';
     case 'goal':
-      return 'Votre objectif principal';
+      return 'Objectif';
     case 'equipment':
-      return 'Votre matériel';
+      return 'Matériel';
     case 'strength_goal':
-      return 'Quel est ton objectif principal ?';
+      return 'Objectif muscu';
     case 'days':
-      return 'Vos disponibilités';
+      return 'Jours dispo';
     case 'days_with_long':
-      return 'Vos disponibilités';
+      return 'Jours dispo';
     case 'weekly_volume':
-      if (sport === 'bike') return 'Votre volume vélo hebdomadaire';
-      return 'Votre volume hebdomadaire';
+      if (sport === 'bike') return 'Volume vélo / semaine';
+      return 'Volume / semaine';
     case 'swim_volume':
-      return 'Votre volume natation hebdomadaire';
+      return 'Volume nage / semaine';
     case 'ppg':
-      return 'Renforcement musculaire';
+      return 'Renforcement ?';
     case 'references':
-      return 'Vos repères (optionnel)';
+      return 'Repères (optionnel)';
     case 'devices':
-      return 'Connexion du matériel';
+      return 'Ta montre (optionnel)';
     default:
-      return 'Configuration';
+      return 'Suite';
   }
 }
 

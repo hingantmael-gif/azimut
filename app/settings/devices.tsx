@@ -51,8 +51,7 @@ export default function DevicesScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
           <Text style={{ color: colors.textMuted, lineHeight: 20 }}>
-            Connecte Garmin, Apple Santé ou Health Connect, choisis ta montre, et importe le
-            sommeil — tout au même endroit.
+            Garmin et montre — sync & sommeil.
           </Text>
         </View>
 
