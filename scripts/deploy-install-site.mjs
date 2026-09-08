@@ -12,14 +12,32 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LIVE = 'https://hingantmael-gif.github.io';
 /** API auth partagée (Render) — tous les e-mails, comptes cross-device */
-const PROD_API = process.env.EXPO_PUBLIC_API_URL || 'https://azimut-auth-api.onrender.com';
+const PROD_API = process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onrender.com';
 const sh = (cmd, cwd = root, env = {}) =>
   execSync(cmd, { cwd, stdio: 'inherit', shell: true, env: { ...process.env, ...env } });
 
 sh('node scripts/generate-install-qr.mjs');
-sh('npx expo export --platform web', root, {
-  EXPO_PUBLIC_API_URL: PROD_API,
-});
+
+/** Expo charge `.env` et peut écraser l’env shell → on force l’URL prod le temps du build. */
+const envPath = path.join(root, '.env');
+let envBackup = null;
+if (fs.existsSync(envPath)) {
+  envBackup = fs.readFileSync(envPath, 'utf8');
+  let next = envBackup;
+  if (/^EXPO_PUBLIC_API_URL=/m.test(next)) {
+    next = next.replace(/^EXPO_PUBLIC_API_URL=.*$/m, `EXPO_PUBLIC_API_URL=${PROD_API}`);
+  } else {
+    next = `${next.trimEnd()}\nEXPO_PUBLIC_API_URL=${PROD_API}\n`;
+  }
+  fs.writeFileSync(envPath, next);
+}
+try {
+  sh('npx expo export --platform web', root, {
+    EXPO_PUBLIC_API_URL: PROD_API,
+  });
+} finally {
+  if (envBackup != null) fs.writeFileSync(envPath, envBackup);
+}
 
 const dist = path.join(root, 'dist');
 for (const f of [
