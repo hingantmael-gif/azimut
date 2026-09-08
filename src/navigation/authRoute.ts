@@ -14,7 +14,9 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   /** Pages légales — publiques (validation Google OAuth) */
   const pathKey = segments.filter(Boolean).join('/');
   const isPublicLegal =
-    pathKey === 'settings/privacy-policy' || pathKey === 'settings/terms';
+    pathKey === 'settings/privacy-policy' ||
+    pathKey === 'settings/terms' ||
+    pathKey === 'apropos';
 
   // Sans compte → écran d’accueil / login (comme BTP Pro), PAS /install (évite spinner infini)
   if (!session.authToken && !inAuth && !inInstall && !isPublicLegal) return '/(auth)/welcome';
@@ -26,11 +28,13 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   ) {
     return '/(auth)/verify-2fa';
   }
+  // Déjà connecté : ne pas rester bloqué sur welcome / login / register
   if (
     session.authToken &&
     session.emailVerified &&
     !session.onboardingCompleted &&
-    page !== 'onboarding'
+    page !== 'onboarding' &&
+    !isPublicLegal
   ) {
     return '/(auth)/onboarding';
   }

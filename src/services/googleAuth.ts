@@ -38,10 +38,10 @@ export function useGoogleAuth(
   onSuccessRef.current = onSuccess;
   onErrorRef.current = onError;
 
-  // Web PWA : origine du site (GitHub Pages). Natif : schéma azimut://oauth
+  // Web PWA : retour OAuth sur /welcome (pas la page apropos à la racine)
   const redirectUri =
     Platform.OS === 'web'
-      ? makeRedirectUri()
+      ? makeRedirectUri({ path: 'welcome' })
       : makeRedirectUri({
           scheme: 'azimut',
           path: 'oauth',

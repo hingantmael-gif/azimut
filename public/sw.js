@@ -1,15 +1,11 @@
-/* Service worker Azimut — scope / (comme BTP Pro). */
-const CACHE = 'azimut-shell-v13';
+/* Service worker Azimut — mises à jour auto à chaque réouverture. */
+const CACHE = 'azimut-static-v14';
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/telecharger.html',
   '/manifest.webmanifest',
   '/icon.png',
   '/icon-192.png',
   '/icon-512.png',
   '/favicon.png',
-  '/qr-install.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -27,13 +23,26 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== CACHE)
+            .map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim())
+      .then(() =>
+        self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((c) => c.postMessage({ type: 'AZIMUT_SW_ACTIVATED' }));
+        }),
+      ),
   );
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -41,7 +50,16 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.includes('/_expo/') || url.pathname.endsWith('.js')) return;
+
+  // App bundle + API : toujours le réseau (jamais de vieux JS en cache SW)
+  if (
+    url.pathname.includes('/_expo/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.startsWith('/api')
+  ) {
+    return;
+  }
 
   const isHtml =
     req.mode === 'navigate' ||
@@ -49,18 +67,31 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/' ||
     (req.headers.get('accept') || '').includes('text/html');
 
+  // HTML / navigation : réseau d’abord (nouvelle version dès réouverture)
   if (isHtml) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(function () {});
-          return res;
-        })
-        .catch(() => caches.match(req).then((c) => c || caches.match('/index.html'))),
+      fetch(req, { cache: 'no-store' })
+        .then((res) => res)
+        .catch(() =>
+          caches.match(req).then((c) => c || caches.match('/app.html') || caches.match('/welcome')),
+        ),
     );
     return;
   }
 
-  event.respondWith(caches.match(req).then((cached) => cached || fetch(req)));
+  // Icônes / manifest : cache puis réseau
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const net = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy)).catch(function () {});
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || net;
+    }),
+  );
 });

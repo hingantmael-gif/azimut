@@ -1,26 +1,31 @@
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
-import { OrangeButton, TermsCheckbox } from '../../src/ui/strava/AuthScreen';
+import { OrangeButton } from '../../src/ui/strava/AuthScreen';
 import { BRAND } from '../../src/constants/brand';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
+import { useApp } from '../../src/store/AppContext';
 import { spacing } from '../../src/theme/tokens';
 
-/** Accueil Azimut — peu de texte, CGU obligatoires pour continuer */
+/** Accueil Azimut — entrée simple ; CGU à l’inscription / connexion. */
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [terms, setTerms] = useState(false);
-  const [hint, setHint] = useState('');
+  const { state } = useApp();
 
-  const go = (path: '/(auth)/register' | '/(auth)/login') => {
-    if (!terms) {
-      setHint('Accepte les conditions pour continuer.');
+  useEffect(() => {
+    if (!state.authToken || !state.profile.emailVerified) return;
+    if (!state.profile.onboardingCompleted) {
+      router.replace('/(auth)/onboarding');
       return;
     }
-    setHint('');
-    router.push(path);
-  };
+    router.replace('/(tabs)');
+  }, [
+    state.authToken,
+    state.profile.emailVerified,
+    state.profile.onboardingCompleted,
+    router,
+  ]);
 
   return (
     <View style={styles.root}>
@@ -37,21 +42,18 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.actions}>
-        <TermsCheckbox
-          checked={terms}
-          onToggle={() => {
-            setTerms((v) => !v);
-            setHint('');
-          }}
-          onOpenTerms={() => router.push('/settings/terms')}
+        <OrangeButton
+          label="Inscription"
+          onPress={() => router.push('/(auth)/register')}
         />
-        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-        <OrangeButton label="Inscription" onPress={() => go('/(auth)/register')} />
         <OrangeButton
           label={AUTH_LABELS.signIn}
           variant="outline"
-          onPress={() => go('/(auth)/login')}
+          onPress={() => router.push('/(auth)/login')}
         />
+        <Text style={styles.legal} onPress={() => router.push('/settings/terms')}>
+          Conditions d’utilisation
+        </Text>
       </View>
     </View>
   );
@@ -131,9 +133,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F7F5',
     gap: spacing.sm,
   },
-  hint: {
-    color: '#B42318',
+  legal: {
+    color: '#0E8F6F',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 4,
+    textDecorationLine: 'underline',
   },
 });

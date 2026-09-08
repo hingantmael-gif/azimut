@@ -59,16 +59,33 @@ for (const f of [
 }
 
 if (fs.existsSync(path.join(dist, 'index.html'))) {
-  // Garde l’app Expo pour /welcome, /body, etc. ; la racine `/` = page publique (Google OAuth)
+  // App Expo = index + 404 (SPA). Page publique Google = /apropos.html uniquement.
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'app.html'));
 }
-const aproposSrc = path.join(dist, 'apropos.html');
-if (fs.existsSync(aproposSrc)) {
-  fs.copyFileSync(aproposSrc, path.join(dist, 'index.html'));
-}
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
 
+// Garde-fou OAuth : si Google renvoie encore sur /apropos.html, renvoyer vers /welcome
+const aproposPath = path.join(dist, 'apropos.html');
+if (fs.existsSync(aproposPath)) {
+  let apropos = fs.readFileSync(aproposPath, 'utf8');
+  if (!apropos.includes('AZIMUT_OAUTH_BOUNCE')) {
+    apropos = apropos.replace(
+      '<head>',
+      `<head>
+  <script>/* AZIMUT_OAUTH_BOUNCE */
+  (function () {
+    var q = location.search || '';
+    var h = location.hash || '';
+    if (/[?&#](code|state|error|access_token)=/.test(q + h)) {
+      location.replace('/welcome' + q + h);
+    }
+  })();
+  </script>`,
+    );
+    fs.writeFileSync(aproposPath, apropos);
+  }
+}
 // --- 1) Site racine (user pages) : https://hingantmael-gif.github.io/
 const rootTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'azimut-root-'));
 fs.cpSync(dist, rootTmp, { recursive: true });

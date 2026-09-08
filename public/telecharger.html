@@ -96,7 +96,9 @@
     <script>
       /* Exactement comme BTP Pro : capturer BIP, un clic → prompt(). */
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+        navigator.serviceWorker.register('/sw.js?v=14', { scope: '/' }).then(function (reg) {
+          try { reg.update(); } catch (e) {}
+        }).catch(function () {});
       }
 
       document.getElementById('url-hint').textContent = 'Lien : ' + window.location.origin;
