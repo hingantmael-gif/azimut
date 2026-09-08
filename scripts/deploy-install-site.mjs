@@ -36,7 +36,13 @@ for (const f of [
 }
 
 if (fs.existsSync(path.join(dist, 'index.html'))) {
+  // Garde l’app Expo pour /welcome, /body, etc. ; la racine `/` = page publique (Google OAuth)
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
+  fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'app.html'));
+}
+const aproposSrc = path.join(dist, 'apropos.html');
+if (fs.existsSync(aproposSrc)) {
+  fs.copyFileSync(aproposSrc, path.join(dist, 'index.html'));
 }
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
 

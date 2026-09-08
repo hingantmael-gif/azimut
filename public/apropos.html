@@ -72,7 +72,16 @@
       color: var(--mint);
       border: 1px solid rgba(61, 255, 154, 0.45);
     }
-    a.inline { color: var(--mint); }
+    a.inline { color: var(--mint); font-weight: 700; }
+    .privacy-box {
+      margin-top: 28px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(61, 255, 154, 0.28);
+      background: rgba(14, 143, 111, 0.12);
+      font-family: system-ui, sans-serif;
+      font-size: 0.95rem;
+    }
     footer {
       margin-top: 48px;
       padding-top: 20px;
@@ -114,7 +123,33 @@
       <li>Export de séances vers la montre</li>
     </ul>
 
-    <a class="cta" href="/welcome">Ouvrir Azimut</a>
+    <h2>Pourquoi Azimut demande des données Google ?</h2>
+    <p>
+      Lorsque tu choisis <strong style="color:#fff">« Continuer avec Google »</strong>, Azimut
+      demande l’accès à ton <strong style="color:#fff">adresse e-mail</strong>, ton
+      <strong style="color:#fff">nom</strong> et ton <strong style="color:#fff">profil de base</strong>
+      uniquement pour :
+    </p>
+    <ul>
+      <li>créer ou retrouver ton compte Azimut sans mot de passe séparé ;</li>
+      <li>afficher ton identité sur ton profil dans l’application ;</li>
+      <li>sécuriser la connexion (pas d’envoi d’e-mails marketing via ton Gmail).</li>
+    </ul>
+    <p>
+      Azimut ne publie pas sur ton compte Google et ne vend pas ces données.
+      Tu peux aussi t’inscrire uniquement avec un e-mail et un mot de passe, sans Google.
+    </p>
+
+    <div class="privacy-box">
+      <strong style="color:#fff">Confidentialité :</strong>
+      lis notre
+      <a class="inline" href="/privacy.html">politique de confidentialité</a>
+      (données collectées, finalités, droits RGPD) et nos
+      <a class="inline" href="/terms.html">conditions d’utilisation</a>.
+      Aucune connexion n’est requise pour lire ces pages.
+    </div>
+
+    <a class="cta" href="/welcome">Ouvrir l’application Azimut</a>
     <a class="cta secondary" href="/register">Créer un compte</a>
 
     <footer>
@@ -122,7 +157,7 @@
       ·
       <a class="inline" href="/terms.html">Conditions d’utilisation</a>
       ·
-      <a class="inline" href="/">App</a>
+      <a class="inline" href="/welcome">App</a>
     </footer>
   </main>
 </body>

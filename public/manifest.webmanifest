@@ -3,7 +3,7 @@
   "name": "Azimut",
   "short_name": "Azimut",
   "description": "Coaching multi-sport — application Azimut.",
-  "start_url": "/",
+  "start_url": "/welcome",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
