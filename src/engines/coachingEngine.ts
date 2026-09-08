@@ -36,7 +36,7 @@ import {
   qualitySessionsFromZoneMix,
   zoneMixForRaceDistanceKm,
   enrichRunWarmup,
-  ironman24WeekPhase,
+  ironmanWeekPhase,
 } from './sportsScience';
 import {
   resolveEasyRunKm,
@@ -126,10 +126,44 @@ function finalize(
     partial.plannedDurationSec && partial.plannedDurationSec > 0
       ? partial.plannedDurationSec
       : computeSessionDurationSec(partial.steps);
+  const coachNote = partial.coachNote ?? defaultCoachNote(partial);
   return {
     ...partial,
+    coachNote,
     plannedDurationSec: clamp(duration, 300, 6 * 3600), // 5 min – 6 h max
   };
+}
+
+function defaultCoachNote(
+  w: Pick<PlannedWorkout, 'discipline' | 'title' | 'periodization' | 'expectedRpe'>,
+): string | undefined {
+  const phase =
+    w.periodization === 'affutage'
+      ? 'Phase d’affûtage — volume maîtrisé. '
+      : w.periodization === 'travail_specifique'
+        ? 'Phase spécifique — qualité prioritaire. '
+        : w.periodization === 'developpement_general'
+          ? 'Phase foncière — construis l’endurance. '
+          : '';
+  switch (w.discipline) {
+    case 'run':
+      return `${phase}Course : respecte les allures indiquées ; si les sensations sont dures, reste sur le bas de la fourchette.`;
+    case 'bike':
+      return `${phase}Vélo : cadence souple, puissance dans la zone prévue — évite de « forcer » hors cible.`;
+    case 'swim':
+      return `${phase}Natation : technique d’abord, distance ensuite. Respire régulièrement.`;
+    case 'brick':
+      return `${phase}Enchaînement vélo → course : transition rapide, allure course volontairement facile.`;
+    case 'strength':
+    case 'ppg':
+      return `${phase}Renfo : qualité d’exécution avant charge. Arrête si douleur articulaire.`;
+    case 'mobility':
+      return 'Mobilité / récup : respire, ne force pas les amplitudes.';
+    case 'rest':
+      return 'Repos actif ou complet — la récupération fait partie du plan.';
+    default:
+      return phase || undefined;
+  }
 }
 
 function paceTargetFromBand(b: { minSecPerKm: number; maxSecPerKm: number }) {
@@ -412,9 +446,12 @@ function makeBrick(
     title: 'Brick vélo → course',
     date,
     discipline: 'brick',
-    plannedDistanceM: Math.round((bikeMin / 60) * 28000 + runM),
+    // Distance affichée = jambe course uniquement (vélo compté en durée / watts)
+    plannedDistanceM: runM,
     expectedRpe: 6,
     periodization: block,
+    coachNote:
+      'Enchaînement : enchaîne la course juste après le vélo pour habituer les jambes à la transition. Allure course facile — ne force pas.',
     steps,
   });
 }
@@ -525,8 +562,10 @@ export function generateCoachedWeek(
   const family = resolveSportFamily(opts.sportCategory ?? answers.sportCategory, answers.goal);
   const weekLoad = resolveWeekLoadProfile(opts.weekIndex, opts.totalWeeks, opts.periodization);
   const ironmanPhase =
-    (answers.goal === 'ironman' || opts.sportCategory === 'ironman') && opts.totalWeeks === 24
-      ? ironman24WeekPhase(opts.weekIndex)
+    answers.goal === 'ironman' ||
+    answers.goal === 'ironman_70_3' ||
+    opts.sportCategory === 'ironman'
+      ? ironmanWeekPhase(opts.weekIndex, opts.totalWeeks)
       : null;
   const load = weekLoad.volumeFactor * (ironmanPhase?.volumeFactor ?? 1);
   const raceRef = pickBestRaceReference(answers);
@@ -740,15 +779,31 @@ export function generateCoachedWeek(
               ? Math.round(55 + 20 * load)
               : Math.round(40 + 15 * load);
 
-      if (role === 'brick' || role === 'long') {
+      if (role === 'brick') {
         workouts.push(makeBrick(date, ftp, paceZones, load, block, answers.goal));
+      } else if (role === 'long') {
+        const ctx: RunSessionContext = { ...runCtxBase(), date };
+        const distM = Math.round(longKm * 1000);
+        workouts.push(
+          makeLongRunEasy(
+            ctx,
+            Math.max(5000, Math.round(distM * (answers.goal === 'ironman' ? 0.85 : 0.9))),
+          ),
+        );
       } else if (role === 'swim') {
         workouts.push(makeSwimAerobic(date, swimM, swimPace, block, 'Natation endurance'));
-      } else if (role === 'bike' || role === 'quality_a') {
+      } else if (role === 'bike') {
+        workouts.push(makeBikeEndurance(date, bikeMin, ftp, block));
+      } else if (role === 'quality_a') {
+        workouts.push(makeBikeVo2(date, ftp, answers.level, block));
+      } else if (role === 'quality_b') {
+        const ctx: RunSessionContext = { ...runCtxBase(), date };
         workouts.push(
-          qualitySlot++ % 2 === 0
-            ? makeBikeVo2(date, ftp, answers.level, block)
-            : makeBikeEndurance(date, bikeMin, ftp, block),
+          pickQualitySession({
+            ...ctx,
+            qualitySlot: 0,
+            load: load * weekLoad.qualityFactor,
+          }),
         );
       } else if (role === 'strength') {
         workouts.push(makeStrength(date, answers.level, block, 'ppg', ppgStrengthOpts(answers, opts.weekIndex)));
@@ -782,6 +837,14 @@ export function generateCoachedWeek(
   return workouts
     .map((w) =>
       enrichRunWarmup(w, answers.targetDistanceKm ?? answers.recentDistanceKm),
+    )
+    .map((w) =>
+      w.coachNote
+        ? w
+        : {
+            ...w,
+            coachNote: defaultCoachNote(w),
+          },
     )
     .sort((a, b) => a.date.localeCompare(b.date));
 }

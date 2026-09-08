@@ -57,7 +57,8 @@ export default function RpeScreen() {
     <Screen>
       <Title>Feedback post-séance</Title>
       <Muted>
-        Interface à 3 clics — RPE, sensations, énergie mentale. +{rpeXp} XP (une seule fois).
+        Interface à 3 clics — RPE, sensations, énergie. Le coach ajuste ta prochaine séance.
+        (+{rpeXp} XP une seule fois)
       </Muted>
 
       <Body style={{ marginTop: spacing.lg }}>RPE (Borg 1–10) : {rpe}</Body>
@@ -95,7 +96,7 @@ export default function RpeScreen() {
       </View>
 
       <PrimaryButton
-        label={`Valider (+${rpeXp} XP)`}
+        label="Valider mon feedback"
         onPress={() => {
           dispatch({
             type: 'SUBMIT_RPE',

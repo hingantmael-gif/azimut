@@ -419,9 +419,7 @@ export default function NewProgramScreen() {
     [guide, derivedLevel],
   );
   const defaultRecWeeks =
-    isStrength &&
-    selectedTemplate !== null &&
-    selectedTemplate !== 'custom'
+    selectedTemplate !== null && selectedTemplate !== 'custom'
       ? selectedTemplate.weeks
       : recommendedWeeks(guide, isStrength ? strengthLevel : derivedLevel);
   const strengthWeekPresets = useMemo(
@@ -667,6 +665,7 @@ export default function NewProgramScreen() {
       recentDistanceKm: parsedTimeSec ? refDistanceKm : undefined,
       includePpg: isStrength ? false : includePpg,
       ongoing: isStrength ? strengthDurationMode === 'ongoing' : undefined,
+      runIntent: state.profile.onboarding?.runIntent,
       strengthEquipment:
         isStrength && strengthEquipment.length > 0 ? strengthEquipment : undefined,
       strengthGoal: isStrength ? strengthGoal ?? undefined : undefined,

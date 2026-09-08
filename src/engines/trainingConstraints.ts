@@ -119,12 +119,20 @@ export function assignRolesWithConstraints(input: RoleAssignmentInput): Map<numb
     return assignments;
   }
 
-  // 1. Sortie longue / brick en priorité
-  if (family === 'triathlon' && sorted.length >= 4) {
-    const brickDay = findBestDay(sorted, 'brick', assignments, longDow) ?? longDow;
-    if (sorted.includes(brickDay)) assignments.set(brickDay, 'brick');
-  } else if (sorted.includes(longDow)) {
+  // 1. Sortie longue (course pure) — toujours distincte du brick en triathlon
+  if (sorted.includes(longDow)) {
     assignments.set(longDow, 'long');
+  }
+
+  // 1b. Brick triathlon : 1×/sem max, jamais le même jour que la longue
+  if (family === 'triathlon' && sorted.length >= 3) {
+    const brickCandidates = sorted.filter((d) => d !== longDow);
+    const brickDay =
+      findBestDay(brickCandidates, 'brick', assignments, brickCandidates[0]) ??
+      brickCandidates[0];
+    if (brickDay != null && sorted.includes(brickDay)) {
+      assignments.set(brickDay, 'brick');
+    }
   }
 
   const remaining = sorted.filter((d) => !assignments.has(d));
@@ -147,7 +155,10 @@ export function assignRolesWithConstraints(input: RoleAssignmentInput): Map<numb
     if (free[0] != null) assignments.set(free[0], 'swim');
     if (free[1] != null) assignments.set(free[1], 'bike');
     free.slice(2).forEach((d, i) => {
-      if (!assignments.has(d)) assignments.set(d, i % 2 === 0 ? 'easy' : 'swim');
+      if (!assignments.has(d)) {
+        // Alterner footing facile et nage — jamais tout absorber en brick
+        assignments.set(d, i % 2 === 0 ? 'easy' : 'swim');
+      }
     });
   } else if (family === 'swim') {
     sorted.forEach((d) => {

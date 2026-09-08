@@ -114,7 +114,7 @@ function resolveTemplate(input: ProgramBuildInput): {
     const resolved = resolveTrainingWeeks({
       guide,
       level,
-      manualWeeks: input.customWeeks,
+      manualWeeks: input.customWeeks ?? template?.weeks,
       raceDateIso: input.raceDateIso,
     });
     weeks = resolved.weeks;

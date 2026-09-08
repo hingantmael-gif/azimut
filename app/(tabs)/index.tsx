@@ -76,10 +76,22 @@ export default function HomeDashboard() {
         </View>
       </FadeInUp>
 
+      {state.coachAdaptations?.[0] ? (
+        <Pressable
+          style={styles.coachBanner}
+          onPress={() => router.push('/(tabs)/calendar')}
+        >
+          <Text style={styles.coachBannerTitle}>Ajustement coach</Text>
+          <Text style={styles.coachBannerSub} numberOfLines={3}>
+            {state.coachAdaptations[0]}
+          </Text>
+        </Pressable>
+      ) : null}
+
       {state.pendingRpeActivityId ? (
         <Pressable style={styles.rpeBanner} onPress={() => router.push('/session/rpe')}>
           <Text style={styles.rpeTitle}>Feedback RPE en attente</Text>
-          <Text style={styles.rpeSub}>3 clics · +{rpeXp} XP</Text>
+          <Text style={styles.rpeSub}>Aide le coach à ajuster ta prochaine séance</Text>
         </Pressable>
       ) : null}
 
@@ -304,6 +316,17 @@ function makeStyles(colors: ColorPalette) {
     },
     rpeTitle: { fontWeight: '800', color: colors.accent, fontSize: 15 },
     rpeSub: { color: colors.textSecondary, marginTop: 2, fontSize: 13 },
+    coachBanner: {
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.bgElevated,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    coachBannerTitle: { fontWeight: '800', color: colors.accent, fontSize: 15 },
+    coachBannerSub: { color: colors.textSecondary, marginTop: 4, fontSize: 13, lineHeight: 18 },
     todayCard: {
       marginHorizontal: spacing.md,
       padding: spacing.md,

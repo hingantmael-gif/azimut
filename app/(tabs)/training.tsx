@@ -6,6 +6,7 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
 import { summarizeWorkout } from '../../src/engines/workoutPresentation';
+import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { shareWorkoutSession } from '../../src/engines/stravaExport';
@@ -70,7 +71,8 @@ export default function TrainingScreen() {
         <Text style={styles.cardTitle}>{workout?.title ?? 'Repos'}</Text>
         {workout ? (
           <Text style={styles.cardMeta}>
-            {workoutSummary?.durationLabel ?? '—'} · {workout.discipline}
+            {workoutSummary?.durationLabel ?? '—'} ·{' '}
+            {DISCIPLINE_META[workout.discipline]?.label ?? workout.discipline}
           </Text>
         ) : null}
         {workout && canSendWorkoutToWatch(workout.discipline) ? (

@@ -87,6 +87,12 @@ export default function PlanScreen() {
           {vmaHint ? ` · ${vmaHint}` : ''}
         </Text>
       </View>
+      {state.coachAdaptations?.[0] ? (
+        <View style={styles.adaptBanner}>
+          <Text style={styles.adaptTitle}>Ajustement coach</Text>
+          <Text style={styles.adaptBody}>{state.coachAdaptations[0]}</Text>
+        </View>
+      ) : null}
       <View style={styles.calendarPad}>
         <PlanCalendar
           year={year}
@@ -254,6 +260,17 @@ function makeStyles(colors: ColorPalette) {
     },
     title: { fontSize: 22, fontWeight: '800', color: colors.text },
     sub: { color: colors.textMuted, marginTop: 4, fontSize: 13, lineHeight: 18 },
+    adaptBanner: {
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.bgElevated,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    adaptTitle: { fontWeight: '800', color: colors.accent, fontSize: 14 },
+    adaptBody: { color: colors.textSecondary, marginTop: 4, fontSize: 13, lineHeight: 18 },
     calendarPad: { padding: spacing.md, paddingBottom: spacing.sm },
     evoPad: { paddingHorizontal: spacing.md, marginBottom: spacing.sm },
     moveHint: {

@@ -231,28 +231,38 @@ export type IronmanPhase =
   | 'affutage'
   | 'competition';
 
-export function ironman24WeekPhase(weekIndex0: number): {
+export function ironmanWeekPhase(
+  weekIndex0: number,
+  totalWeeks = 24,
+): {
   phase: IronmanPhase;
   label: string;
   volumeFactor: number;
 } {
+  const n = Math.max(4, totalWeeks);
   const w = weekIndex0 + 1;
-  if (w <= 8) {
+  const fEnd = Math.max(1, Math.round(n * (8 / 24)));
+  const sEnd = Math.max(fEnd + 1, Math.round(n * (16 / 24)));
+  const aEnd = Math.max(sEnd + 1, Math.round(n * (22 / 24)));
+
+  if (w <= fEnd) {
+    const progress = fEnd <= 1 ? 1 : w / fEnd;
     return {
       phase: 'fonciere',
       label: 'Phase foncière · volume Zone 2 + renforcement',
-      volumeFactor: 0.85 + (w / 8) * 0.15,
+      volumeFactor: 0.85 + progress * 0.15,
     };
   }
-  if (w <= 16) {
+  if (w <= sEnd) {
     return {
       phase: 'specifique',
       label: 'Phase spécifique · bricks & nutrition effort long',
       volumeFactor: 1,
     };
   }
-  if (w <= 22) {
-    const t = (w - 16) / 6;
+  if (w <= aEnd) {
+    const span = Math.max(1, aEnd - sEnd);
+    const t = (w - sEnd) / span;
     return {
       phase: 'affutage',
       label: 'Phase d’affûtage · intensité maintenue, volume −30 à −50 %',
@@ -266,16 +276,43 @@ export function ironman24WeekPhase(weekIndex0: number): {
   };
 }
 
+/** @deprecated préférer ironmanWeekPhase(week, 24) */
+export function ironman24WeekPhase(weekIndex0: number): {
+  phase: IronmanPhase;
+  label: string;
+  volumeFactor: number;
+} {
+  return ironmanWeekPhase(weekIndex0, 24);
+}
+
+/** Périodisation Ironman proportionnelle (base 8 / 8 / 6 / 2 sur 24 sem.). */
+export function ironmanPeriodizationForWeeks(weeks: number): Array<
+  'developpement_general' | 'travail_specifique' | 'affutage'
+> {
+  const n = Math.max(1, Math.round(weeks));
+  const fonc = Math.max(1, Math.round(n * (8 / 24)));
+  const spec = Math.max(1, Math.round(n * (8 / 24)));
+  let aff = n - fonc - spec;
+  if (aff < 1) {
+    aff = 1;
+  }
+  // Ajuste si arrondis dépassent
+  const blocks: Array<'developpement_general' | 'travail_specifique' | 'affutage'> = [];
+  for (let i = 0; i < fonc && blocks.length < n; i++) {
+    blocks.push('developpement_general');
+  }
+  for (let i = 0; i < spec && blocks.length < n; i++) {
+    blocks.push('travail_specifique');
+  }
+  while (blocks.length < n) blocks.push('affutage');
+  return blocks;
+}
+
 /** Périodisation explicite 24 sem. Ironman (8 / 8 / 6 / 2). */
 export function ironman24Periodization(): Array<
   'developpement_general' | 'travail_specifique' | 'affutage'
 > {
-  const blocks: Array<'developpement_general' | 'travail_specifique' | 'affutage'> = [];
-  for (let i = 0; i < 8; i++) blocks.push('developpement_general');
-  for (let i = 0; i < 8; i++) blocks.push('travail_specifique');
-  for (let i = 0; i < 6; i++) blocks.push('affutage');
-  for (let i = 0; i < 2; i++) blocks.push('affutage');
-  return blocks;
+  return ironmanPeriodizationForWeeks(24);
 }
 
 /** Ajustement 1RM haltères : −10 % à −15 % vs barre/machine (stabilisation). */

@@ -19,7 +19,13 @@ export function generateMultiWeekPlan(
   const start = new Date(startIso + 'T12:00:00');
   const blocks = opts?.ongoing
     ? (Array.from({ length: weeks }, () => 'developpement_general') as PeriodizationBlock[])
-    : periodizationForWeeks(weeks);
+    : periodizationForWeeks(weeks, {
+        ironmanStyle:
+          answers.goal === 'ironman' ||
+          answers.goal === 'ironman_70_3' ||
+          sportCategory === 'ironman' ||
+          answers.sportCategory === 'ironman',
+      });
   const raceRef = pickBestRaceReference(answers);
   const paceZones = resolvePaceZones({
     level: answers.level,

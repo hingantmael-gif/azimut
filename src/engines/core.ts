@@ -400,7 +400,9 @@ export {
   qualitySessionsFromZoneMix,
   buildRunWarmupProtocol,
   ironman24WeekPhase,
+  ironmanWeekPhase,
   ironman24Periodization,
+  ironmanPeriodizationForWeeks,
   enrichRunWarmup,
 } from './sportsScience';
 
@@ -510,6 +512,7 @@ export function applyAdaptiveToWorkout(
     return {
       ...workout,
       title: `${workout.title} (−${action.pct}% volume)`,
+      coachNote: `Ajustement coach : volume −${action.pct}% suite à ton RPE / récupération.`,
       plannedDistanceM: workout.plannedDistanceM
         ? Math.round(workout.plannedDistanceM * factor)
         : undefined,
@@ -523,6 +526,8 @@ export function applyAdaptiveToWorkout(
       ...workout,
       title: 'Footing récupération très doux',
       expectedRpe: 2,
+      coachNote:
+        'Ajustement coach : séance transformée en récupération très douce (charge / RPE élevés).',
       steps: [
         {
           id: 'easy',
@@ -533,10 +538,19 @@ export function applyAdaptiveToWorkout(
       ],
     };
   }
-  if (action.case === 1 && health) {
+  if (action.case === 1) {
     return {
       ...workout,
       title: `${workout.title} (+${action.pct}% allure)`,
+      coachNote: `Ajustement coach : légère hausse d’allure (+${action.pct}%) — tu encaisses bien.`,
+    };
+  }
+  if (action.case === 4) {
+    return {
+      ...workout,
+      coachNote:
+        workout.coachNote ??
+        'Plan maintenu : on observe encore avant de modifier la charge.',
     };
   }
   return workout;
@@ -548,7 +562,12 @@ export function formatPace(secPerKm: number): string {
   const s = Math.round(safe % 60)
     .toString()
     .padStart(2, '0');
-  return `${m}'${s}"/km`;
+  return `${m}'${s}"`;
+}
+
+/** Allure avec unité (éviter le double /km côté présentation). */
+export function formatPacePerKm(secPerKm: number): string {
+  return `${formatPace(secPerKm)}/km`;
 }
 
 /**

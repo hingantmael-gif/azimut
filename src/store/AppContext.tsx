@@ -705,6 +705,8 @@ function reducer(state: AppState, action: Action): AppState {
         }
       }
       return (() => {
+        // Garde l’historique passé — ne vide plus tout le calendrier
+        const keptPlan = state.plan.filter((w) => w.date < today);
         const nextProfile = {
           ...state.profile,
           activeProgram: undefined,
@@ -715,12 +717,16 @@ function reducer(state: AppState, action: Action): AppState {
             newlyFinishedIds[0] ?? state.profile.pendingProgramReviewId ?? null,
         };
         const unlocked = applyBadgeUnlocks(
-          { ...state, plan: [], profile: nextProfile },
+          { ...state, plan: keptPlan, profile: nextProfile },
           state.profile.ranked,
         );
         return withReminders({
           ...state,
-          plan: [],
+          plan: keptPlan,
+          coachAdaptations: [
+            'Programme terminé — ton historique de séances est conservé. Crée un nouveau cycle quand tu veux.',
+            ...(state.coachAdaptations ?? []),
+          ].slice(0, 12),
           profile: {
             ...nextProfile,
             ranked: unlocked.ranked,
@@ -1169,32 +1175,51 @@ function reducer(state: AppState, action: Action): AppState {
           a.plannedWorkoutId === action.feedback.sessionId ||
           a.activityId === action.feedback.sessionId,
       );
+      const planned =
+        state.plan.find((p) => p.id === sid) ??
+        (analysis ? state.plan.find((p) => p.id === analysis.plannedWorkoutId) : undefined);
+
+      const adaptive = decideAdaptiveAction({
+        sleepScore: state.health.sleep?.score,
+        sleepBrand: state.health.sleep?.source ?? state.profile.watch?.brandId,
+        hrvDeltaPct: state.health.hrv?.deltaPct,
+        rpe: action.feedback.rpe,
+        expectedRpe: planned?.expectedRpe,
+        // Sans analyse Strava : on reste neutre-positif pour laisser le RPE piloter
+        compliance: analysis?.compliance.total ?? 100,
+        muscle: action.feedback.muscle,
+        acwrForceRest: (() => {
+          const loads = state.activities.map((a) => ({
+            date: a.startDate.slice(0, 10),
+            load: banisterLoadFromSession(a.movingSec, action.feedback.rpe),
+          }));
+          return computeAcwr(loads, planned?.date ?? state.banister.date).forceRest;
+        })(),
+      });
+
       let plan = state.plan;
-      if (analysis) {
-        const planned = state.plan.find((p) => p.id === analysis.plannedWorkoutId);
-        const adaptive = decideAdaptiveAction({
-          sleepScore: state.health.sleep?.score,
-          sleepBrand: state.health.sleep?.source ?? state.profile.watch?.brandId,
-          hrvDeltaPct: state.health.hrv?.deltaPct,
-          rpe: action.feedback.rpe,
-          expectedRpe: planned?.expectedRpe,
-          compliance: analysis.compliance.total,
-          muscle: action.feedback.muscle,
-          acwrForceRest: (() => {
-            const loads = state.activities.map((a) => ({
-              date: a.startDate.slice(0, 10),
-              load: banisterLoadFromSession(a.movingSec, action.feedback.rpe),
-            }));
-            return computeAcwr(loads, planned?.date ?? state.banister.date).forceRest;
-          })(),
-        });
-        const nextIdx = state.plan.findIndex((p) => planned && p.date > planned.date);
-        if (nextIdx >= 0) {
-          plan = state.plan.map((p, i) =>
-            i === nextIdx ? applyAdaptiveToWorkout(p, adaptive, state.health) : p,
-          );
-        }
+      const anchorDate = planned?.date;
+      const nextIdx =
+        anchorDate != null
+          ? state.plan.findIndex(
+              (p) => p.date > anchorDate && p.discipline !== 'rest' && !p.lockedRest,
+            )
+          : -1;
+      let adaptationMsg: string | null = null;
+      if (nextIdx >= 0) {
+        const adapted = applyAdaptiveToWorkout(
+          state.plan[nextIdx],
+          adaptive,
+          state.health,
+        );
+        plan = state.plan.map((p, i) => (i === nextIdx ? adapted : p));
+        adaptationMsg =
+          adapted.coachNote ??
+          (adaptive.case !== 4
+            ? 'Prochaine séance ajustée selon ton RPE.'
+            : 'Feedback enregistré — plan maintenu pour l’instant.');
       }
+
       const unlocked = applyBadgeUnlocks(
         {
           ...state,
@@ -1202,10 +1227,18 @@ function reducer(state: AppState, action: Action): AppState {
         },
         ranked,
       );
+      const coachAdaptations = [
+        adaptationMsg,
+        ...(state.coachAdaptations ?? []),
+      ]
+        .filter(Boolean)
+        .slice(0, 12) as string[];
+
       return withReminders({
         ...state,
         feedbacks: [...state.feedbacks, action.feedback],
         plan,
+        coachAdaptations,
         pendingRpeActivityId: null,
         profile: {
           ...state.profile,
@@ -1714,7 +1747,12 @@ export function useApp() {
 
 export function todayWorkout(plan: PlannedWorkout[]): PlannedWorkout | undefined {
   const d = new Date().toISOString().slice(0, 10);
-  return plan.find((w) => w.date === d);
+  const today = plan.filter((w) => w.date === d);
+  if (today.length === 0) return undefined;
+  return (
+    today.find((w) => w.discipline !== 'rest' && !w.lockedRest) ??
+    today[0]
+  );
 }
 
 /** Prochaine séance d’entraînement (aujourd’hui ou plus tard, hors repos) */

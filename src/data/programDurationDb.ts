@@ -1,5 +1,5 @@
 import type { AthleticLevel, GoalType, PeriodizationBlock } from '../types/domain';
-import { ironman24Periodization } from '../engines/sportsScience';
+import { ironmanPeriodizationForWeeks } from '../engines/sportsScience';
 
 /**
  * Base offline — durées & périodisation par objectif.
@@ -262,12 +262,15 @@ export function resolveTrainingWeeks(opts: {
 
 /**
  * Répartition périodisation selon le nombre de semaines (offline).
- * Ironman 24 sem. : foncière 8 / spécifique 8 / affûtage 6 / compétition 2.
+ * Ironman / 70.3 : proportions foncière / spécifique / affûtage (base 8/8/6/2).
  */
-export function periodizationForWeeks(weeks: number): PeriodizationBlock[] {
+export function periodizationForWeeks(
+  weeks: number,
+  opts?: { ironmanStyle?: boolean },
+): PeriodizationBlock[] {
   if (weeks <= 0) return [];
-  if (weeks === 24) {
-    return ironman24Periodization();
+  if (opts?.ironmanStyle) {
+    return ironmanPeriodizationForWeeks(weeks);
   }
   if (weeks === 1) return ['affutage'];
   if (weeks === 2) return ['travail_specifique', 'affutage'];

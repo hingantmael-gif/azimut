@@ -129,6 +129,13 @@ export default function SessionDetailScreen() {
           <Muted style={{ marginTop: spacing.sm }}>{vmaHint} · allures offline</Muted>
         ) : null}
 
+        {workout.coachNote ? (
+          <View style={styles.coachBox}>
+            <Text style={styles.coachLabel}>Note du coach</Text>
+            <Body style={{ marginTop: 4 }}>{workout.coachNote}</Body>
+          </View>
+        ) : null}
+
         <Body style={{ marginTop: spacing.lg, fontWeight: '700' }}>Déroulé</Body>
         {summary.stepLines.map((line, i) => (
           <View key={`${workout.id}-line-${i}`} style={styles.step}>
@@ -241,6 +248,21 @@ function makeStyles(colors: ColorPalette) {
       height: 10,
       borderRadius: 5,
       marginTop: 6,
+    },
+    coachBox: {
+      marginTop: spacing.md,
+      padding: spacing.md,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      backgroundColor: `${colors.accent}12`,
+    },
+    coachLabel: {
+      color: colors.accent,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
     },
   });
 }
