@@ -70,35 +70,35 @@ export const RUN_GOAL_OPTIONS: ReadonlyArray<{
   {
     id: 'race_road',
     title: 'Course sur route',
-    subtitle: '',
+    subtitle: '5 km → marathon',
     image: ONBOARDING_IMAGES.goalRoad,
     goal: '10k',
   },
   {
     id: 'race_trail',
     title: 'Trail',
-    subtitle: '',
+    subtitle: 'Sentier & dénivelé',
     image: ONBOARDING_IMAGES.goalTrail,
     goal: 'trail',
   },
   {
     id: 'start',
     title: 'Se mettre à courir',
-    subtitle: '',
+    subtitle: 'Bases solides',
     image: ONBOARDING_IMAGES.goalStart,
     goal: 'forme',
   },
   {
     id: 'progress',
     title: 'Progresser',
-    subtitle: '',
+    subtitle: 'Allure & régularité',
     image: ONBOARDING_IMAGES.goalProgress,
     goal: 'forme',
   },
   {
     id: 'return_injury',
     title: 'Reprise',
-    subtitle: '',
+    subtitle: 'Après une pause',
     image: ONBOARDING_IMAGES.goalReturn,
     goal: 'forme',
   },
@@ -131,17 +131,17 @@ export const TRAINING_TYPE_OPTIONS: ReadonlyArray<{
   {
     id: 'hills',
     title: 'Dénivelé',
-    subtitle: '',
+    subtitle: 'Côtes & relief',
   },
   {
     id: 'mixed',
     title: 'Mixte',
-    subtitle: '',
+    subtitle: 'Plat et relief',
   },
   {
     id: 'flat',
     title: 'Plat',
-    subtitle: '',
+    subtitle: 'Allure stable',
   },
 ];
 

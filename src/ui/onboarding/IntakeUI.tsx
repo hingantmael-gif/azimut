@@ -128,11 +128,13 @@ export function IntakeChoiceCard({
       ]}
     >
       {image ? (
-        <Image
-          source={image}
-          style={[styles.choiceThumb, coverCropImageStyle(COVER_CROP_CENTER)]}
-          resizeMode="cover"
-        />
+        <View style={styles.choiceThumbWrap}>
+          <Image
+            source={image}
+            style={[styles.choiceThumb, coverCropImageStyle(COVER_CROP_CENTER)]}
+            resizeMode="cover"
+          />
+        </View>
       ) : null}
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={styles.choiceTitleRow}>
@@ -427,6 +429,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.lg,
+  },
+  choiceThumbWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+    flexShrink: 0,
   },
   choiceThumb: {
     width: 56,

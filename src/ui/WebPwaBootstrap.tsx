@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 
-const SW_URL = '/sw.js?v=14';
+const SW_URL = '/sw.js?v=15';
 
 /**
  * PWA : à chaque ouverture / retour au premier plan, cherche une nouvelle

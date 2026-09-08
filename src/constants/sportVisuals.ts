@@ -94,7 +94,8 @@ export function programImageFocus(catalogId?: string | null): string {
 
 /**
  * Style image pour `Image` / `ImageBackground` : cover + cadrage centré.
- * Sur web, sans `objectFit: cover` RN étire souvent l’image (déformation).
+ * Sur web, `objectFit` évite la déformation — ne force PAS width/height
+ * (sinon les thumbs 56×56 s’étirent et masquent le texte).
  */
 export function coverCropImageStyle(objectPosition: string = COVER_CROP_CENTER): ImageStyle {
   if (Platform.OS !== 'web') {
@@ -102,8 +103,6 @@ export function coverCropImageStyle(objectPosition: string = COVER_CROP_CENTER):
     return {};
   }
   return {
-    width: '100%',
-    height: '100%',
     objectFit: 'cover',
     objectPosition,
   } as ImageStyle;
