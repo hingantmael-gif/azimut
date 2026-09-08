@@ -23,6 +23,9 @@ export function validateUsernameFormat(
 ): { ok: true } | { ok: false; error: string } {
   const u = normalizeUsername(username);
   if (!u) return { ok: false, error: 'Choisissez un identifiant.' };
+  if (u.length < 3) {
+    return { ok: false, error: 'Identifiant : 3 caractères minimum.' };
+  }
   if (!USERNAME_RE.test(u)) {
     return {
       ok: false,

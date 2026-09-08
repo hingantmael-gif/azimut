@@ -651,16 +651,19 @@ export function generateCoachedWeek(
     if (family === 'other') {
       const ctx: RunSessionContext = { ...runCtxBase(), date };
       if (role === 'brick') {
+        // Enchaînement vélo → course (biathlon / duathlon)
         workouts.push(makeBrick(date, ftp, paceZones, load, block, 'triathlon_sprint'));
       } else if (role === 'long') {
         workouts.push(makeLongRunEasy(ctx, Math.round(longKm * 1000)));
+      } else if (role === 'bike') {
+        workouts.push(
+          makeBikeEndurance(date, Math.round(50 + 25 * load), ftp, block, 'Sortie vélo'),
+        );
       } else if (role === 'easy') {
         workouts.push(makeRecoveryRun(ctx, Math.round(otherEasyKm * 1000)));
       } else if (role === 'quality_a' || role === 'quality_b') {
         workouts.push(pickQualitySession({ ...ctx, qualitySlot: qualitySlot }));
         qualitySlot = 1;
-      } else if (role === 'bike') {
-        workouts.push(makeBikeEndurance(date, Math.round(50 + 25 * load), ftp, block));
       } else if (role === 'strength') {
         workouts.push(makeStrength(date, answers.level, block, 'ppg', ppgStrengthOpts(answers, opts.weekIndex)));
       } else {

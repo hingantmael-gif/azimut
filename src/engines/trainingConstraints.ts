@@ -158,12 +158,14 @@ export function assignRolesWithConstraints(input: RoleAssignmentInput): Map<numb
       if (!assignments.has(d)) assignments.set(d, 'easy');
     });
   } else if (family === 'other') {
-    sorted.forEach((d) => {
-      if (!assignments.has(d)) assignments.set(d, 'easy');
-    });
+    // Biathlon / duathlon : brick + vélo + course (easy)
     if (sorted.includes(longDow) && sorted.length >= 3) {
       assignments.set(longDow, 'brick');
     }
+    const free = sorted.filter((d) => !assignments.has(d));
+    free.forEach((d, i) => {
+      assignments.set(d, i % 2 === 0 ? 'bike' : 'easy');
+    });
   } else {
     // run — easy par défaut
     sorted.forEach((d) => {

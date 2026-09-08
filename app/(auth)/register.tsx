@@ -39,7 +39,11 @@ import {
 } from '../../src/utils/passwordPolicy';
 import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
-import { clearOnboardingCompleted } from '../../src/storage/onboardingPersistence';
+import {
+  clearOnboardingCompleted,
+  hasCompletedOnboarding,
+  markOnboardingCompleted,
+} from '../../src/storage/onboardingPersistence';
 import { colors, radii, spacing } from '../../src/theme/tokens';
 
 type Step = 'options' | 'email' | 'password' | 'profile';
@@ -61,51 +65,74 @@ export default function RegisterScreen() {
 
   const passwordRules = useMemo(() => getPasswordRules(password), [password]);
 
+  const finishGoogleAccount = async (
+    payload: {
+      token: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      username?: string;
+    },
+    isNewAccount: boolean,
+  ) => {
+    const done =
+      !isNewAccount &&
+      (await hasCompletedOnboarding(payload.email, payload.username));
+    if (!done) {
+      await clearOnboardingCompleted(payload.email, payload.username);
+    } else {
+      await markOnboardingCompleted(payload.email, payload.username);
+    }
+    dispatch({
+      type: 'AUTH_WITH_PROVIDER',
+      payload: {
+        ...payload,
+        onboardingCompleted: done,
+      },
+    });
+  };
+
   const google = useGoogleAuth(
     async (profile) => {
       setBusy(true);
       setError('');
       try {
         await clearSession();
-        await clearOnboardingCompleted(profile.email);
         const res = await apiGoogleAuth(profile.accessToken);
-        if (res.error || !res.token || !res.user) {
-          dispatch({
-            type: 'AUTH_WITH_PROVIDER',
-            payload: {
-              token: `google_${profile.accessToken.slice(0, 16)}`,
-              email: profile.email,
-              firstName: profile.firstName,
-              lastName: profile.lastName,
-              onboardingCompleted: false,
-            },
-          });
-        } else {
-          await clearOnboardingCompleted(res.user.email, res.user.username, profile.email);
-          dispatch({
-            type: 'AUTH_WITH_PROVIDER',
-            payload: {
+        if (res.token && res.user) {
+          await finishGoogleAccount(
+            {
               token: res.token,
               email: res.user.email,
               firstName: res.user.firstName || profile.firstName,
               lastName: res.user.lastName || profile.lastName,
               username: res.user.username,
-              onboardingCompleted: false,
             },
-          });
+            Boolean(res.isNew),
+          );
+        } else {
+          const known = await hasCompletedOnboarding(profile.email);
+          await finishGoogleAccount(
+            {
+              token: `google_${profile.accessToken.slice(0, 16)}`,
+              email: profile.email,
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+            },
+            !known,
+          );
         }
       } catch {
-        await clearOnboardingCompleted(profile.email);
-        dispatch({
-          type: 'AUTH_WITH_PROVIDER',
-          payload: {
+        const known = await hasCompletedOnboarding(profile.email);
+        await finishGoogleAccount(
+          {
             token: `google_${Date.now()}`,
             email: profile.email,
             firstName: profile.firstName,
             lastName: profile.lastName,
-            onboardingCompleted: false,
           },
-        });
+          !known,
+        );
       } finally {
         setBusy(false);
       }
@@ -274,6 +301,14 @@ export default function RegisterScreen() {
           return;
         }
         if (err.includes('mot de passe') || err.includes('password')) {
+          setError(res.error);
+          return;
+        }
+        if (
+          err.includes('identifiant') ||
+          err.includes('username') ||
+          err.includes('invalide')
+        ) {
           setError(res.error);
           return;
         }
