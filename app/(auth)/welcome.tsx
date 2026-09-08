@@ -21,6 +21,20 @@ export default function WelcomeScreen() {
           <Text style={styles.eyebrow}>MULTI-SPORT · COACHING</Text>
           <BrandMark size="lg" ink surfaceColor={BRAND.ink} />
           <Text style={styles.tagline}>{BRAND.taglineLines}</Text>
+          <Text style={styles.purpose}>
+            Azimut est une appli de coaching multi-sport : plans d’entraînement (course, vélo,
+            natation, triathlon…), récupération, sommeil et export vers ta montre. Tu peux
+            découvrir le service avant de créer un compte.
+          </Text>
+          <Text
+            style={styles.legalLink}
+            onPress={() => router.push('/settings/privacy-policy')}
+          >
+            Politique de confidentialité
+          </Text>
+          <Text style={styles.legalLink} onPress={() => router.push('/settings/terms')}>
+            Conditions d’utilisation
+          </Text>
         </View>
       </View>
 
@@ -105,6 +119,20 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     marginTop: spacing.md,
     maxWidth: 300,
+  },
+  purpose: {
+    color: 'rgba(244,247,250,0.82)',
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: spacing.md,
+    maxWidth: 340,
+  },
+  legalLink: {
+    color: BRAND.signalMint,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 10,
+    textDecorationLine: 'underline',
   },
   actions: {
     paddingHorizontal: spacing.lg,

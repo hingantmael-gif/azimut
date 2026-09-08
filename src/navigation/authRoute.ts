@@ -11,9 +11,13 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   const inAuth = root === '(auth)';
   /** Page d’installation PWA — publique, sans compte */
   const inInstall = root === 'install';
+  /** Pages légales — publiques (validation Google OAuth) */
+  const pathKey = segments.filter(Boolean).join('/');
+  const isPublicLegal =
+    pathKey === 'settings/privacy-policy' || pathKey === 'settings/terms';
 
   // Sans compte → écran d’accueil / login (comme BTP Pro), PAS /install (évite spinner infini)
-  if (!session.authToken && !inAuth && !inInstall) return '/(auth)/welcome';
+  if (!session.authToken && !inAuth && !inInstall && !isPublicLegal) return '/(auth)/welcome';
   if (
     session.authToken &&
     !session.emailVerified &&

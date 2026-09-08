@@ -27,6 +27,9 @@ for (const f of [
   'telecharger.html',
   'qr-install.png',
   'get.html',
+  'apropos.html',
+  'privacy.html',
+  'terms.html',
 ]) {
   const src = path.join(root, 'public', f);
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
