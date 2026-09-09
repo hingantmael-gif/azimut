@@ -11,6 +11,7 @@ import {
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
+import { PressableScale, SoftPulse } from '../motion/softMotion';
 
 type Props = {
   year: number;
@@ -132,7 +133,7 @@ export function PlanCalendar({
           const isMoveSource = moveMode && cell.date === moveSourceDate;
 
           return (
-            <Pressable
+            <PressableScale
               key={cell.date}
               style={[
                 styles.cell,
@@ -143,13 +144,15 @@ export function PlanCalendar({
               ]}
               onPress={() => onDayPress(cell.date!)}
             >
-              <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{cell.day}</Text>
-              <View style={styles.dots}>
-                {sessions.slice(0, 4).map((s) => (
-                  <SportDot key={s.id} discipline={s.discipline} />
-                ))}
-              </View>
-            </Pressable>
+              <SoftPulse intensity={isDaySelected ? 0.04 : 0}>
+                <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{cell.day}</Text>
+                <View style={styles.dots}>
+                  {sessions.slice(0, 4).map((s) => (
+                    <SportDot key={s.id} discipline={s.discipline} />
+                  ))}
+                </View>
+              </SoftPulse>
+            </PressableScale>
           );
         })}
       </View>

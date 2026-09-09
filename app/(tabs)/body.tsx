@@ -18,6 +18,7 @@ import {
   BreathingDot,
   FadeInUp,
   PressableScale,
+  RevealPanel,
   SectionHeader,
   SoftPulse,
   StaticFillBar,
@@ -285,9 +286,14 @@ function MuscleListRow({
         <Text style={styles.chevron}>{expanded ? '▾' : '›'}</Text>
       </Pressable>
       {expanded ? (
-        <View style={styles.detailPad}>
+        <RevealPanel
+          key={muscle.id}
+          resetKey={muscle.id}
+          duration={1050}
+          style={styles.detailPad}
+        >
           <MuscleRecoveryDetail muscle={muscle} />
-        </View>
+        </RevealPanel>
       ) : null}
     </View>
   );

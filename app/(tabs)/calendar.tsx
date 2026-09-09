@@ -15,6 +15,7 @@ import {
 import { AppScrollView } from '../../src/ui/scrolling';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
+import { FadeInUp, RevealPanel, StaggerIn } from '../../src/ui/motion/softMotion';
 
 function formatDayTitle(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -121,99 +122,124 @@ export default function PlanScreen() {
         </View>
       ) : null}
       {selectedDate ? (
-        <View style={styles.dayPanel}>
-          <Text style={styles.dayPanelTitle}>{formatDayTitle(selectedDate)}</Text>
+        <RevealPanel
+          key={selectedDate}
+          resetKey={selectedDate}
+          duration={880}
+          style={styles.dayPanel}
+        >
+          <FadeInUp delay={40} duration={700} distance={10}>
+            <Text style={styles.dayPanelTitle}>{formatDayTitle(selectedDate)}</Text>
+          </FadeInUp>
           {daySessions.length === 0 ? (
-            <Text style={styles.emptyDay}>
-              Aucune séance ce jour — déplacez-en une depuis une autre date.
-            </Text>
+            <FadeInUp delay={120} duration={720} distance={12}>
+              <Text style={styles.emptyDay}>
+                Aucune séance ce jour — déplacez-en une depuis une autre date.
+              </Text>
+            </FadeInUp>
           ) : (
-            daySessions.map((workout) => {
+            daySessions.map((workout, index) => {
               const isActive = activeWorkoutId === workout.id;
               const summary = summarizeWorkout(workout);
               const dColor = disciplineColor(workout.discipline);
               return (
-                <View
-                  key={workout.id}
-                  style={[
-                    styles.sessionCard,
-                    { backgroundColor: `${dColor}12`, borderColor: `${dColor}40` },
-                    isActive && { borderColor: dColor, borderWidth: 1.5 },
-                  ]}
-                >
-                  <Pressable onPress={() => setActiveWorkoutId(isActive ? null : workout.id)}>
-                    <View style={styles.sessionHead}>
-                      <View
-                        style={[
-                          styles.sessionDot,
-                          { backgroundColor: dColor },
-                        ]}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.sessionTitle}>{workout.title}</Text>
-                        <Text style={styles.sessionMeta}>
-                          {DISCIPLINE_META[workout.discipline].label} · {summary.durationLabel}
-                          {summary.distanceLabel ? ` · ${summary.distanceLabel}` : ''}
-                          {workout.expectedRpe ? ` · RPE ~${workout.expectedRpe}` : ''}
-                        </Text>
-                      </View>
-                      <Text style={[styles.chevron, { color: dColor }]}>
-                        {isActive ? '▾' : '▸'}
-                      </Text>
-                    </View>
-                  </Pressable>
-                  {isActive ? (
-                    <View style={styles.sessionEdit}>
-                      {workout.coachNote ? (
-                        <Text style={[styles.coachNote, { color: colors.accent }]}>
-                          {workout.coachNote}
-                        </Text>
-                      ) : null}
-                      {summary.stepLines.map((line, i) => (
-                        <View key={`${workout.id}-step-${i}`} style={styles.stepLine}>
-                          <Text style={styles.stepTitle}>{line.title}</Text>
-                          <Text style={styles.stepDetail}>{line.detail}</Text>
+                <StaggerIn key={workout.id} index={index} baseDelay={90} step={80} duration={680}>
+                  <View
+                    style={[
+                      styles.sessionCard,
+                      { backgroundColor: `${dColor}12`, borderColor: `${dColor}40` },
+                      isActive && { borderColor: dColor, borderWidth: 1.5 },
+                    ]}
+                  >
+                    <Pressable onPress={() => setActiveWorkoutId(isActive ? null : workout.id)}>
+                      <View style={styles.sessionHead}>
+                        <View
+                          style={[
+                            styles.sessionDot,
+                            { backgroundColor: dColor },
+                          ]}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.sessionTitle}>{workout.title}</Text>
+                          <Text style={styles.sessionMeta}>
+                            {DISCIPLINE_META[workout.discipline].label} · {summary.durationLabel}
+                            {summary.distanceLabel ? ` · ${summary.distanceLabel}` : ''}
+                            {workout.expectedRpe ? ` · RPE ~${workout.expectedRpe}` : ''}
+                          </Text>
                         </View>
-                      ))}
-                      <View style={styles.actionRow}>
-                        <Pressable
-                          style={styles.actionBtn}
-                          onPress={() => router.push(`/session/${workout.id}`)}
-                        >
-                          <Text style={styles.actionBtnText}>Détails complets</Text>
-                        </Pressable>
-                        {workout.discipline !== 'rest' &&
-                        canSendWorkoutToWatch(workout.discipline) ? (
-                          <Pressable
-                            style={[styles.actionBtn, styles.actionBtnAccent]}
-                            onPress={() => router.push(`/session/${workout.id}`)}
-                          >
-                            <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
-                              Envoyer séance
-                            </Text>
-                          </Pressable>
-                        ) : null}
-                        {!workout.lockedRest ? (
-                          <Pressable
-                            style={[styles.actionBtn, styles.actionBtnAccent]}
-                            onPress={() => {
-                              setActiveWorkoutId(workout.id);
-                              setMoveMode(true);
-                            }}
-                          >
-                            <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
-                              Déplacer
-                            </Text>
-                          </Pressable>
-                        ) : null}
+                        <Text style={[styles.chevron, { color: dColor }]}>
+                          {isActive ? '▾' : '▸'}
+                        </Text>
                       </View>
-                    </View>
-                  ) : null}
-                </View>
+                    </Pressable>
+                    {isActive ? (
+                      <FadeInUp
+                        key={`${workout.id}-open`}
+                        delay={40}
+                        duration={720}
+                        distance={12}
+                        style={styles.sessionEdit}
+                      >
+                        {workout.coachNote ? (
+                          <Text style={[styles.coachNote, { color: colors.accent }]}>
+                            {workout.coachNote}
+                          </Text>
+                        ) : null}
+                        {summary.stepLines.map((line, i) => (
+                          <FadeInUp
+                            key={`${workout.id}-step-${i}`}
+                            delay={70 + i * 55}
+                            duration={560}
+                            distance={8}
+                          >
+                            <View style={styles.stepLine}>
+                              <Text style={styles.stepTitle}>{line.title}</Text>
+                              <Text style={styles.stepDetail}>{line.detail}</Text>
+                            </View>
+                          </FadeInUp>
+                        ))}
+                        <FadeInUp delay={90 + summary.stepLines.length * 45} duration={600}>
+                          <View style={styles.actionRow}>
+                            <Pressable
+                              style={styles.actionBtn}
+                              onPress={() => router.push(`/session/${workout.id}`)}
+                            >
+                              <Text style={styles.actionBtnText}>Détails complets</Text>
+                            </Pressable>
+                            {workout.discipline !== 'rest' &&
+                            canSendWorkoutToWatch(workout.discipline) ? (
+                              <Pressable
+                                style={[styles.actionBtn, styles.actionBtnAccent]}
+                                onPress={() => router.push(`/session/${workout.id}`)}
+                              >
+                                <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                  Envoyer séance
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                            {!workout.lockedRest ? (
+                              <Pressable
+                                style={[styles.actionBtn, styles.actionBtnAccent]}
+                                onPress={() => {
+                                  setActiveWorkoutId(workout.id);
+                                  setMoveMode(true);
+                                }}
+                              >
+                                <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                  Déplacer
+                                </Text>
+                              </Pressable>
+                            ) : null}
+                          </View>
+                        </FadeInUp>
+                      </FadeInUp>
+                    ) : null}
+                  </View>
+                </StaggerIn>
               );
             })
           )}
-        </View>
+        </RevealPanel>
       ) : null}
       <View style={styles.upcoming}>
         <Text style={styles.sectionTitle}>Prochaine séance</Text>

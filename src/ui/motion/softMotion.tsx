@@ -84,38 +84,131 @@ export function useBreathingOpacity(opts?: {
 export function FadeInUp({
   children,
   delay = 0,
+  duration = 560,
+  distance = 12,
   style,
 }: {
   children: ReactNode;
   delay?: number;
+  /** Durée totale du mouvement (ms). */
+  duration?: number;
+  /** Décalage vertical de départ (px). */
+  distance?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(10)).current;
+  const translateY = useRef(new Animated.Value(distance)).current;
 
   useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(distance);
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 520,
+        duration: Math.max(280, duration * 0.92),
         delay,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 560,
+        duration,
         delay,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [opacity, translateY, delay]);
+  }, [opacity, translateY, delay, duration, distance]);
 
   return (
     <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
       {children}
     </Animated.View>
+  );
+}
+
+/**
+ * Panneau qui se révèle à chaque changement de clé (jour / muscle).
+ * Fade + slide + léger scale — ~0,8–1,2 s, assez présent sans être long.
+ */
+export function RevealPanel({
+  resetKey,
+  children,
+  style,
+  duration = 900,
+}: {
+  resetKey: string;
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  duration?: number;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(18)).current;
+  const scale = useRef(new Animated.Value(0.97)).current;
+
+  useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(18);
+    scale.setValue(0.97);
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: duration * 0.85,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 8,
+        tension: 68,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [resetKey, opacity, translateY, scale, duration]);
+
+  return (
+    <Animated.View
+      style={[
+        { opacity, transform: [{ translateY }, { scale }] },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Élément en cascade dans un panneau (délai croissant). */
+export function StaggerIn({
+  index,
+  children,
+  baseDelay = 60,
+  step = 75,
+  duration = 620,
+  style,
+}: {
+  index: number;
+  children: ReactNode;
+  baseDelay?: number;
+  step?: number;
+  duration?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <FadeInUp
+      delay={baseDelay + index * step}
+      duration={duration}
+      distance={14}
+      style={style}
+    >
+      {children}
+    </FadeInUp>
   );
 }
 
