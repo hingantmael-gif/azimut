@@ -12,6 +12,7 @@ import { radii, spacing } from '../../src/theme/tokens';
 import { formatDuration } from '../../src/engines/core';
 import { DISCIPLINE_META, supportsActivityImport } from '../../src/constants/disciplines';
 import { summarizeWorkout } from '../../src/engines/workoutPresentation';
+import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
 import { FadeInUp } from '../../src/ui/motion/softMotion';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
 import { resolveActivePrograms } from '../../src/engines/multiProgramPlan';
@@ -118,14 +119,49 @@ export default function HomeDashboard() {
                 </Text>
               ))}
             </Pressable>
-            {showStravaImport ? (
+            {isTodayTraining &&
+            focus &&
+            canStartLiveWorkout(focus.discipline) ? (
               <Pressable
                 style={[styles.primaryBtn, { backgroundColor: discColor, marginTop: spacing.md }]}
+                onPress={() =>
+                  router.push({ pathname: '/session/live', params: { id: focus.id } })
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Effectuer la séance dans Azimut"
+              >
+                <Text style={styles.primaryBtnText}>Effectuer la séance dans Azimut</Text>
+              </Pressable>
+            ) : null}
+            {showStravaImport ? (
+              <Pressable
+                style={[
+                  styles.primaryBtn,
+                  {
+                    backgroundColor:
+                      isTodayTraining && focus && canStartLiveWorkout(focus.discipline)
+                        ? colors.bgElevated
+                        : discColor,
+                    marginTop: spacing.sm,
+                    borderWidth:
+                      isTodayTraining && focus && canStartLiveWorkout(focus.discipline) ? 1 : 0,
+                    borderColor: colors.border,
+                  },
+                ]}
                 onPress={() => router.push('/import-activity')}
                 accessibilityRole="button"
                 accessibilityLabel="Importer depuis Strava"
               >
-                <Text style={styles.primaryBtnText}>Importer depuis Strava</Text>
+                <Text
+                  style={[
+                    styles.primaryBtnText,
+                    isTodayTraining && focus && canStartLiveWorkout(focus.discipline)
+                      ? { color: colors.text }
+                      : null,
+                  ]}
+                >
+                  Importer depuis Strava
+                </Text>
               </Pressable>
             ) : isTodayTraining &&
               focus &&

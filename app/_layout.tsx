@@ -98,6 +98,10 @@ function AppShell() {
             <Stack.Screen name="import-activity" options={{ title: 'Importer Strava' }} />
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />
+            <Stack.Screen
+              name="session/live"
+              options={{ title: 'Séance live', headerShown: false }}
+            />
             <Stack.Screen name="session/rpe" options={{ title: 'Effort ressenti' }} />
             <Stack.Screen name="ranked" options={{ title: 'Classement' }} />
             <Stack.Screen name="badges" options={{ title: 'Badges' }} />

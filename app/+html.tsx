@@ -75,7 +75,7 @@ export default function Root({ children }: PropsWithChildren) {
             __html: `
               if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
                 window.addEventListener('load', function () {
-                  navigator.serviceWorker.register('/sw.js?v=24', { scope: '/' }).then(function (reg) {
+                  navigator.serviceWorker.register('/sw.js?v=25', { scope: '/' }).then(function (reg) {
                     try { reg.update(); } catch (e) {}
                     if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
                   }).catch(function () {});

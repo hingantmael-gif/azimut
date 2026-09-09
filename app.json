@@ -27,6 +27,10 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -79,6 +83,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.azimut.training",
       "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Azimut utilise ta position pour suivre ta séance même en arrière-plan si tu l’autorises.",
         "LSApplicationQueriesSchemes": [
           "strava",
           "connect"
@@ -109,6 +115,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-document-picker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
       [
         "expo-notifications",
         {

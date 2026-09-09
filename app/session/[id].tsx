@@ -17,6 +17,7 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
+import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
 import { shareWorkoutSession } from '../../src/engines/stravaExport';
 import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
@@ -147,9 +148,26 @@ export default function SessionDetailScreen() {
           </View>
         ))}
 
+        {!isRest && canStartLiveWorkout(workout.discipline) ? (
+          <>
+            <View style={{ marginTop: spacing.md }}>
+              <PrimaryButton
+                label="Effectuer la séance dans Azimut"
+                onPress={() =>
+                  router.push({ pathname: '/session/live', params: { id: workout.id } })
+                }
+              />
+            </View>
+            <Muted style={{ marginTop: 6 }}>
+              Tracker GPS intégré : allure cible, étapes du plan, carte live — sans passer par
+              Strava.
+            </Muted>
+          </>
+        ) : null}
+
         {canWatchSend ? (
           <>
-            <FocusTarget active={focusGarmin} style={{ marginTop: spacing.md }}>
+            <FocusTarget active={focusGarmin} style={{ marginTop: spacing.sm }}>
               <PrimaryButton
                 label={
                   exporting
