@@ -12,7 +12,9 @@
     "deploy:install-site": "node scripts/deploy-install-site.mjs",
     "rank-badges": "node scripts/process-rank-frames.mjs",
     "api": "npm run start --prefix backend",
-    "api:dev": "npm run dev --prefix backend"
+    "api:dev": "npm run dev --prefix backend",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@expo/metro-runtime": "^57.0.11",
@@ -50,7 +52,8 @@
     "@types/react": "~19.2.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
   },
   "private": true
 }

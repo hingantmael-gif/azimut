@@ -10,9 +10,64 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
+const MAX_DECAY_DAYS = 365;
+
 /**
- * Mise à jour Banister avec τ individuels.
- * fitness' = fitness · e^(−1/τf) + load ; idem fatigue.
+ * Jours calendaires (UTC, insensible aux changements d'heure) entre deux dates ISO.
+ * `null` si une date est invalide ; négatif si `toIso` précède `fromIso`.
+ */
+export function elapsedDays(fromIso: string, toIso: string): number | null {
+  const day = (iso: string) => Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`) / 86_400_000;
+  const d = day(toIso) - day(fromIso);
+  return Number.isFinite(d) ? d : null;
+}
+
+/** Décroissance exponentielle sur `days` jours (0 = même jour, aucune décroissance). */
+function decayBanister(
+  prev: BanisterState,
+  days: number,
+  tauFit: number,
+  tauFat: number,
+): { fitness: number; fatigue: number } {
+  const n = Math.min(MAX_DECAY_DAYS, Math.max(0, days));
+  return {
+    fitness: prev.fitness * Math.exp(-n / tauFit),
+    fatigue: prev.fatigue * Math.exp(-n / tauFat),
+  };
+}
+
+/**
+ * Impulsion-réponse de Banister : décroissance sur les jours écoulés depuis
+ * `prev.date`, puis ajout de la charge.
+ * fitness' = fitness · e^(−Δj/τf) + load ; idem fatigue.
+ *
+ * Δj = 0 le même jour (pas de double décroissance), 1 le lendemain, 7 après une
+ * semaine de repos… Une date précédente invalide retombe sur Δj = 1 (ancien
+ * comportement) ; une date antérieure à `prev.date` (import tardif) ne décroît pas.
+ */
+export function banisterStep(
+  prev: BanisterState,
+  load: number,
+  date: string,
+  tauFit: number,
+  tauFat: number,
+): BanisterState {
+  const days = elapsedDays(prev.date, date) ?? 1;
+  const decayed = decayBanister(prev, days, tauFit, tauFat);
+  const trainingLoad = Number.isFinite(load) ? Math.max(0, load) : 0;
+  const fitness = decayed.fitness + trainingLoad;
+  const fatigue = decayed.fatigue + trainingLoad;
+  return {
+    // Ne jamais faire reculer la date de l'état (import d'une activité ancienne).
+    date: days < 0 ? prev.date : date,
+    fitness,
+    fatigue,
+    formTsb: fitness - fatigue,
+  };
+}
+
+/**
+ * Mise à jour Banister avec τ individuels (voir {@link banisterStep}).
  */
 export function updateBanisterPlus(
   prev: BanisterState,
@@ -22,15 +77,25 @@ export function updateBanisterPlus(
 ): BanisterState {
   const tauFit = clamp(response.tauFitnessDays || 42, 20, 56);
   const tauFat = clamp(response.tauFatigueDays || 7, 3, 14);
-  const trainingLoad = Math.max(0, load);
-  const fitness = prev.fitness * Math.exp(-1 / tauFit) + trainingLoad;
-  const fatigue = prev.fatigue * Math.exp(-1 / tauFat) + trainingLoad;
-  return {
-    date,
-    fitness,
-    fatigue,
-    formTsb: fitness - fatigue,
-  };
+  return banisterStep(prev, load, date, tauFit, tauFat);
+}
+
+/**
+ * État Banister « à la date `asOfDate` », sans nouvelle charge : fitness et fatigue
+ * décroissent pendant les jours de repos, donc la forme (TSB) remonte.
+ * À utiliser pour toute lecture (le state stocké date de la dernière séance).
+ */
+export function projectBanister(
+  prev: BanisterState,
+  asOfDate: string,
+  response?: Pick<IndividualResponseProfile, 'tauFitnessDays' | 'tauFatigueDays'>,
+): BanisterState {
+  const days = elapsedDays(prev.date, asOfDate);
+  if (days == null || days <= 0) return prev;
+  const tauFit = clamp(response?.tauFitnessDays || 42, 20, 56);
+  const tauFat = clamp(response?.tauFatigueDays || 7, 3, 14);
+  const { fitness, fatigue } = decayBanister(prev, days, tauFit, tauFat);
+  return { date: asOfDate.slice(0, 10), fitness, fatigue, formTsb: fitness - fatigue };
 }
 
 /**

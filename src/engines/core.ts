@@ -17,6 +17,7 @@ import type {
 } from '../types/domain';
 import { generateCoachedWeek } from './coachingEngine';
 import { computeTrimp, trimpToBanisterLoad } from './sportsScience';
+import { banisterStep } from './banisterPlus';
 
 /** CDC §2.A — Score de conformité 0–100 */
 export function computeCompliance(
@@ -239,7 +240,7 @@ export function xpProgressFromTotal(xp: number): {
  * XP par km : entre 5 et 10 selon la fidélité au plan (0 % → 5, 100 % → 10).
  */
 export function xpPerKmFromCompliance(compliancePct: number): number {
-  const c = Math.max(0, Math.min(100, compliancePct)) / 100;
+  const c = Number.isFinite(compliancePct) ? Math.max(0, Math.min(100, compliancePct)) / 100 : 0;
   return 5 + 5 * c;
 }
 
@@ -266,20 +267,22 @@ export function computeSessionXp(opts: {
   rpeBonus: number;
   firstSessionBonus: number;
 } {
-  const km = Math.max(0, opts.distanceM / 1000);
+  const finite = (n: number, fallback: number) => (Number.isFinite(n) ? n : fallback);
+  const km = Math.max(0, finite(opts.distanceM, 0) / 1000);
   const xpPerKm = xpPerKmFromCompliance(opts.compliance);
   const distanceXp = Math.round(km * xpPerKm);
-  const durationXp = Math.round(Math.max(0, opts.durationSec) / 180);
+  const durationXp = Math.round(Math.max(0, finite(opts.durationSec, 0)) / 180);
   const base = distanceXp + durationXp;
 
+  const compliance = finite(opts.compliance, 0);
   let complianceMult = 1;
-  if (opts.compliance >= 95) complianceMult = 1.2;
-  else if (opts.compliance >= 85) complianceMult = 1.12;
-  else if (opts.compliance >= 70) complianceMult = 1.06;
+  if (compliance >= 95) complianceMult = 1.2;
+  else if (compliance >= 85) complianceMult = 1.12;
+  else if (compliance >= 70) complianceMult = 1.06;
 
   const afterCompliance = Math.round(base * complianceMult);
   const complianceBonus = afterCompliance - base;
-  const streakMult = Math.min(1.25, Math.max(1, opts.streakMultiplier));
+  const streakMult = Math.min(1.25, Math.max(1, finite(opts.streakMultiplier, 1)));
   const withStreak = Math.round(afterCompliance * streakMult);
   const streakBonus = withStreak - afterCompliance;
   const rpeBonus = opts.rpeSubmitted ? RPE_SUBMIT_XP : 0;
@@ -320,7 +323,8 @@ export function clampXp(xp: number): number {
 }
 
 export function applyXp(ranked: RankedProgress, gain: number): RankedProgress {
-  const add = Math.max(0, gain);
+  // Un gain non fini (NaN/∞) ne doit jamais effacer ni gonfler l'XP existante.
+  const add = Number.isFinite(gain) ? Math.max(0, gain) : 0;
   const xp = clampXp(ranked.xp + add);
   const level = levelFromXp(xp);
   return {
@@ -376,14 +380,7 @@ export function updateBanister(
   trainingLoad: number,
   date: string,
 ): BanisterState {
-  const fitness = prev.fitness * Math.exp(-1 / 42) + trainingLoad;
-  const fatigue = prev.fatigue * Math.exp(-1 / 7) + trainingLoad;
-  return {
-    date,
-    fitness,
-    fatigue,
-    formTsb: fitness - fatigue,
-  };
+  return banisterStep(prev, trainingLoad, date, 42, 7);
 }
 
 export {

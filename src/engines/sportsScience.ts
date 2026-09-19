@@ -29,15 +29,16 @@ export function computeAcwr(dailyLoads: DailyLoadPoint[], asOfDate: string): {
   ratio: number;
   forceRest: boolean;
 } {
-  const asOf = asOfDate.slice(0, 10);
-  const asOfMs = new Date(`${asOf}T12:00:00`).getTime();
+  // Jours calendaires en UTC : insensible aux changements d'heure (journées de 23/25 h).
+  const dayIndex = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / 86_400_000;
+  const asOfDay = dayIndex(asOfDate);
   let acute = 0;
   let chronic = 0;
   for (const p of dailyLoads) {
-    const ms = new Date(`${p.date.slice(0, 10)}T12:00:00`).getTime();
-    const daysAgo = (asOfMs - ms) / 86_400_000;
-    if (daysAgo < 0 || daysAgo > 28) continue;
-    if (daysAgo <= 7) acute += p.load;
+    const daysAgo = asOfDay - dayIndex(p.date);
+    // Fenêtres exactes : aiguë = J0..J-6 (7 j), chronique = J0..J-27 (28 j).
+    if (!(daysAgo >= 0) || daysAgo >= 28) continue;
+    if (daysAgo < 7) acute += p.load;
     chronic += p.load;
   }
   const acuteAvg = acute / 7;

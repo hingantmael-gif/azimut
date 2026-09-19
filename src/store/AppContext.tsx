@@ -47,6 +47,7 @@ import {
 } from '../engines/athleteDigitalTwin';
 import {
   eccentricLoadFactor,
+  projectBanister,
   updateBanisterPlus,
 } from '../engines/banisterPlus';
 import { predictSessionRpe } from '../engines/sessionPrediction';
@@ -323,7 +324,7 @@ function syncPlanToAthleteLoad(state: AppState): AppState {
   if (state.plan.length === 0) return state;
   const twin = resolveDigitalTwin(state);
   const snap = computeAthleteLoadSnapshot({
-    formTsb: state.banister.formTsb,
+    formTsb: banisterFormNow(state),
     health: state.health,
     activities: state.activities,
     feedbacks: state.feedbacks,
@@ -393,6 +394,14 @@ function activityAvgCadence(activity: StravaActivity): number | undefined {
   return sum / c.length;
 }
 
+/**
+ * Forme (TSB) à aujourd'hui : le state stocké date de la dernière charge, donc on
+ * applique la décroissance des jours de repos avant toute décision / affichage.
+ */
+function banisterFormNow(state: AppState): number {
+  return projectBanister(state.banister, todayIsoDate(), resolveDigitalTwin(state).response).formTsb;
+}
+
 function applyBanisterLoad(
   state: AppState,
   baseLoad: number,
@@ -449,7 +458,7 @@ function withReminders(state: AppState): AppState {
       state.health.sleep?.score,
       {
         sessionTitle: workout?.title,
-        formTsb: state.banister.formTsb,
+        formTsb: banisterFormNow(state),
         todayWorkout: workout,
       },
     ),
@@ -1139,7 +1148,7 @@ function reduceAppState(state: AppState, action: Action): AppState {
           level: answers.level ?? state.profile.onboarding?.level,
         });
       const loadSnap = computeAthleteLoadSnapshot({
-        formTsb: state.banister.formTsb,
+        formTsb: banisterFormNow(state),
         health: state.health,
         activities: state.activities,
         feedbacks: state.feedbacks,
@@ -1850,8 +1859,8 @@ function reduceAppState(state: AppState, action: Action): AppState {
       const sleepScore = state.health.sleep?.score;
       const readinessApprox =
         sleepScore != null
-          ? Math.round((sleepScore + Math.max(0, Math.min(100, 50 + state.banister.formTsb))) / 2)
-          : Math.max(40, Math.min(90, 55 + state.banister.formTsb));
+          ? Math.round((sleepScore + Math.max(0, Math.min(100, 50 + banisterFormNow(state)))) / 2)
+          : Math.max(40, Math.min(90, 55 + banisterFormNow(state)));
       const pendingPredictedRpe = planned
         ? predictSessionRpe(planned, readinessApprox, twinForPred.response.rpeBias)
         : null;
@@ -2015,7 +2024,7 @@ function reduceAppState(state: AppState, action: Action): AppState {
       const learned = learnFromSession(twin, {
         predictedRpe,
         actualRpe: action.feedback.rpe,
-        predictedFormTsb: state.banister.formTsb,
+        predictedFormTsb: banisterFormNow(state),
         observedHrvRatio,
         recoveryFeltVsExpected:
           action.feedback.mental === 'excellent'
