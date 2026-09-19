@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
-const SW_URL = '/sw.js?v=25';
+const SW_URL = '/sw.js?v=48';
 
 /**
  * PWA : à chaque ouverture / retour au premier plan, cherche une nouvelle
@@ -10,6 +11,8 @@ const SW_URL = '/sw.js?v=25';
 export function WebPwaBootstrap() {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    // Ferme la popup OAuth Google même si la page de retour n’importe pas googleAuth
+    WebBrowser.maybeCompleteAuthSession();
     if (!('serviceWorker' in navigator)) return;
 
     const link = document.createElement('link');

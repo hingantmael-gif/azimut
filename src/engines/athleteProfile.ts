@@ -378,6 +378,70 @@ export function lookupStoredChronoSec(opts: {
   return null;
 }
 
+/**
+ * Enregistre une perf (fin de programme / test / séance matching)
+ * dans le profil onboarding pour préremplir le prochain cycle.
+ */
+export function promoteChronoToOnboarding(
+  onboarding: OnboardingAnswers | undefined | null,
+  opts: {
+    distanceKm: number;
+    timeSec: number;
+    sport?: string | null;
+  },
+): OnboardingAnswers | undefined | null {
+  const timeSec = Math.round(opts.timeSec);
+  const distanceKm = opts.distanceKm;
+  if (!onboarding || !(timeSec >= 30) || !(distanceKm > 0)) return onboarding;
+
+  const sport =
+    opts.sport ?? onboarding.sportCategory ?? 'run';
+  const next: OnboardingAnswers = {
+    ...onboarding,
+    recentTimeSec: timeSec,
+    recentDistanceKm: distanceKm,
+  };
+
+  if (sport === 'swim') {
+    const key = SWIM_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key;
+    if (key) {
+      next.sportTimesSec = {
+        ...onboarding.sportTimesSec,
+        swim: {
+          ...(onboarding.sportTimesSec?.swim ?? {}),
+          [key]: timeSec,
+        },
+      };
+    }
+  } else if (sport === 'bike') {
+    const key = BIKE_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key;
+    if (key) {
+      next.sportTimesSec = {
+        ...onboarding.sportTimesSec,
+        bike: {
+          ...(onboarding.sportTimesSec?.bike ?? {}),
+          [key]: timeSec,
+        },
+      };
+    }
+  } else {
+    const key = RUN_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key as
+      | keyof NonNullable<OnboardingAnswers['raceTimesSec']>
+      | undefined;
+    if (key) {
+      next.raceTimesSec = {
+        ...(onboarding.raceTimesSec ?? {}),
+        [key]: timeSec,
+      };
+    }
+    if (distanceKm <= 5.5) {
+      next.vmaKmh = vmaFromRaceTime(distanceKm, timeSec);
+    }
+  }
+
+  return next;
+}
+
 /** Allure natation sec/100 m depuis chronos saisis. */
 export function swimPaceSecPer100FromOnboarding(
   o?: OnboardingAnswers | null,

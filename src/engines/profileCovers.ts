@@ -7,6 +7,7 @@ export type CoverDistanceSport = 'run' | 'bike' | 'swim';
 
 export type ProfileCoverUnlock =
   | { type: 'free' }
+  | { type: 'premium' }
   | { type: 'rank'; tier: RankTier; division: RankDivision | null }
   /** Palier fixe (ex. 10 km course, 100 km vélo) */
   | { type: 'distance'; sport: CoverDistanceSport; minKm: number }
@@ -80,172 +81,172 @@ const RANK_COVERS: ProfileCoverDef[] = [
   {
     id: 'rank-bronze-3',
     title: 'Bronze 3',
-    description: 'Flammes + emblème bronze.',
+    description: 'Braises discrètes — flammes ambre sombre.',
     unlock: { type: 'rank', tier: 'bronze', division: 3 },
     visual: 'flames',
-    colors: ['#1A100A', '#6B3E26', '#C4A574'],
+    colors: ['#07111F', '#92400E', '#B45309'],
     watermark: 'Bronze 3',
   },
   {
     id: 'rank-bronze-2',
     title: 'Bronze 2',
-    description: 'Forge + emblème animé.',
+    description: 'Le feu prend — étincelles montantes.',
     unlock: { type: 'rank', tier: 'bronze', division: 2 },
     visual: 'flames',
-    colors: ['#140C08', '#8B5A2B', '#D4AF7A'],
+    colors: ['#07111F', '#B45309', '#D97706'],
     watermark: 'Bronze 2',
   },
   {
     id: 'rank-bronze-1',
     title: 'Bronze 1',
-    description: 'Braises + crest bronze.',
+    description: 'Feu établi — pointes vives et halo net.',
     unlock: { type: 'rank', tier: 'bronze', division: 1 },
     visual: 'flames',
-    colors: ['#100804', '#9C6B3C', '#E8C99A'],
+    colors: ['#07111F', '#B45309', '#D97706'],
     watermark: 'Bronze 1',
   },
   {
     id: 'rank-argent-3',
     title: 'Argent 3',
-    description: 'Mercure + lames chromées.',
+    description: 'Gouttes de mercure lentes.',
     unlock: { type: 'rank', tier: 'argent', division: 3 },
     visual: 'mercury',
-    colors: ['#0E1014', '#6B7280', '#E5E7EB'],
+    colors: ['#07111F', '#64748B', '#94A3B8'],
     watermark: 'Argent 3',
   },
   {
     id: 'rank-argent-2',
     title: 'Argent 2',
-    description: 'Métal fluide.',
+    description: 'Filets de mercure — tension de surface.',
     unlock: { type: 'rank', tier: 'argent', division: 2 },
     visual: 'mercury',
-    colors: ['#090A0C', '#9CA3AF', '#F9FAFB'],
+    colors: ['#07111F', '#64748B', '#E2E8F0'],
     watermark: 'Argent 2',
   },
   {
     id: 'rank-argent-1',
     title: 'Argent 1',
-    description: 'Éclat argenté.',
+    description: 'Flaque mercurielle active.',
     unlock: { type: 'rank', tier: 'argent', division: 1 },
     visual: 'mercury',
-    colors: ['#050506', '#D1D5DB', '#FFFFFF'],
+    colors: ['#05080F', '#64748B', '#FFFFFF'],
     watermark: 'Argent 1',
   },
   {
     id: 'rank-or-3',
     title: 'Or 3',
-    description: 'Coulées d’or.',
+    description: 'Coulées d’or fines.',
     unlock: { type: 'rank', tier: 'or', division: 3 },
     visual: 'liquid-gold',
-    colors: ['#120E06', '#8B6914', '#E0C35A'],
+    colors: ['#07111F', '#92400E', '#D97706'],
     watermark: 'Or 3',
   },
   {
     id: 'rank-or-2',
     title: 'Or 2',
-    description: 'Or en fusion.',
+    description: 'Or en fusion — poussière d’or animée.',
     unlock: { type: 'rank', tier: 'or', division: 2 },
     visual: 'liquid-gold',
-    colors: ['#0E0A04', '#A67C00', '#F0D77B'],
+    colors: ['#07111F', '#D97706', '#FBBF24'],
     watermark: 'Or 2',
   },
   {
     id: 'rank-or-1',
     title: 'Or 1',
-    description: 'Or brillant.',
+    description: 'Cascade d’or + SoftPulse doré.',
     unlock: { type: 'rank', tier: 'or', division: 1 },
     visual: 'liquid-gold',
-    colors: ['#0A0802', '#B8860B', '#FFF1A8'],
+    colors: ['#05080A', '#D97706', '#FFF1A8'],
     watermark: 'Or 1',
   },
   {
     id: 'rank-diamant-3',
     title: 'Diamant 3',
-    description: 'Cristaux tournants.',
+    description: 'Cristaux bleu clair en chute lente.',
     unlock: { type: 'rank', tier: 'diamant', division: 3 },
     visual: 'crystals',
-    colors: ['#060B18', '#2B4C7E', '#C5D9F0'],
+    colors: ['#04070F', '#1E3A8A', '#93C5FD'],
     watermark: 'Diamant 3',
   },
   {
     id: 'rank-diamant-2',
     title: 'Diamant 2',
-    description: 'Prismes lumineux.',
+    description: 'Cristaux en rotation — éclat au sol.',
     unlock: { type: 'rank', tier: 'diamant', division: 2 },
     visual: 'crystals',
-    colors: ['#04070F', '#3D5A80', '#E8F1FA'],
+    colors: ['#03060C', '#2563EB', '#BFDBFE'],
     watermark: 'Diamant 2',
   },
   {
     id: 'rank-diamant-1',
     title: 'Diamant 1',
-    description: 'Éclat diamant.',
+    description: 'Pluie dense + flash bleu discret.',
     unlock: { type: 'rank', tier: 'diamant', division: 1 },
     visual: 'crystals',
-    colors: ['#02040A', '#5B8DB8', '#FFFFFF'],
+    colors: ['#02040A', '#2563EB', '#DBEAFE'],
     watermark: 'Diamant 1',
   },
   {
     id: 'rank-platine-3',
     title: 'Platine 3',
-    description: 'Ondes concentriques.',
+    description: 'Anneaux concentriques lents.',
     unlock: { type: 'rank', tier: 'platine', division: 3 },
     visual: 'ripple',
-    colors: ['#070C0C', '#4A6B6B', '#C8E0E0'],
+    colors: ['#04100E', '#0F766E', '#5EEAD4'],
     watermark: 'Platine 3',
   },
   {
     id: 'rank-platine-2',
     title: 'Platine 2',
-    description: 'Ondes plus larges.',
+    description: 'Ondes plus larges et plus vives.',
     unlock: { type: 'rank', tier: 'platine', division: 2 },
     visual: 'ripple',
-    colors: ['#050909', '#5F8A8A', '#E0F4F4'],
+    colors: ['#030E0C', '#0D9488', '#99F6E4'],
     watermark: 'Platine 2',
   },
   {
     id: 'rank-platine-1',
     title: 'Platine 1',
-    description: 'Résonance platine.',
+    description: 'Champ d’ondulations + interférences.',
     unlock: { type: 'rank', tier: 'platine', division: 1 },
     visual: 'ripple',
-    colors: ['#030606', '#7AA3A3', '#F5FFFF'],
+    colors: ['#020A09', '#0D9488', '#CCFBF1'],
     watermark: 'Platine 1',
   },
   {
     id: 'rank-elite-3',
     title: 'Élite 3',
-    description: 'Éclairs violets.',
+    description: 'Éclairs violets brefs.',
     unlock: { type: 'rank', tier: 'elite', division: 3 },
     visual: 'bolts',
-    colors: ['#0A0614', '#4C1D75', '#C4B5FD'],
+    colors: ['#0A0614', '#6D28D9', '#8B5CF6'],
     watermark: 'Élite 3',
   },
   {
     id: 'rank-elite-2',
     title: 'Élite 2',
-    description: 'Éclairs intenses.',
+    description: 'Éclairs ramifiés + rémanence.',
     unlock: { type: 'rank', tier: 'elite', division: 2 },
     visual: 'bolts',
-    colors: ['#070310', '#5B21B6', '#DDD6FE'],
+    colors: ['#070310', '#7C3AED', '#C4B5FD'],
     watermark: 'Élite 2',
   },
   {
     id: 'rank-elite-1',
     title: 'Élite 1',
-    description: 'Orage élite.',
+    description: 'Réseau d’éclairs + glow violet.',
     unlock: { type: 'rank', tier: 'elite', division: 1 },
     visual: 'bolts',
-    colors: ['#040208', '#6D28D9', '#F5F3FF'],
+    colors: ['#040208', '#7C3AED', '#F5F3FF'],
     watermark: 'Élite 1',
   },
   {
     id: 'rank-champion',
     title: 'Champion',
-    description: 'Grand emblème Champion (or & rouge) — sans cadre.',
+    description: 'Or liquide sublimé — synthèse de tous les paliers.',
     unlock: { type: 'rank', tier: 'champion', division: null },
     visual: 'liquid-gold',
-    colors: ['#0A0402', '#7F1D1D', '#FBBF24'],
+    colors: ['#07111F', '#D97706', '#FBBF24'],
     watermark: 'Champion',
   },
 ];
@@ -448,34 +449,34 @@ export const PROFILE_COVERS: ProfileCoverDef[] = [
   {
     id: 'prem-aurora',
     title: 'Voile d’aurore',
-    description: 'Voiles doux animés.',
-    unlock: { type: 'free' },
+    description: 'Aurore jade/mint à parallaxe — Premium.',
+    unlock: { type: 'premium' },
     visual: 'aurora-veil',
-    colors: ['#020617', '#4C1D95', '#22D3EE'],
+    colors: ['#07111F', '#0A6B54', '#3DFF9A'],
   },
   {
     id: 'prem-neon',
     title: 'Hex néon',
-    description: 'Grille soft animée.',
-    unlock: { type: 'free' },
+    description: 'Grille hexagonale mint/lime — Premium.',
+    unlock: { type: 'premium' },
     visual: 'cyber-hex',
-    colors: ['#020617', '#0891B2', '#DB2777'],
+    colors: ['#07111F', '#0E8F6F', '#D4FF3F'],
   },
   {
     id: 'prem-ocean',
     title: 'Maelström',
-    description: 'Anneaux lents en spirale.',
-    unlock: { type: 'free' },
+    description: 'Tourbillon océanique jade → turquoise — Premium.',
+    unlock: { type: 'premium' },
     visual: 'maelstrom',
-    colors: ['#020617', '#0E4D6B', '#67E8F9'],
+    colors: ['#07111F', '#0A6B54', '#06B6D4'],
   },
   {
     id: 'prem-ember',
     title: 'Inferno',
-    description: 'Chaleur douce animée.',
-    unlock: { type: 'free' },
+    description: 'Brasier premium + fumée + chaleur — Premium.',
+    unlock: { type: 'premium' },
     visual: 'inferno',
-    colors: ['#140505', '#9A3412', '#FBBF24'],
+    colors: ['#07111F', '#7C2D12', '#F97316'],
   },
   ...RANK_COVERS,
   ...DISTANCE_COVERS,
@@ -549,10 +550,13 @@ export function isProfileCoverUnlocked(
     longestBySport?: Partial<Record<CoverDistanceSport, number>>;
     /** Compte essai : tous les fonds accessibles sans palier / record */
     unlockAll?: boolean;
+    /** Abonnement Premium (covers prem-*) */
+    premium?: boolean;
   },
 ): boolean {
   if (opts.unlockAll) return true;
   if (cover.unlock.type === 'free') return true;
+  if (cover.unlock.type === 'premium') return Boolean(opts.premium);
   if (cover.unlock.type === 'personal_best') {
     const km =
       opts.longestBySport?.[cover.unlock.sport] ??
@@ -573,6 +577,9 @@ export function isProfileCoverUnlocked(
 }
 
 export function profileCoverLockHint(cover: ProfileCoverDef): string {
+  if (cover.unlock.type === 'premium') {
+    return 'Premium';
+  }
   if (cover.unlock.type === 'rank') {
     return formatRankLabel(cover.unlock.tier, cover.unlock.division);
   }
@@ -591,8 +598,10 @@ export function profileCoverLockHint(cover: ProfileCoverDef): string {
 }
 
 export function coversBySection(): {
-  /** Fonds de base (anciens gratuits + styles animés) */
+  /** Fonds de base (gratuits) + Premium en fin de liste */
   styles: ProfileCoverDef[];
+  /** Fonds Premium uniquement */
+  premium: ProfileCoverDef[];
   ranks: ProfileCoverDef[];
   /** Record perso en premier, puis paliers */
   run: ProfileCoverDef[];
@@ -615,7 +624,10 @@ export function coversBySection(): {
     PROFILE_COVERS.filter(
       (c) => c.unlock.type === 'distance' && c.unlock.sport === sport,
     );
-  const styles = PROFILE_COVERS.filter((c) => c.unlock.type === 'free');
+  const styles = PROFILE_COVERS.filter(
+    (c) => c.unlock.type === 'free' || c.unlock.type === 'premium',
+  );
+  const premium = PROFILE_COVERS.filter((c) => c.unlock.type === 'premium');
   const ranks = PROFILE_COVERS.filter((c) => c.unlock.type === 'rank');
   const run = [...pb('run'), ...dist('run')];
   const bike = [...pb('bike'), ...dist('bike')];
@@ -625,12 +637,13 @@ export function coversBySection(): {
   );
   return {
     styles,
+    premium,
     ranks,
     run,
     bike,
     swim,
-    free: styles.filter((c) => !EXTREME_VISUALS.includes(c.visual)),
-    extreme: styles.filter((c) => EXTREME_VISUALS.includes(c.visual)),
+    free: styles.filter((c) => c.unlock.type === 'free' && !EXTREME_VISUALS.includes(c.visual)),
+    extreme: styles.filter((c) => c.unlock.type === 'free' && EXTREME_VISUALS.includes(c.visual)),
     distancePb: distance.filter((c) => c.unlock.type === 'personal_best'),
     distanceRun: dist('run'),
     distanceBike: dist('bike'),

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Body, Chip, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';
-import { useApp, todayWorkout } from '../../src/store/AppContext';
+import { resolveDigitalTwin, todayWorkout, useApp } from '../../src/store/AppContext';
 import type { MentalEnergy, MuscleSensation } from '../../src/types/domain';
 import {
   hasRpeFeedbackForSession,
@@ -10,6 +10,7 @@ import {
   withPremiumXpBonus,
 } from '../../src/engines/subscription';
 import { RPE_SUBMIT_XP } from '../../src/engines/core';
+import { predictSessionRpe } from '../../src/engines/sessionPrediction';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
@@ -35,6 +36,28 @@ export default function RpeScreen() {
   const [mental, setMental] = useState<MentalEnergy>('neutre');
   const rpeXp = withPremiumXpBonus(RPE_SUBMIT_XP, isPremium(state.profile.plan));
 
+  const twin = useMemo(() => resolveDigitalTwin(state), [state.profile]);
+  const plannedForPred =
+    state.plan.find((p) => p.id === sessionId) ??
+    (() => {
+      const an = state.analyses.find(
+        (a) => a.activityId === sessionId || a.plannedWorkoutId === sessionId,
+      );
+      return an ? state.plan.find((p) => p.id === an.plannedWorkoutId) : workout;
+    })();
+
+  const predictedRpe = useMemo(() => {
+    if (state.pendingPredictedRpe != null) return state.pendingPredictedRpe;
+    if (!plannedForPred || plannedForPred.discipline === 'rest') return null;
+    const ready = state.health.sleep?.score ?? 65;
+    return predictSessionRpe(plannedForPred, ready, twin.response.rpeBias);
+  }, [
+    state.pendingPredictedRpe,
+    plannedForPred,
+    state.health.sleep?.score,
+    twin.response.rpeBias,
+  ]);
+
   if (alreadyDone) {
     const existing = state.feedbacks.find((f) => f.sessionId === sessionId);
     return (
@@ -57,9 +80,19 @@ export default function RpeScreen() {
     <Screen>
       <Title>Feedback post-séance</Title>
       <Muted>
-        Interface à 3 clics — RPE, sensations, énergie. Le coach ajuste ta prochaine séance.
+        Interface à 3 clics — RPE, sensations, énergie. Le coach personnalise la suite.
         (+{rpeXp} XP une seule fois)
       </Muted>
+
+      {predictedRpe != null ? (
+        <View style={styles.predBox}>
+          <Text style={styles.predLabel}>RPE prédit par le coach</Text>
+          <Text style={styles.predValue}>~{predictedRpe}/10</Text>
+          <Muted style={{ marginTop: 4 }}>
+            Compare avec ton ressenti — l’écart affine ton jumeau numérique.
+          </Muted>
+        </View>
+      ) : null}
 
       <Body style={{ marginTop: spacing.lg }}>RPE (Borg 1–10) : {rpe}</Body>
       <View style={styles.row}>
@@ -123,6 +156,27 @@ export default function RpeScreen() {
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
     row: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm },
+    predBox: {
+      marginTop: spacing.md,
+      padding: spacing.md,
+      borderRadius: radii.lg,
+      backgroundColor: colors.accentLight,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    predLabel: {
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      color: colors.accentDark,
+    },
+    predValue: {
+      marginTop: 4,
+      fontSize: 22,
+      fontWeight: '900',
+      color: colors.text,
+    },
     warn: {
       marginTop: spacing.md,
       color: colors.warn,

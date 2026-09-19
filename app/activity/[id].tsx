@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
@@ -10,10 +10,17 @@ import {
   planMatchExplanation,
   planMatchHeadline,
 } from '../../src/engines/compliancePresentation';
+import {
+  exportActivityToStrava,
+  shareActivityRecap,
+} from '../../src/engines/stravaExport';
+import { buildSessionCoachingInsight } from '../../src/engines/socialCoachingInsight';
+import { findSimilarPaceCompare } from '../../src/engines/paceCompare';
+import { compareSessionVsPlan } from '../../src/engines/progressiveLearning';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
-import { PrimaryButton } from '../../src/ui/primitives';
+import { PrimaryButton, SecondaryButton } from '../../src/ui/primitives';
 import { AppScrollView } from '../../src/ui/scrolling';
 
 /** Détail activité — carte GPS, FC, allure, fidélité au plan */
@@ -23,11 +30,20 @@ export default function ActivityDetailScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [sharing, setSharing] = useState(false);
+  const [stravaBusy, setStravaBusy] = useState(false);
   const activityId = typeof id === 'string' ? decodeURIComponent(id) : '';
   const activity = state.activities.find(
     (a) => a.id === activityId || a.id === id,
   );
   const analysis = state.analyses.find((x) => x.activityId === activity?.id);
+  const coachingInsight = useMemo(
+    () =>
+      activity
+        ? buildSessionCoachingInsight(activity, state.analyses)
+        : null,
+    [activity, state.analyses],
+  );
 
   if (!activity) {
     return (
@@ -64,7 +80,11 @@ export default function ActivityDetailScreen() {
     }
     elevationGain = Math.round(gain);
   }
-  const hasGps = (activity.streams?.latlng?.length ?? 0) >= 2;
+  const gpsPoints = activity.streams?.latlng?.length ?? 0;
+  const hasGps = gpsPoints >= 1;
+  const isLiveAzimut = activity.id.startsWith('azimut-live-');
+  const paceCompare = findSimilarPaceCompare(activity, state.activities);
+  const vsPlanLearn = compareSessionVsPlan(activity, state.plan);
 
   const dateLabel = new Date(activity.startDate).toLocaleString('fr-FR', {
     weekday: 'long',
@@ -77,10 +97,21 @@ export default function ActivityDetailScreen() {
 
   return (
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 40 }}>
-      <ActivityRouteMap latlng={activity.streams?.latlng ?? []} height={280} />
+      <ActivityRouteMap
+        latlng={activity.streams?.latlng ?? []}
+        height={hasGps ? 340 : 220}
+        zoomControl={false}
+        emptyLabel={
+          isLiveAzimut
+            ? 'Aucun point GPS enregistré pour cette sortie'
+            : 'Pas de tracé GPS — stats ci-dessous'
+        }
+      />
       {!hasGps ? (
         <Text style={styles.gpsHint}>
-          Pas de tracé GPS dans ce fichier — les stats restent disponibles ci-dessous.
+          {isLiveAzimut
+            ? 'Le GPS n’a pas pu enregistrer de position. Distance et chrono restent ci-dessous.'
+            : 'Pas de tracé GPS dans ce fichier — les stats restent disponibles ci-dessous.'}
         </Text>
       ) : null}
 
@@ -158,6 +189,18 @@ export default function ActivityDetailScreen() {
           </View>
         ) : null}
 
+        {paceCompare || vsPlanLearn ? (
+          <View style={styles.complianceBox}>
+            <Text style={styles.complianceTitle}>Comparaison d’allure</Text>
+            {paceCompare ? (
+              <Text style={styles.complianceExplain}>{paceCompare.summary}</Text>
+            ) : null}
+            {vsPlanLearn ? (
+              <Text style={styles.complianceExplain}>{vsPlanLearn.note}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
         {activity.laps && activity.laps.length > 0 ? (
           <View style={styles.lapsBox}>
             <Text style={styles.complianceTitle}>Tours</Text>
@@ -170,6 +213,37 @@ export default function ActivityDetailScreen() {
             ))}
           </View>
         ) : null}
+
+        <View style={styles.shareWrap}>
+          <PrimaryButton
+            label={stravaBusy ? 'Préparation Strava…' : 'Envoyer vers Strava'}
+            onPress={() => {
+              if (stravaBusy) return;
+              setStravaBusy(true);
+              void exportActivityToStrava(activity, {
+                profile: state.profile,
+              }).then((r) => {
+                if (r === 'paywall') {
+                  router.push('/settings/subscription');
+                }
+              }).finally(() => setStravaBusy(false));
+            }}
+          />
+          <View style={{ height: spacing.sm }} />
+          <SecondaryButton
+            label={sharing ? 'Partage…' : 'Partager ma séance'}
+            onPress={() => {
+              if (sharing) return;
+              setSharing(true);
+              void shareActivityRecap(activity).finally(() => setSharing(false));
+            }}
+          />
+          {coachingInsight ? (
+            <Text style={styles.insightMuted}>
+              Insight coach : {coachingInsight}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </AppScrollView>
   );
@@ -272,6 +346,13 @@ function makeStyles(colors: ColorPalette) {
       borderColor: colors.border,
     },
     lapLine: { color: colors.textSecondary, fontSize: 13, marginTop: 4 },
+    shareWrap: { marginTop: spacing.lg },
+    insightMuted: {
+      marginTop: spacing.sm,
+      fontSize: 12,
+      lineHeight: 17,
+      color: colors.textMuted,
+    },
     missing: {
       flex: 1,
       alignItems: 'center',

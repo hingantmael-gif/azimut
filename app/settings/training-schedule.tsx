@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Body, Chip, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';
+import { Body, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';
+import { WizardDayGrid } from '../../src/ui/program/WizardPickers';
 import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { spacing } from '../../src/theme/tokens';
 import { AppScrollView } from '../../src/ui/scrolling';
-
-const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+import { coachPanelForDaySpacing } from '../../src/engines/sessionFrequencyCoach';
 
 /** Modifier les jours dispo en cours de programme — décale les séances futures. */
 export default function TrainingScheduleScreen() {
@@ -17,23 +17,30 @@ export default function TrainingScheduleScreen() {
   const o = state.profile.onboarding;
 
   const [trainingDays, setTrainingDays] = useState<number[]>(
-    o?.trainingDays?.length ? [...o.trainingDays] : [2, 4, 6],
+    o?.trainingDays?.length ? [...o.trainingDays] : [1, 3, 5],
   );
   const [longRunDay, setLongRunDay] = useState(o?.longRunDay ?? 6);
 
+  const spacingHint = useMemo(
+    () => coachPanelForDaySpacing(trainingDays),
+    [trainingDays],
+  );
+
   const toggleDay = (i: number) => {
     setTrainingDays((prev) => {
-      const next = prev.includes(i) ? prev.filter((d) => d !== i) : [...prev, i].sort((a, b) => a - b);
+      const next = prev.includes(i)
+        ? prev.filter((d) => d !== i)
+        : [...prev, i].sort((a, b) => a - b);
       if (next.length && !next.includes(longRunDay)) {
-        setLongRunDay(next[next.length - 1]);
+        setLongRunDay(next[next.length - 1]!);
       }
       return next;
     });
   };
 
   const save = () => {
-    if (trainingDays.length < 2) {
-      Alert.alert('Minimum 2 jours', 'Sélectionnez au moins 2 jours d\'entraînement.');
+    if (trainingDays.length < 1) {
+      Alert.alert('Jours requis', "Sélectionnez au moins 1 jour d'entraînement.");
       return;
     }
     if (!trainingDays.includes(longRunDay)) {
@@ -45,70 +52,56 @@ export default function TrainingScheduleScreen() {
       trainingDays,
       longRunDay,
     });
-    Alert.alert(
-      'Planning mis à jour',
-      'Les séances futures ont été décalées sur vos nouveaux jours. Les séances déjà réalisées ne changent pas.',
-      [{ text: 'OK', onPress: () => router.back() }],
-    );
+    router.back();
   };
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm },
-      }),
-    [],
-  );
 
   return (
     <Screen>
-      <AppScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}>
-        <Title>Jours d'entraînement</Title>
-        <Muted style={{ marginTop: 6, lineHeight: 20 }}>
+      <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+        <Title>Disponibilités</Title>
+        <Muted style={{ marginTop: 8, lineHeight: 20 }}>
           Changez vos disponibilités en cours de programme. Azimut décale les séances futures
-          (sans regénérer tout le plan) et comble les gros trous par un footing récupération.
+          sans tout écraser.
         </Muted>
 
-        <Body style={{ marginTop: spacing.lg }}>Jours disponibles</Body>
-        <View style={styles.row}>
-          {DAYS.map((label, i) => (
-            <Chip
-              key={label}
-              label={label}
-              selected={trainingDays.includes(i)}
-              onPress={() => toggleDay(i)}
-            />
-          ))}
-        </View>
-        <Muted style={{ marginTop: 4 }}>
+        <Body style={{ marginTop: spacing.lg }}>Jours d&apos;entraînement</Body>
+        <WizardDayGrid
+          selected={trainingDays}
+          onToggle={toggleDay}
+          accent={colors.accent}
+          tone="surface"
+        />
+        <Muted style={{ marginTop: 8 }}>
           {trainingDays.length} jour{trainingDays.length > 1 ? 's' : ''} · style Runna : décalage,
-          pas regénération complète
+          pas de reset
         </Muted>
-
-        <Body style={{ marginTop: spacing.lg }}>Sortie longue (chaque semaine)</Body>
-        <View style={styles.row}>
-          {DAYS.map((label, i) => (
-            <Chip
-              key={`long-${label}`}
-              label={label}
-              selected={longRunDay === i}
-              onPress={() => {
-                if (!trainingDays.includes(i)) {
-                  setTrainingDays((prev) => [...prev, i].sort((a, b) => a - b));
-                }
-                setLongRunDay(i);
-              }}
-            />
-          ))}
-        </View>
-
-        {state.coachAdaptations?.[0] ? (
-          <Muted style={{ marginTop: spacing.lg, color: colors.accent }}>
-            Dernière adaptation : {state.coachAdaptations[0]}
+        {spacingHint ? (
+          <Muted style={{ marginTop: 10, lineHeight: 18, color: colors.accent }}>
+            {spacingHint.title} — {spacingHint.body}
           </Muted>
         ) : null}
 
-        <PrimaryButton label="Appliquer et décaler le plan" onPress={save} />
+        <Body style={{ marginTop: spacing.lg }}>Sortie longue</Body>
+        <WizardDayGrid
+          selected={[longRunDay]}
+          mode="long"
+          accent="#F59E0B"
+          tone="surface"
+          onToggle={(dow) => {
+            if (!trainingDays.includes(dow)) {
+              Alert.alert(
+                'Jour indisponible',
+                "Choisis d'abord ce jour dans les jours d'entraînement.",
+              );
+              return;
+            }
+            setLongRunDay(dow);
+          }}
+        />
+
+        <View style={{ marginTop: spacing.xl }}>
+          <PrimaryButton label="Enregistrer" onPress={save} />
+        </View>
       </AppScrollView>
     </Screen>
   );

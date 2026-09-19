@@ -78,6 +78,12 @@ export function useWatchWorkoutExport() {
   ) => {
     setExporting(true);
     try {
+      const { takeUsageQuotaIfNeeded } = await import('../premium/guardQuota');
+      const q = await takeUsageQuotaIfNeeded('watchExport', state.profile);
+      if (q === 'paywall') {
+        router?.push('/settings/subscription');
+        return false;
+      }
       return await exportWorkoutToSelectedWatch({
         state,
         dispatch,

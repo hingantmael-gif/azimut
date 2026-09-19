@@ -9,7 +9,8 @@ import { summarizeWorkout } from '../../src/engines/workoutPresentation';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
-import { shareWorkoutSession } from '../../src/engines/stravaExport';
+import { canStartGuidedStrengthSession } from '../../src/engines/guidedStrengthSession';
+import { exportWorkoutToStrava } from '../../src/engines/stravaExport';
 import { hasRpeFeedbackForSession } from '../../src/engines/subscription';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
 import { FocusTarget } from '../../src/ui/FocusTarget';
@@ -50,9 +51,28 @@ export default function TrainingScreen() {
       Alert.alert('Aucune séance', 'Pas de séance prévue aujourd’hui à partager.');
       return;
     }
-    const result = await shareWorkoutSession(workout);
-    if (result === 'shared') {
+    const result = await exportWorkoutToStrava(
+      workout,
+      state.activities,
+      state.analyses,
+      state.profile,
+    );
+    if (result === 'ok') {
       dispatch({ type: 'EXPORT_STRAVA', workoutId: workout.id });
+    } else if (result === 'paywall') {
+      Alert.alert(
+        'Exports Strava',
+        'Tu as utilisé tes exports gratuits ce mois-ci. Passe en Premium pour continuer.',
+        [
+          { text: 'Plus tard', style: 'cancel' },
+          {
+            text: 'Voir Premium',
+            onPress: () => router.push('/settings/subscription'),
+          },
+        ],
+      );
+    } else {
+      Alert.alert('Strava', 'Impossible de préparer le fichier d’activité.');
     }
   };
 
@@ -112,6 +132,19 @@ export default function TrainingScreen() {
           </>
         ) : workout && workout.discipline !== 'rest' ? (
           <>
+            {canStartGuidedStrengthSession(workout) ? (
+              <Pressable
+                style={styles.primaryBtn}
+                onPress={() =>
+                  router.push({
+                    pathname: '/session/guided',
+                    params: { id: workout.id },
+                  })
+                }
+              >
+                <Text style={styles.primaryBtnText}>Démarrer la séance guidée</Text>
+              </Pressable>
+            ) : null}
             <FocusTarget active={focusStrava} style={{ marginTop: spacing.sm }}>
               <Pressable style={styles.secondaryBtn} onPress={() => void onStrava()}>
                 <Text style={styles.secondaryBtnText}>
@@ -151,10 +184,6 @@ export default function TrainingScreen() {
           </Pressable>
         </FocusTarget>
       ) : null}
-      <Pressable style={styles.row} onPress={() => router.push('/coach-vokal')}>
-        <Text style={styles.rowText}>Coach</Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
     </AppScrollView>
     {WatchPicker}
     </View>
@@ -187,17 +216,31 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 14,
       borderRadius: 8,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    primaryBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+    primaryBtnText: {
+      color: colors.white,
+      fontWeight: '700',
+      fontSize: 15,
+      textAlign: 'center',
+      width: '100%',
+    },
     secondaryBtn: {
       backgroundColor: colors.bgElevated,
       paddingVertical: 14,
       borderRadius: 8,
       alignItems: 'center',
+      justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
     },
-    secondaryBtnText: { color: colors.text, fontWeight: '700', fontSize: 15 },
+    secondaryBtnText: {
+      color: colors.text,
+      fontWeight: '700',
+      fontSize: 15,
+      textAlign: 'center',
+      width: '100%',
+    },
     autoHint: {
       marginTop: spacing.sm,
       fontSize: 12,

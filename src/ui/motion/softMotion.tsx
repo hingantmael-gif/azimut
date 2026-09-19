@@ -2,13 +2,16 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type AccessibilityRole,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { usePathname } from 'expo-router';
 
 /** Respiration lente (échelle) — hypnotique, discret */
 export function useBreathingScale(opts?: {
@@ -278,15 +281,19 @@ export function AnimatedFillBar({
   color,
   height = 6,
   trackColor,
+  /** Durée anim (ms) — ex. récup rapide = court, lente = long (audit §4.1). */
+  durationMs,
 }: {
   ratio: number;
   color: string;
   height?: number;
   trackColor: string;
+  durationMs?: number;
 }) {
   const target = Math.max(0, Math.min(1, ratio));
   const width = useRef(new Animated.Value(target)).current;
   const prev = useRef(target);
+  const duration = Math.max(280, Math.min(1600, durationMs ?? 650));
 
   useEffect(() => {
     const next = Math.max(0, Math.min(1, ratio));
@@ -294,11 +301,11 @@ export function AnimatedFillBar({
     prev.current = next;
     Animated.timing(width, {
       toValue: next,
-      duration: 650,
+      duration,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [ratio, width]);
+  }, [ratio, width, duration]);
 
   const w = width.interpolate({
     inputRange: [0, 1],
@@ -369,34 +376,199 @@ export function SectionHeader({
   );
 }
 
-/** Press léger (scale) — feedback tactile sans flash */
+export type PressableMotionVariant = 'subtle' | 'pop' | 'nav';
+
+/**
+ * Interaction sobre : survol = léger zoom (sans tilt / lift),
+ * clic = scale court. `nav` = petit feedback avant navigation.
+ */
 export function PressableScale({
   children,
   onPress,
   style,
+  contentStyle,
+  disabled,
+  variant = 'pop',
+  accessibilityLabel,
+  accessibilityRole = 'button',
 }: {
   children: ReactNode;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
+  disabled?: boolean;
+  variant?: PressableMotionVariant;
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const bump = (to: number) => {
-    Animated.spring(scale, {
-      toValue: to,
+  const hovered = useRef(false);
+  const pressed = useRef(false);
+  const navLock = useRef(false);
+
+  // Zoom discret uniquement — pas de déformation du texte
+  const hoverScale = variant === 'subtle' ? 1.015 : 1.02;
+  const pressScale = variant === 'subtle' ? 0.985 : variant === 'nav' ? 0.96 : 0.97;
+
+  const sync = (opts?: { hover?: boolean; press?: boolean }) => {
+    if (opts?.hover != null) hovered.current = opts.hover;
+    if (opts?.press != null) pressed.current = opts.press;
+    const toScale = pressed.current
+      ? pressScale
+      : hovered.current
+        ? hoverScale
+        : 1;
+    Animated.timing(scale, {
+      toValue: toScale,
+      duration: pressed.current ? 90 : 140,
+      easing: Easing.out(Easing.quad),
       useNativeDriver: true,
-      speed: 28,
-      bounciness: 5,
     }).start();
   };
+
+  const handlePress = () => {
+    if (!onPress || disabled || navLock.current) return;
+    if (variant !== 'nav') {
+      onPress();
+      return;
+    }
+    navLock.current = true;
+    Animated.sequence([
+      Animated.timing(scale, {
+        toValue: 0.96,
+        duration: 80,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: hovered.current ? hoverScale : 1,
+        duration: 120,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onPress();
+      navLock.current = false;
+      sync();
+    });
+  };
+
   return (
     <Pressable
-      onPress={onPress}
-      onPressIn={() => bump(0.97)}
-      onPressOut={() => bump(1)}
-      style={style}
+      disabled={disabled}
+      onPress={handlePress}
+      onPressIn={() => sync({ press: true })}
+      onPressOut={() => sync({ press: false })}
+      onHoverIn={() => sync({ hover: true })}
+      onHoverOut={() => sync({ hover: false })}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+      style={[
+        style,
+        Platform.OS === 'web'
+          ? ({ cursor: disabled ? 'not-allowed' : 'pointer' } as object)
+          : null,
+      ]}
     >
-      <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>
+      <Animated.View
+        style={[
+          {
+            // Cartes / listes : pleine largeur, hauteur stable
+            alignSelf: 'stretch',
+            width: '100%',
+          },
+          contentStyle,
+          { transform: [{ scale }] },
+        ]}
+      >
+        {children}
+      </Animated.View>
     </Pressable>
+  );
+}
+
+/**
+ * Entrée de page : fade + slide + scale élastique.
+ * Réutilise `resetKey` (ex. pathname) pour rejouer à chaque navigation.
+ */
+export function ScreenEnter({
+  children,
+  resetKey,
+  style,
+  intensity = 'md',
+}: {
+  children: ReactNode;
+  resetKey?: string;
+  style?: StyleProp<ViewStyle>;
+  intensity?: 'sm' | 'md' | 'lg';
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.97)).current;
+
+  const dist = intensity === 'sm' ? 10 : intensity === 'lg' ? 28 : 18;
+  const dur = intensity === 'sm' ? 420 : intensity === 'lg' ? 780 : 580;
+
+  useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(dist);
+    translateX.setValue(intensity === 'lg' ? 14 : 0);
+    scale.setValue(intensity === 'lg' ? 0.94 : 0.97);
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: dur * 0.85,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: dur,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateX, {
+        toValue: 0,
+        duration: dur,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 7,
+        tension: 64,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [resetKey, opacity, translateY, translateX, scale, dist, dur, intensity]);
+
+  return (
+    <Animated.View
+      style={[
+        { flex: 1, opacity, transform: [{ translateX }, { translateY }, { scale }] },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Anime tout le contenu à chaque changement de route (navigation globale). */
+export function RouteEnter({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const pathname = usePathname();
+  return (
+    <ScreenEnter resetKey={pathname} intensity="md" style={style}>
+      {children}
+    </ScreenEnter>
   );
 }
 

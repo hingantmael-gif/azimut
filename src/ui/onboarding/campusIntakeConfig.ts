@@ -15,7 +15,7 @@ export type TerrainFocus = 'route' | 'trail';
 export type TrainingTerrain = 'hills' | 'mixed' | 'flat';
 export type RunningExperience = 'lt1' | '1_3' | '3_5' | '5plus';
 export type UsualVolumeBand = '0_20' | '15_35' | '30_50' | '40_60' | '60plus';
-export type WeeklySessionsTarget = 3 | 4 | 5 | 6 | 7;
+export type WeeklySessionsTarget = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type CampusIntakeStepId =
   | 'relay'
@@ -27,6 +27,8 @@ export type CampusIntakeStepId =
   | 'injury'
   | 'usual_volume'
   | 'weekly_rhythm'
+  /** Jours + volume + rythme — une seule étape (parcours run Campus). */
+  | 'availability'
   | 'reference_time'
   | 'plan_preview'
   | 'program_pick'
@@ -191,6 +193,16 @@ export const RHYTHM_COPY = {
   cta: 'Continuer',
 } as const;
 
+export const AVAILABILITY_COPY = {
+  title: 'Dispo & rythme',
+  subtitle: 'Jours, volume et séances — tout sur un seul écran.',
+  days: 'Jours disponibles',
+  longRun: 'Jour sortie longue',
+  volume: 'Volume hebdo actuel',
+  rhythm: 'Séances par semaine',
+  cta: 'Continuer',
+} as const;
+
 export const RHYTHM_OPTIONS: ReadonlyArray<{
   sessions: WeeklySessionsTarget;
   kmLabel: string;
@@ -249,11 +261,8 @@ export function buildCampusRunSteps(opts: {
 
   steps.push('experience', 'injury');
 
-  if (opts.intent !== 'start') {
-    steps.push('usual_volume');
-  }
-
-  steps.push('weekly_rhythm');
+  // Volume + rythme + jours : une seule étape (évite usual_volume / weekly_rhythm / days séparés)
+  steps.push('availability');
 
   if (opts.intent !== 'start') {
     steps.push('reference_time');
@@ -279,7 +288,9 @@ export function goalTitleForName(firstName: string): string {
 
 export function defaultTrainingDaysForSessions(n: WeeklySessionsTarget): number[] {
   const presets: Record<WeeklySessionsTarget, number[]> = {
-    3: [2, 4, 6],
+    1: [3],
+    2: [2, 5],
+    3: [1, 3, 5],
     4: [1, 3, 5, 6],
     5: [1, 2, 4, 5, 6],
     6: [1, 2, 3, 4, 5, 6],
@@ -299,6 +310,7 @@ export function isCampusStep(id: string): id is CampusIntakeStepId {
     id === 'injury' ||
     id === 'usual_volume' ||
     id === 'weekly_rhythm' ||
+    id === 'availability' ||
     id === 'reference_time' ||
     id === 'plan_preview' ||
     id === 'program_pick' ||
@@ -329,12 +341,14 @@ export function campusStepTitle(
       return VOLUME_COPY.title;
     case 'weekly_rhythm':
       return RHYTHM_COPY.title;
+    case 'availability':
+      return AVAILABILITY_COPY.title;
     case 'reference_time':
       return REFERENCE_COPY.title;
     case 'plan_preview':
       return 'Tes allures';
     case 'program_pick':
-      return 'Quel programme souhaitez-vous suivre ?';
+      return 'Choisis ton programme';
     case 'program_weeks':
       return 'Sur combien de semaines ?';
     default:
@@ -361,14 +375,25 @@ export function buildFullOnboardingSteps(opts: {
       intent: opts.runIntent,
       terrain: opts.terrain,
     });
-    const tail: string[] = ['days_with_long'];
-    if (!opts.hasUsualVolume) tail.push('weekly_volume');
-    tail.push('references', 'devices', 'program_pick', 'program_weeks');
+    // `availability` couvre déjà jours + volume + rythme — pas de doublons en queue
+    // devices : non bloquant (« Configurer plus tard »)
+    const tail: string[] = [
+      'references',
+      'devices',
+      'program_pick',
+      'program_weeks',
+    ];
     return [...head, ...campus, ...tail];
   }
 
   const sportSteps = buildOnboardingSteps(opts.sport, opts.includePpg).filter(
-    (s) => s !== 'sport',
+    (s) => s !== 'sport' && s !== 'devices',
   );
-  return [...head, ...sportSteps, 'program_pick', 'program_weeks'];
+  return [
+    ...head,
+    ...sportSteps,
+    'devices',
+    'program_pick',
+    'program_weeks',
+  ];
 }

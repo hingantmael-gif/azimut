@@ -25,7 +25,7 @@ export interface TrainingProgramTemplate {
   swimVenue?: 'pool' | 'open_water';
 }
 
-/** Sports les plus pratiqués — Ironman juste au-dessus du duathlon */
+/** Sports les plus pratiqués — callisthénie en carte dédiée */
 export const POPULAR_SPORT_CATEGORIES: Array<{
   id: ProgramSportCategory;
   label: string;
@@ -36,6 +36,7 @@ export const POPULAR_SPORT_CATEGORIES: Array<{
   { id: 'swim', label: 'Natation', desc: 'Piscine, eau libre' },
   { id: 'triathlon', label: 'Triathlon', desc: 'Natation · vélo · course' },
   { id: 'strength', label: 'Musculation', desc: 'Renforcement, salle' },
+  { id: 'other', label: 'Callisthénie', desc: 'Poids du corps, skills' },
   { id: 'ironman', label: 'Ironman', desc: '5150 · 70.3 · 140.6' },
 ];
 
@@ -421,26 +422,37 @@ export const PROGRAM_CATALOG: TrainingProgramTemplate[] = [
     distanceKm: 226,
   },
   {
-    id: 'prog-biathlon',
-    title: 'Biathlon (course + vélo)',
-    subtitle: '12 semaines · enchaînement run / bike',
+    id: 'prog-calisthenics-base',
+    title: 'Callisthénie débutant',
+    subtitle: '0–3 mois · fondations pompes, tractions, squats',
     weeks: 12,
-    disciplines: ['run', 'bike'],
-    level: 'intermediaire',
-    sportCategory: 'other',
-    goal: 'forme',
-    keywords: ['biathlon', 'course', 'vélo', 'run bike', 'brick', 'enchaînement'],
-  },
-  {
-    id: 'prog-duathlon-sprint',
-    title: 'Duathlon sprint',
-    subtitle: '8 semaines · course / vélo / course',
-    weeks: 8,
-    disciplines: ['run', 'bike'],
+    disciplines: ['strength'],
     level: 'debutant',
     sportCategory: 'other',
     goal: 'forme',
-    keywords: ['duathlon', 'sprint', 'course', 'vélo', 'run bike run'],
+    keywords: ['callisthénie', 'calisthenics', 'débutant', 'pompes', 'tractions'],
+  },
+  {
+    id: 'prog-calisthenics-strength',
+    title: 'Callisthénie intermédiaire',
+    subtitle: '3–12 mois · planche tuck, front lever, muscle-up',
+    weeks: 16,
+    disciplines: ['strength'],
+    level: 'intermediaire',
+    sportCategory: 'other',
+    goal: 'forme',
+    keywords: ['callisthénie', 'intermédiaire', 'planche', 'muscle-up', 'front lever'],
+  },
+  {
+    id: 'prog-calisthenics-endurance',
+    title: 'Callisthénie avancé',
+    subtitle: '12+ mois · planche, front lever, OAP, drapeau',
+    weeks: 20,
+    disciplines: ['strength'],
+    level: 'confirme',
+    sportCategory: 'other',
+    goal: 'forme',
+    keywords: ['callisthénie', 'avancé', 'élite', 'planche', 'drapeau'],
   },
   {
     id: 'prog-strength-base',

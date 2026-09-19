@@ -8,7 +8,6 @@ import {
   AuthTitle,
   OrangeButton,
   StravaInput,
-  TermsCheckbox,
   TextLink,
 } from '../../src/ui/strava/AuthScreen';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
@@ -24,17 +23,22 @@ import {
   hasCompletedOnboarding,
   markOnboardingCompleted,
 } from '../../src/storage/onboardingPersistence';
-import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
 import { colors } from '../../src/theme/tokens';
+import {
+  isOwnerPremiumEmail,
+  OWNER_GOOGLE_ONLY_MESSAGE,
+} from '../../src/engines/ownerAccess';
+import { isGiftedPremiumEmail } from '../../src/storage/ownerPremiumGifts';
+import { useI18n } from '../../src/i18n/I18nContext';
 
 export default function LoginScreen() {
   const { state, dispatch } = useApp();
   const { colors: themeColors } = useThemeColors();
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [terms, setTerms] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -60,7 +64,9 @@ export default function LoginScreen() {
       type: 'AUTH_WITH_PROVIDER',
       payload: {
         ...payload,
+        provider: 'google',
         onboardingCompleted: done,
+        giftedPremium: await isGiftedPremiumEmail(payload.email),
       },
     });
   };
@@ -131,22 +137,17 @@ export default function LoginScreen() {
     router,
   ]);
 
-  const requireTerms = () => {
-    if (!terms) {
-      setError('Accepte les conditions pour continuer.');
-      return false;
-    }
-    return true;
-  };
-
   const submit = async () => {
     setError('');
-    if (!requireTerms()) return;
     setBusy(true);
     const idRaw = email.trim();
     const id = idRaw.includes('@') ? normalizeEmailInput(idRaw) : idRaw.toLowerCase();
     if (id.includes('@')) setEmail(id);
     try {
+      if (isOwnerPremiumEmail(id) || isOwnerPremiumEmail(idRaw)) {
+        setError(OWNER_GOOGLE_ONLY_MESSAGE);
+        return;
+      }
       if (isTrialCredentials(idRaw, password) || isTrialCredentials(id, password)) {
         await loginTrialAccount(clearSession, dispatch);
         return;
@@ -154,6 +155,10 @@ export default function LoginScreen() {
 
       const res = await apiLogin(id, password);
       if (res.token && res.user) {
+        if (isOwnerPremiumEmail(res.user.email)) {
+          setError(OWNER_GOOGLE_ONLY_MESSAGE);
+          return;
+        }
         await clearSession();
         const done = await hasCompletedOnboarding(
           res.user.email,
@@ -171,7 +176,9 @@ export default function LoginScreen() {
             firstName: res.user.firstName,
             lastName: res.user.lastName,
             username: res.user.username,
+            provider: 'email',
             onboardingCompleted: done,
+            giftedPremium: await isGiftedPremiumEmail(res.user.email),
           },
         });
         return;
@@ -179,6 +186,10 @@ export default function LoginScreen() {
 
       const local = await verifyLocalCredentials(id, password);
       if (local) {
+        if (isOwnerPremiumEmail(local.email)) {
+          setError(OWNER_GOOGLE_ONLY_MESSAGE);
+          return;
+        }
         await clearSession();
         const done = await hasCompletedOnboarding(local.email, local.username);
         if (done) {
@@ -192,7 +203,9 @@ export default function LoginScreen() {
             firstName: local.firstName,
             lastName: local.lastName,
             username: local.username,
+            provider: 'local',
             onboardingCompleted: done,
+            giftedPremium: await isGiftedPremiumEmail(local.email),
           },
         });
         return;
@@ -210,6 +223,10 @@ export default function LoginScreen() {
       }
       const local = await verifyLocalCredentials(id, password);
       if (local) {
+        if (isOwnerPremiumEmail(local.email)) {
+          setError(OWNER_GOOGLE_ONLY_MESSAGE);
+          return;
+        }
         await clearSession();
         const done = await hasCompletedOnboarding(local.email, local.username);
         if (done) {
@@ -223,7 +240,9 @@ export default function LoginScreen() {
             firstName: local.firstName,
             lastName: local.lastName,
             username: local.username,
+            provider: 'local',
             onboardingCompleted: done,
+            giftedPremium: await isGiftedPremiumEmail(local.email),
           },
         });
         return;
@@ -237,22 +256,14 @@ export default function LoginScreen() {
   return (
     <AuthScreen>
       <BrandMark size="md" surfaceColor={themeColors.bg} />
-      <AuthTitle>{AUTH_LABELS.signIn}</AuthTitle>
-      <AuthSubtitle>Content de te revoir.</AuthSubtitle>
-
-      <TermsCheckbox
-        checked={terms}
-        onToggle={() => {
-          setTerms((v) => !v);
-          setError('');
-        }}
-        onOpenTerms={() => router.push('/settings/terms')}
-      />
+      <AuthTitle>{t('auth.signInTitle')}</AuthTitle>
+      <AuthSubtitle>{t('auth.signInSubtitle')}</AuthSubtitle>
 
       <SocialAuthButtons
         loading={busy}
+        label={t('auth.google')}
+        loadingLabel={t('auth.googleBusy')}
         onGoogle={() => {
-          if (!requireTerms()) return;
           setError('');
           setBusy(true);
           void google.signIn().finally(() => setBusy(false));
@@ -262,7 +273,7 @@ export default function LoginScreen() {
       <AuthDivider />
 
       <StravaInput
-        label="E-mail"
+        label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -273,7 +284,7 @@ export default function LoginScreen() {
         placeholder="toi@orange.fr"
       />
       <StravaInput
-        label="Mot de passe"
+        label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -281,12 +292,12 @@ export default function LoginScreen() {
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <OrangeButton
-        label={busy ? 'Connexion…' : AUTH_LABELS.signIn}
+        label={busy ? t('auth.signInBusy') : t('auth.signIn')}
         disabled={busy}
         onPress={() => void submit()}
       />
       <TextLink
-        label={AUTH_LABELS.needAccount}
+        label={t('auth.needAccount')}
         accent
         onPress={() => router.push('/(auth)/register')}
       />

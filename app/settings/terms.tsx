@@ -11,7 +11,7 @@ import {
   TERMS_VERSION,
 } from '../../src/legal/azimutTerms';
 
-/** CGU détaillées (usage + confidentialité). Acceptation obligatoire à l’entrée. */
+/** CGU détaillées (usage + confidentialité). Acceptation à l’inscription. */
 export default function TermsScreen() {
   const { colors } = useThemeColors();
   const body = { color: colors.textSecondary };

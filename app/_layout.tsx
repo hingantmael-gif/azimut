@@ -4,9 +4,11 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from '../src/store/AppContext';
 import { ThemeProvider, useThemeColors } from '../src/theme/ThemeContext';
+import { I18nProvider } from '../src/i18n/I18nContext';
 import { PhoneShell } from '../src/ui/PhoneShell';
 import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
+import { SocialInboxBootstrap } from '../src/ui/notifications/SocialInboxBootstrap';
 import { PendingProgramReviewModal } from '../src/ui/program/PendingProgramReviewModal';
 import { GlobalLevelUpHost } from '../src/ui/ranked/GlobalLevelUpHost';
 import { XpGainToast } from '../src/ui/ranked/XpGainToast';
@@ -76,6 +78,7 @@ function AppShell() {
       <PhoneShell>
         <AuthGate>
           <NotificationBootstrap />
+          <SocialInboxBootstrap />
           <PendingProgramReviewModal />
           <GlobalLevelUpHost />
           <XpGainToast />
@@ -87,6 +90,8 @@ function AppShell() {
               contentStyle: { backgroundColor: colors.bgSecondary },
               headerShadowVisible: false,
               headerBackTitle: 'Retour',
+              animation: 'fade_from_bottom',
+              animationDuration: 420,
               /** Toujours visible — même après refresh (historique vide). */
               headerLeft: () => <AlwaysBackButton tintColor={colors.text} />,
             }}
@@ -99,6 +104,10 @@ function AppShell() {
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen
+              name="session/guided"
+              options={{ title: 'Séance guidée', headerShown: false }}
+            />
+            <Stack.Screen
               name="session/live"
               options={{ title: 'Séance live', headerShown: false }}
             />
@@ -107,6 +116,7 @@ function AppShell() {
             <Stack.Screen name="badges" options={{ title: 'Badges' }} />
             <Stack.Screen name="activities" options={{ title: 'Activités' }} />
             <Stack.Screen name="programs" options={{ title: 'Programmes' }} />
+            <Stack.Screen name="calisthenics" options={{ title: 'Callisthénie' }} />
             <Stack.Screen name="recovery" options={{ title: 'Récupération' }} />
             <Stack.Screen name="nutrition" options={{ title: 'Nutrition' }} />
             <Stack.Screen name="race-predictor" options={{ title: 'Prédiction' }} />
@@ -114,9 +124,11 @@ function AppShell() {
             <Stack.Screen name="safety" options={{ title: 'Sécurité' }} />
             <Stack.Screen name="coach-vokal" options={{ title: 'Coach' }} />
             <Stack.Screen name="year-review" options={{ title: 'Bilan annuel' }} />
+            <Stack.Screen name="week-review" options={{ title: 'Bilan hebdomadaire' }} />
             <Stack.Screen name="search" options={{ title: 'Athlètes' }} />
             <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
             <Stack.Screen name="connections" options={{ title: 'Réseau' }} />
+            <Stack.Screen name="group/[id]" options={{ title: 'Groupe' }} />
             <Stack.Screen name="user/[username]" options={{ title: 'Profil' }} />
             <Stack.Screen name="user/evolution" options={{ title: 'Évolution' }} />
             <Stack.Screen name="user/programs" options={{ title: 'Programmes' }} />
@@ -126,22 +138,26 @@ function AppShell() {
             <Stack.Screen name="settings/profile-cover" options={{ title: 'Fond de profil' }} />
             <Stack.Screen name="settings/goals" options={{ title: 'Objectifs & niveau' }} />
             <Stack.Screen name="settings/sports-data" options={{ title: 'Données sportives' }} />
-            <Stack.Screen name="settings/athlete-profile" options={{ title: 'Profil sportif' }} />
+            <Stack.Screen name="settings/athlete-hub" options={{ title: 'Profil sportif' }} />
+            <Stack.Screen name="settings/athlete-profile" options={{ title: 'Objectif & volume' }} />
             <Stack.Screen name="settings/performance" options={{ title: 'Ma forme' }} />
-            <Stack.Screen name="settings/subscription" options={{ title: 'Tout explorer' }} />
+            <Stack.Screen name="settings/subscription" options={{ title: 'Abonnement Premium' }} />
             <Stack.Screen name="settings/watch" options={{ title: 'Montre' }} />
             <Stack.Screen name="settings/devices" options={{ title: 'Appareils & sync' }} />
-            <Stack.Screen name="settings/integrations" options={{ title: 'Appareils & sync' }} />
+            {/* integrations / partners : redirects legacy → devices (pas dans le hub) */}
             <Stack.Screen name="settings/privacy" options={{ title: 'Qui peut me voir' }} />
             <Stack.Screen name="settings/data-permissions" options={{ title: 'Autorisations' }} />
             <Stack.Screen name="settings/display" options={{ title: 'Unités et carte' }} />
             <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
             <Stack.Screen name="settings/email" options={{ title: 'E-mail' }} />
-            <Stack.Screen name="settings/partners" options={{ title: 'Partenaires' }} />
             <Stack.Screen name="settings/help" options={{ title: 'Centre d\'aide' }} />
             <Stack.Screen name="settings/terms" options={{ title: 'CGU' }} />
             <Stack.Screen name="settings/privacy-policy" options={{ title: 'Politique de confidentialité' }} />
             <Stack.Screen name="settings/account" options={{ title: 'Compte et sécurité' }} />
+            <Stack.Screen
+              name="settings/premium-manage"
+              options={{ title: 'Gestion compte premium' }}
+            />
           </Stack>
         </AuthGate>
       </PhoneShell>
@@ -153,7 +169,9 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <ThemeProvider>
-        <AppShell />
+        <I18nProvider>
+          <AppShell />
+        </I18nProvider>
       </ThemeProvider>
     </AppProvider>
   );

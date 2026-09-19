@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
 import { DISCIPLINE_META, disciplineColor } from '../../src/constants/disciplines';
@@ -16,7 +16,9 @@ import { AppScrollView } from '../../src/ui/scrolling';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
-import { FadeInUp, RevealPanel, StaggerIn } from '../../src/ui/motion/softMotion';
+import { FadeInUp, RevealPanel, SoftPulse, StaggerIn } from '../../src/ui/motion/softMotion';
+import { FloatingActionButton } from '../../src/ui/FloatingActionButton';
+import { appConfirm } from '../../src/utils/appAlert';
 
 function formatDayTitle(iso: string): string {
   return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
@@ -39,10 +41,33 @@ export default function PlanScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
   const [moveMode, setMoveMode] = useState(false);
+  const [dropPulse, setDropPulse] = useState(false);
+  const dropScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     dispatch({ type: 'PRUNE_FINISHED_PROGRAM' });
   }, [dispatch, state.plan.length, state.profile.activeProgram?.id]);
+
+  useEffect(() => {
+    if (!dropPulse) return;
+    dropScale.setValue(0.96);
+    Animated.sequence([
+      Animated.timing(dropScale, {
+        toValue: 1.03,
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(dropScale, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    const t = setTimeout(() => setDropPulse(false), 900);
+    return () => clearTimeout(t);
+  }, [dropPulse, dropScale]);
 
   const visiblePlan = state.plan;
   const vmaHint = formatVmaHint(state.profile.onboarding, state.activities);
@@ -67,6 +92,7 @@ export default function PlanScreen() {
       dispatch({ type: 'MOVE_WORKOUT', id: activeWorkoutId, newDate: date });
       setMoveMode(false);
       setSelectedDate(date);
+      setDropPulse(true);
       return;
     }
     setSelectedDate((prev) => (prev === date ? null : date));
@@ -81,7 +107,7 @@ export default function PlanScreen() {
   return (
     <View style={{ flex: 1 }}>
       <ScreenAtmosphere intensity={0.75} />
-    <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 40 }}>
+    <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 100 }}>
       <View style={styles.header}>
         <Text style={styles.title}>Mon plan</Text>
         <Text style={styles.sub}>
@@ -104,6 +130,7 @@ export default function PlanScreen() {
           moveMode={moveMode}
           selectedWorkoutId={activeWorkoutId}
           selectedDate={selectedDate}
+          moveTargetPulse={0.05}
           onPrevMonth={() => shiftMonth(-1)}
           onNextMonth={() => shiftMonth(1)}
           onDayPress={handleDayPress}
@@ -123,139 +150,172 @@ export default function PlanScreen() {
         </View>
       ) : null}
       {selectedDate ? (
-        <RevealPanel
-          key={selectedDate}
-          resetKey={selectedDate}
-          duration={880}
-          style={styles.dayPanel}
-        >
-          <FadeInUp delay={40} duration={700} distance={10}>
-            <Text style={styles.dayPanelTitle}>{formatDayTitle(selectedDate)}</Text>
-          </FadeInUp>
-          {daySessions.length === 0 ? (
-            <FadeInUp delay={120} duration={720} distance={12}>
-              <Text style={styles.emptyDay}>
-                Aucune séance ce jour — déplacez-en une depuis une autre date.
-              </Text>
-            </FadeInUp>
-          ) : (
-            daySessions.map((workout, index) => {
-              const isActive = activeWorkoutId === workout.id;
-              const summary = summarizeWorkout(workout);
-              const dColor = disciplineColor(workout.discipline);
-              return (
-                <StaggerIn key={workout.id} index={index} baseDelay={90} step={80} duration={680}>
-                  <View
-                    style={[
-                      styles.sessionCard,
-                      { backgroundColor: `${dColor}12`, borderColor: `${dColor}40` },
-                      isActive && { borderColor: dColor, borderWidth: 1.5 },
-                    ]}
-                  >
-                    <Pressable onPress={() => setActiveWorkoutId(isActive ? null : workout.id)}>
-                      <View style={styles.sessionHead}>
-                        <View
-                          style={[
-                            styles.sessionDot,
-                            { backgroundColor: dColor },
-                          ]}
-                        />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.sessionTitle}>{workout.title}</Text>
-                          <Text style={styles.sessionMeta}>
-                            {DISCIPLINE_META[workout.discipline].label} · {summary.durationLabel}
-                            {summary.distanceLabel ? ` · ${summary.distanceLabel}` : ''}
-                            {workout.expectedRpe ? ` · RPE ~${workout.expectedRpe}` : ''}
-                          </Text>
-                        </View>
-                        <Text style={[styles.chevron, { color: dColor }]}>
-                          {isActive ? '▾' : '▸'}
-                        </Text>
-                      </View>
+        <SoftPulse intensity={dropPulse ? 0.04 : 0}>
+          <Animated.View style={{ transform: [{ scale: dropScale }] }}>
+            <RevealPanel
+              key={selectedDate}
+              resetKey={selectedDate}
+              duration={880}
+              style={styles.dayPanel}
+            >
+              <FadeInUp delay={40} duration={700} distance={10}>
+                <Text style={styles.dayPanelTitle}>{formatDayTitle(selectedDate)}</Text>
+              </FadeInUp>
+              {daySessions.length === 0 ? (
+                <FadeInUp delay={120} duration={720} distance={12}>
+                  <SoftPulse intensity={0.03}>
+                    <Pressable
+                      style={styles.emptyDayCta}
+                      onPress={() => router.push('/program/new')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Planifier une séance ce jour"
+                    >
+                      <Text style={styles.emptyDayCtaText}>Planifier une séance ce jour</Text>
                     </Pressable>
-                    {isActive ? (
-                      <FadeInUp
-                        key={`${workout.id}-open`}
-                        delay={40}
-                        duration={720}
-                        distance={12}
-                        style={styles.sessionEdit}
+                  </SoftPulse>
+                </FadeInUp>
+              ) : (
+                daySessions.map((workout, index) => {
+                  const isActive = activeWorkoutId === workout.id;
+                  const summary = summarizeWorkout(workout);
+                  const dColor = disciplineColor(workout.discipline);
+                  return (
+                    <StaggerIn key={workout.id} index={index} baseDelay={90} step={80} duration={680}>
+                      <View
+                        style={[
+                          styles.sessionCard,
+                          { backgroundColor: `${dColor}12`, borderColor: `${dColor}40` },
+                          isActive && { borderColor: dColor, borderWidth: 1.5 },
+                        ]}
                       >
-                        {workout.coachNote ? (
-                          <Text style={[styles.coachNote, { color: colors.accent }]}>
-                            {workout.coachNote}
-                          </Text>
-                        ) : null}
-                        {summary.stepLines.map((line, i) => (
-                          <FadeInUp
-                            key={`${workout.id}-step-${i}`}
-                            delay={70 + i * 55}
-                            duration={560}
-                            distance={8}
-                          >
-                            <View style={styles.stepLine}>
-                              <Text style={styles.stepTitle}>{line.title}</Text>
-                              <Text style={styles.stepDetail}>{line.detail}</Text>
+                        <Pressable onPress={() => setActiveWorkoutId(isActive ? null : workout.id)}>
+                          <View style={styles.sessionHead}>
+                            <View
+                              style={[
+                                styles.sessionDot,
+                                { backgroundColor: dColor },
+                              ]}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.sessionTitle}>{workout.title}</Text>
+                              <Text style={styles.sessionMeta}>
+                                {DISCIPLINE_META[workout.discipline].label} · {summary.durationLabel}
+                                {summary.distanceLabel ? ` · ${summary.distanceLabel}` : ''}
+                                {workout.expectedRpe ? ` · RPE ~${workout.expectedRpe}` : ''}
+                              </Text>
                             </View>
-                          </FadeInUp>
-                        ))}
-                        <FadeInUp delay={90 + summary.stepLines.length * 45} duration={600}>
-                          <View style={styles.actionRow}>
-                            {canStartLiveWorkout(workout.discipline) ? (
-                              <Pressable
-                                style={[styles.actionBtn, styles.actionBtnAccent]}
-                                onPress={() =>
-                                  router.push({
-                                    pathname: '/session/live',
-                                    params: { id: workout.id },
-                                  })
-                                }
-                              >
-                                <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
-                                  Effectuer dans Azimut
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                            <Pressable
-                              style={styles.actionBtn}
-                              onPress={() => router.push(`/session/${workout.id}`)}
-                            >
-                              <Text style={styles.actionBtnText}>Détails complets</Text>
-                            </Pressable>
-                            {workout.discipline !== 'rest' &&
-                            canSendWorkoutToWatch(workout.discipline) ? (
-                              <Pressable
-                                style={[styles.actionBtn, styles.actionBtnAccent]}
-                                onPress={() => router.push(`/session/${workout.id}`)}
-                              >
-                                <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
-                                  Envoyer séance
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                            {!workout.lockedRest ? (
-                              <Pressable
-                                style={[styles.actionBtn, styles.actionBtnAccent]}
-                                onPress={() => {
-                                  setActiveWorkoutId(workout.id);
-                                  setMoveMode(true);
-                                }}
-                              >
-                                <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
-                                  Déplacer
-                                </Text>
-                              </Pressable>
-                            ) : null}
+                            <Text style={[styles.chevron, { color: dColor }]}>
+                              {isActive ? '▾' : '▸'}
+                            </Text>
                           </View>
-                        </FadeInUp>
-                      </FadeInUp>
-                    ) : null}
-                  </View>
-                </StaggerIn>
-              );
-            })
-          )}
-        </RevealPanel>
+                        </Pressable>
+                        {isActive ? (
+                          <FadeInUp
+                            key={`${workout.id}-open`}
+                            delay={40}
+                            duration={720}
+                            distance={12}
+                            style={styles.sessionEdit}
+                          >
+                            {workout.coachNote ? (
+                              <Text style={[styles.coachNote, { color: colors.accent }]}>
+                                {workout.coachNote}
+                              </Text>
+                            ) : null}
+                            {summary.stepLines.map((line, i) => (
+                              <FadeInUp
+                                key={`${workout.id}-step-${i}`}
+                                delay={70 + i * 55}
+                                duration={560}
+                                distance={8}
+                              >
+                                <View style={styles.stepLine}>
+                                  <Text style={styles.stepTitle}>{line.title}</Text>
+                                  <Text style={styles.stepDetail}>{line.detail}</Text>
+                                </View>
+                              </FadeInUp>
+                            ))}
+                            <FadeInUp delay={90 + summary.stepLines.length * 45} duration={600}>
+                              <View style={styles.actionRow}>
+                                {canStartLiveWorkout(workout.discipline) ? (
+                                  <Pressable
+                                    style={[styles.actionBtn, styles.actionBtnAccent]}
+                                    onPress={() =>
+                                      router.push({
+                                        pathname: '/session/live',
+                                        params: { id: workout.id },
+                                      })
+                                    }
+                                  >
+                                    <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                      Démarrer
+                                    </Text>
+                                  </Pressable>
+                                ) : null}
+                                <Pressable
+                                  style={styles.actionBtn}
+                                  onPress={() => router.push(`/session/${workout.id}`)}
+                                >
+                                  <Text style={styles.actionBtnText}>Détails complets</Text>
+                                </Pressable>
+                                {workout.discipline !== 'rest' &&
+                                canSendWorkoutToWatch(workout.discipline) ? (
+                                  <Pressable
+                                    style={[styles.actionBtn, styles.actionBtnAccent]}
+                                    onPress={() => router.push(`/session/${workout.id}`)}
+                                  >
+                                    <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                      Envoyer séance
+                                    </Text>
+                                  </Pressable>
+                                ) : null}
+                                {!workout.lockedRest ? (
+                                  <Pressable
+                                    style={[styles.actionBtn, styles.actionBtnAccent]}
+                                    onPress={() => {
+                                      setActiveWorkoutId(workout.id);
+                                      setMoveMode(true);
+                                    }}
+                                  >
+                                    <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                      Déplacer
+                                    </Text>
+                                  </Pressable>
+                                ) : null}
+                                {!workout.lockedRest ? (
+                                  <Pressable
+                                    style={[styles.actionBtn, styles.actionBtnDanger]}
+                                    onPress={() => {
+                                      void (async () => {
+                                        const ok = await appConfirm(
+                                          'Retirer du plan',
+                                          `Retirer « ${workout.title} » du plan ?`,
+                                          'Retirer',
+                                          'Annuler',
+                                        );
+                                        if (!ok) return;
+                                        dispatch({ type: 'REMOVE_WORKOUT', id: workout.id });
+                                        setActiveWorkoutId(null);
+                                      })();
+                                    }}
+                                  >
+                                    <Text style={[styles.actionBtnText, styles.actionBtnTextDanger]}>
+                                      Retirer
+                                    </Text>
+                                  </Pressable>
+                                ) : null}
+                              </View>
+                            </FadeInUp>
+                          </FadeInUp>
+                        ) : null}
+                      </View>
+                    </StaggerIn>
+                  );
+                })
+              )}
+            </RevealPanel>
+          </Animated.View>
+        </SoftPulse>
       ) : null}
       <View style={styles.upcoming}>
         <Text style={styles.sectionTitle}>Prochaine séance</Text>
@@ -281,12 +341,15 @@ export default function PlanScreen() {
             </View>
           </Pressable>
         ) : (
-          <Text style={styles.emptyUpcoming}>
-            Aucune séance à venir — créez un programme avec le bouton +.
-          </Text>
+          <SoftPulse intensity={0.03}>
+            <Text style={styles.emptyUpcoming}>
+              Aucune séance à venir — créez un programme avec le bouton +.
+            </Text>
+          </SoftPulse>
         )}
       </View>
     </AppScrollView>
+      <FloatingActionButton />
     </View>
   );
 }
@@ -343,7 +406,20 @@ function makeStyles(colors: ColorPalette) {
       textTransform: 'capitalize',
       marginBottom: spacing.sm,
     },
-    emptyDay: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+    emptyDayCta: {
+      paddingVertical: 14,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      backgroundColor: colors.accentLight,
+      alignItems: 'center',
+    },
+    emptyDayCtaText: {
+      color: colors.accentDark,
+      fontWeight: '700',
+      fontSize: 14,
+    },
     sessionCard: {
       borderWidth: 1,
       borderRadius: radii.lg,
@@ -371,9 +447,11 @@ function makeStyles(colors: ColorPalette) {
     stepLine: { marginTop: spacing.sm },
     stepTitle: { fontWeight: '700', color: colors.text, fontSize: 14 },
     stepDetail: { color: colors.textSecondary, fontSize: 13, marginTop: 2, lineHeight: 18 },
-    actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+    actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
     actionBtn: {
-      flex: 1,
+      flexGrow: 1,
+      flexBasis: '40%',
+      minWidth: 120,
       paddingVertical: 12,
       borderRadius: radii.md,
       alignItems: 'center',
@@ -381,8 +459,13 @@ function makeStyles(colors: ColorPalette) {
       borderColor: colors.border,
     },
     actionBtnAccent: { backgroundColor: colors.accent, borderColor: colors.accent },
+    actionBtnDanger: {
+      backgroundColor: `${colors.danger}14`,
+      borderColor: `${colors.danger}55`,
+    },
     actionBtnText: { fontWeight: '700', color: colors.text, fontSize: 13 },
     actionBtnTextAccent: { color: colors.white },
+    actionBtnTextDanger: { color: colors.danger },
     upcoming: { paddingHorizontal: spacing.md },
     sectionTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
     emptyUpcoming: {

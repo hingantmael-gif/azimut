@@ -4,7 +4,7 @@
  * node scripts/process-rank-badges-flat.mjs
  */
 import sharp from 'sharp';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -96,7 +96,7 @@ async function processFrame(inputPath, outPath) {
 
   const trimmed = await pipeline.toBuffer();
   const pad = 8;
-  await sharp(trimmed)
+  const buf = await sharp(trimmed)
     .extend({
       top: pad,
       bottom: pad,
@@ -106,7 +106,9 @@ async function processFrame(inputPath, outPath) {
     })
     .resize(320, 320, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
-    .toFile(outPath);
+    .toBuffer();
+  // writeFileSync avoids intermittent Windows toFile locks
+  writeFileSync(outPath, buf);
 }
 
 async function main() {

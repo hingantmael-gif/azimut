@@ -1,28 +1,33 @@
-import { Pressable, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { PressableScale } from '../motion/softMotion';
 
 /** Uniquement Google — Apple / Facebook retirés (pas de faux comptes). */
 export function SocialAuthButtons({
   onGoogle,
   loading,
+  label = 'Continuer avec Google',
+  loadingLabel = 'Connexion Google…',
 }: {
   onGoogle: () => void;
   loading?: boolean;
+  label?: string;
+  loadingLabel?: string;
 }) {
   return (
     <View style={styles.wrap}>
-      <Pressable
+      <PressableScale
         onPress={onGoogle}
         disabled={loading}
-        accessibilityRole="button"
-        accessibilityLabel={loading ? 'Connexion Google…' : 'Continuer avec Google'}
-        accessibilityState={{ disabled: Boolean(loading) }}
+        variant="pop"
+        accessibilityLabel={loading ? loadingLabel : label}
         style={[styles.btn, styles.google, loading && styles.disabled]}
+        contentStyle={styles.btnContent}
       >
         <Text style={[styles.label, styles.labelDark]}>
-          {loading ? 'Connexion Google…' : 'Continuer avec Google'}
+          {loading ? loadingLabel : label}
         </Text>
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -33,9 +38,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
-    alignItems: 'center',
     borderWidth: 1,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
+  },
+  btnContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   google: {
     backgroundColor: colors.white,
@@ -45,6 +54,8 @@ const styles = StyleSheet.create({
   label: {
     ...typography.button,
     fontSize: 15,
+    textAlign: 'center',
+    width: '100%',
   },
   labelDark: { color: colors.text },
 });

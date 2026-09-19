@@ -19,7 +19,7 @@ export default function EmailPrefsScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <SettingsSection title="Activité">
           <SettingsToggleRow
-            label="Kudos et commentaires"
+            label="Likes et commentaires"
             value={n.social}
             onToggle={() => toggle('social')}
           />

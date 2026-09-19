@@ -1,21 +1,27 @@
 import {
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   type TextProps,
   type ViewProps,
   View,
 } from 'react-native';
+import { usePathname } from 'expo-router';
 import { useThemeColors } from '../theme/ThemeContext';
 import { radii, spacing } from '../theme/tokens';
 import type { ColorPalette } from '../theme/palettes';
 import { stripBidiMarks } from '../constants/authLabels';
+import { PressableScale, ScreenEnter } from './motion/softMotion';
 
 export function Screen({ style, ...props }: ViewProps) {
   const { colors } = useThemeColors();
   const styles = makeStyles(colors);
-  return <View style={[styles.screen, style]} {...props} />;
+  const pathname = usePathname();
+  return (
+    <ScreenEnter resetKey={pathname} intensity="md">
+      <View style={[styles.screen, { flex: 1 }, style]} {...props} />
+    </ScreenEnter>
+  );
 }
 
 export function Title({ style, ...props }: TextProps) {
@@ -51,16 +57,16 @@ export function PrimaryButton({
   const styles = makeStyles(colors);
   const plain = stripBidiMarks(label);
   return (
-    <Pressable
+    <PressableScale
       disabled={disabled}
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: Boolean(disabled) }}
+      variant="nav"
       accessibilityLabel={plain}
       style={[styles.btn, disabled && styles.btnDisabled]}
+      contentStyle={styles.btnContent}
     >
       <Text style={styles.btnText}>{plain}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -75,9 +81,15 @@ export function SecondaryButton({
   const styles = makeStyles(colors);
   const plain = stripBidiMarks(label);
   return (
-    <Pressable onPress={onPress} style={styles.btnSecondary} accessibilityLabel={plain}>
+    <PressableScale
+      onPress={onPress}
+      variant="pop"
+      accessibilityLabel={plain}
+      style={styles.btnSecondary}
+      contentStyle={styles.btnContent}
+    >
       <Text style={styles.btnSecondaryText}>{plain}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -94,13 +106,15 @@ export function Chip({
   const styles = makeStyles(colors);
   const plain = stripBidiMarks(label);
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
+      variant="subtle"
       accessibilityLabel={plain}
+      style={[styles.chip, selected && styles.chipSelected]}
+      contentStyle={styles.btnContent}
     >
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{plain}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -144,8 +158,12 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 14,
       paddingHorizontal: spacing.lg,
       borderRadius: radii.md,
-      alignItems: 'center',
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
+    },
+    btnContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
     },
     btnDisabled: {
       opacity: 0.45,
@@ -157,6 +175,7 @@ function makeStyles(colors: ColorPalette) {
       fontSize: 15,
       writingDirection: 'ltr',
       textAlign: 'center',
+      width: '100%',
     },
     btnSecondary: {
       marginTop: spacing.sm,
@@ -164,7 +183,6 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 14,
       paddingHorizontal: spacing.lg,
       borderRadius: radii.md,
-      alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.borderStrong,
     },
@@ -174,6 +192,7 @@ function makeStyles(colors: ColorPalette) {
       fontSize: 15,
       writingDirection: 'ltr',
       textAlign: 'center',
+      width: '100%',
     },
     chip: {
       borderColor: colors.borderStrong,
@@ -192,11 +211,13 @@ function makeStyles(colors: ColorPalette) {
     chipText: {
       color: colors.textSecondary,
       writingDirection: 'ltr',
+      textAlign: 'center',
     },
     chipTextSelected: {
       color: colors.white,
       fontWeight: '700',
       writingDirection: 'ltr',
+      textAlign: 'center',
     },
   });
 }

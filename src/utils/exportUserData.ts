@@ -13,6 +13,7 @@ export type UserDataExport = {
   banister: AppState['banister'];
   lifetime: AppState['lifetime'];
   progress: AppState['progress'];
+  clubs: AppState['clubs'];
 };
 
 export function buildUserDataExport(state: AppState): UserDataExport {
@@ -28,6 +29,7 @@ export function buildUserDataExport(state: AppState): UserDataExport {
     banister: state.banister,
     lifetime: state.lifetime,
     progress: state.progress,
+    clubs: state.clubs ?? [],
   };
 }
 

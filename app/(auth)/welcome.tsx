@@ -4,14 +4,15 @@ import { useRouter } from 'expo-router';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
 import { OrangeButton } from '../../src/ui/strava/AuthScreen';
 import { BRAND } from '../../src/constants/brand';
-import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useApp } from '../../src/store/AppContext';
 import { spacing } from '../../src/theme/tokens';
+import { useI18n } from '../../src/i18n/I18nContext';
 
-/** Accueil Azimut — entrée simple ; CGU à l’inscription / connexion. */
+/** Accueil Azimut — entrée simple ; CGU à l’inscription. */
 export default function WelcomeScreen() {
   const router = useRouter();
   const { state } = useApp();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!state.authToken || !state.profile.emailVerified) return;
@@ -35,24 +36,24 @@ export default function WelcomeScreen() {
         <View style={styles.orbitB} />
         <View style={styles.orbitC} />
         <View style={styles.heroContent}>
-          <Text style={styles.eyebrow}>MULTI-SPORT</Text>
+          <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
           <BrandMark size="lg" ink surfaceColor={BRAND.ink} />
-          <Text style={styles.tagline}>{BRAND.taglineLines}</Text>
+          <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
         </View>
       </View>
 
       <View style={styles.actions}>
         <OrangeButton
-          label="Inscription"
+          label={t('welcome.signup')}
           onPress={() => router.push('/(auth)/register')}
         />
         <OrangeButton
-          label={AUTH_LABELS.signIn}
+          label={t('auth.signIn')}
           variant="outline"
           onPress={() => router.push('/(auth)/login')}
         />
         <Text style={styles.legal} onPress={() => router.push('/settings/terms')}>
-          Conditions d’utilisation
+          {t('settings.terms')}
         </Text>
       </View>
     </View>

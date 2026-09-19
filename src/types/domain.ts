@@ -1,5 +1,7 @@
 /** Domain types — CDC sections 1–12 */
 
+import type { AthleteDigitalTwin } from '../engines/athleteDigitalTwin';
+
 export type AthleticLevel = 'debutant' | 'intermediaire' | 'confirme';
 export type GoalType =
   | '5k'
@@ -325,7 +327,9 @@ export type SocialNotificationKind =
   | 'follow_request'
   | 'follow_accepted'
   | 'new_follower'
-  | 'program_like';
+  | 'program_like'
+  | 'session_like'
+  | 'product';
 
 export interface SocialNotification {
   id: string;
@@ -455,8 +459,8 @@ export interface OnboardingAnswers {
   injuredLast12Months?: boolean;
   /** Bande de volume habituel */
   usualVolumeBand?: '0_20' | '15_35' | '30_50' | '40_60' | '60plus';
-  /** Nombre de séances / semaine cible */
-  weeklySessionsTarget?: 3 | 4 | 5 | 6 | 7;
+  /** Nombre de séances / semaine cible (1–7) */
+  weeklySessionsTarget?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
 }
 
 export interface ActiveProgram {
@@ -487,6 +491,9 @@ export interface ActiveProgram {
   reviewFeeling?: ProgramReviewFeeling;
   reviewComment?: string;
   reviewedAt?: string;
+  /** Abandonné (supprimé) avant la fin — ne compte pas comme « programme terminé » / pas d’XP */
+  abandoned?: boolean;
+  abandonedAt?: string;
 }
 
 /** Ressenti bilan programme — pouce vert / rouge */
@@ -512,6 +519,8 @@ export interface AthleteProfile {
   outgoingFollowRequests?: string[];
   /** Fil d’activité sociale (cloche) */
   socialNotifications?: SocialNotification[];
+  /** Skills callisthénie validées (ids de l’arbre) */
+  calisthenicsCompletedIds?: string[];
   heightCm?: number;
   weightKg?: number;
   city?: string;
@@ -528,6 +537,35 @@ export interface AthleteProfile {
   theme: ThemeMode;
   language: string;
   plan: SubscriptionPlan;
+  /**
+   * Origine du Premium :
+   * - owner = compte ultra-sécurisé
+   * - gift = offert par l’owner (révocable)
+   * - paid = abonnement payant (non modifiable par l’owner)
+   */
+  premiumSource?: 'owner' | 'gift' | 'paid' | null;
+  /**
+   * État d’abonnement store (Play / App Store / sync API).
+   * Source de vérité pour grace_period / on_hold / canceled.
+   */
+  subscription?: {
+    entitlement: 'free' | 'premium';
+    status:
+      | 'none'
+      | 'active'
+      | 'grace_period'
+      | 'on_hold'
+      | 'canceled'
+      | 'paused'
+      | 'expired';
+    productId?: string | null;
+    currentPeriodEnd?: string | null;
+    autoRenewing?: boolean;
+    platform?: 'android' | 'ios' | 'web' | null;
+    lastSyncedAt?: string | null;
+  };
+  /** Fournisseur d’auth de la session (Google obligatoire pour le compte Premium propriétaire). */
+  authProvider?: 'google' | 'email' | 'apple' | 'local' | 'trial';
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   onboardingCompleted: boolean;
@@ -538,10 +576,24 @@ export interface AthleteProfile {
   /** Anciens programmes (terminés ou remplacés) */
   programHistory?: ActiveProgram[];
   /**
-   * Template catalogue actuellement compté dans le classement d’usage
-   * (+1 au lancement, −1 à la suppression / fin).
+   * @deprecated préférer `programUsageCountedIds` (multi-programmes).
+   * Conservé pour migration locale.
    */
   programUsageCountedId?: string | null;
+  /**
+   * Templates catalogue comptés dans « programmes les plus utilisés »
+   * (+1 au lancement, −1 à l’abandon avant fin ; conservé si terminé).
+   */
+  programUsageCountedIds?: string[];
+  /** Catalogues terminés jusqu’au bout — le +1 d’usage n’est plus retiré. */
+  programUsageFinishedIds?: string[];
+  /** Jour (AAAA-MM-JJ) du dernier XP lié à une création de programme (max 1× / jour). */
+  lastProgramCreateXpDay?: string;
+  /**
+   * Compteur monotone de programmes lancés (badges infinis « Programmes · Niv. n »).
+   * N’est jamais décrémenté à l’abandon.
+   */
+  programsLaunchedCount?: number;
   /**
    * Programmes déjà likés (clé `ownerUsername:programId`) —
    * 1 like = 1 gain d’XP, pas de double.
@@ -557,7 +609,7 @@ export interface AthleteProfile {
   notifications: NotificationPrefs;
   /**
    * true une fois que l’app a proposé d’autoriser les notifications
-   * (création de compte ou reconnexion).
+   * (une seule fois par compte — pas à chaque reconnexion).
    */
   pushPermissionAsked?: boolean;
   /** Permission système accordée (iOS/Android). */
@@ -566,6 +618,15 @@ export interface AthleteProfile {
   /** Montre choisie pour l’import sommeil (questionnaire 1ʳᵉ fois) */
   watch?: WatchPreference | null;
   shoes: ShoePair[];
+  /** Liste d’attente callisthénie (WIP — notification à l’ouverture) */
+  waitlistCalisthenics?: boolean;
+  /** Jumeau numérique — profil de réponse + apprentissage on-device (V2). */
+  digitalTwin?: AthleteDigitalTwin;
+  /**
+   * Dernière clé de sync plan↔charge (Readiness/Sentinelle) —
+   * évite de réécrire le calendrier en boucle le même jour.
+   */
+  lastLoadPlanSyncKey?: string;
   createdAt: string;
 }
 
@@ -600,4 +661,47 @@ export interface ProgressPoint {
   pace10kSecPerKm?: number;
   weeklyKm?: number;
   monthlyHours?: number;
+}
+
+/** Clubs / groupes locaux (communauté) */
+export type ClubVisibility = 'public' | 'private';
+export type ClubMemberRole = 'owner' | 'admin' | 'member';
+export type ClubPostKind = 'message' | 'activity' | 'program';
+
+export interface ClubMember {
+  username: string;
+  displayName?: string;
+  role: ClubMemberRole;
+  joinedAt: string;
+}
+
+export interface ClubPost {
+  id: string;
+  authorUsername: string;
+  authorDisplayName?: string;
+  createdAt: string;
+  kind: ClubPostKind;
+  text?: string;
+  /** Séance partagée (id local) */
+  activityId?: string;
+  activityTitle?: string;
+  activityDistanceKm?: number;
+  /** Programme partagé */
+  programId?: string;
+  programTitle?: string;
+}
+
+export interface Club {
+  id: string;
+  name: string;
+  description: string;
+  city?: string;
+  sportLabel?: string;
+  visibility: ClubVisibility;
+  createdAt: string;
+  createdByUsername: string;
+  members: ClubMember[];
+  posts: ClubPost[];
+  /** Club catalogue (découvrir) — copie locale une fois rejoint */
+  catalogId?: string;
 }

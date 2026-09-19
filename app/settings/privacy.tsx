@@ -1,4 +1,4 @@
-
+import { useEffect, useState } from 'react';
 import {
   SettingsRow,
   SettingsScreen,
@@ -8,10 +8,38 @@ import {
 import { useApp } from '../../src/store/AppContext';
 import type { ProfileVisibility } from '../../src/types/domain';
 import { AppScrollView } from '../../src/ui/scrolling';
+import {
+  communityGetBlocks,
+  communityUnblock,
+} from '../../src/api/community';
+import {
+  loadLocalBlocks,
+  removeLocalBlock,
+  applyServerBlocks,
+} from '../../src/storage/communityBlocks';
+import { formatUsernameDisplay } from '../../src/utils/username';
 
 export default function PrivacySettingsScreen() {
   const { state, dispatch } = useApp();
   const p = state.profile.privacy;
+  const [blocked, setBlocked] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const remote = await communityGetBlocks(state.authToken);
+      if (remote?.blocked) {
+        await applyServerBlocks(remote.blocked);
+        if (!cancelled) setBlocked(remote.blocked.map((u) => u.toLowerCase()));
+        return;
+      }
+      const local = await loadLocalBlocks();
+      if (!cancelled) setBlocked(local);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.authToken]);
 
   const setVisibility = (visibility: ProfileVisibility) => {
     dispatch({ type: 'UPDATE_PROFILE', patch: { privacy: { ...p, visibility } } });
@@ -19,6 +47,12 @@ export default function PrivacySettingsScreen() {
 
   const patchPrivacy = (patch: Partial<typeof p>) => {
     dispatch({ type: 'UPDATE_PROFILE', patch: { privacy: { ...p, ...patch } } });
+  };
+
+  const unblock = async (username: string) => {
+    await communityUnblock(state.authToken, username);
+    await removeLocalBlock(username);
+    setBlocked((prev) => prev.filter((u) => u !== username));
   };
 
   return (
@@ -67,6 +101,20 @@ export default function PrivacySettingsScreen() {
             value={p.hideWeight}
             onToggle={() => patchPrivacy({ hideWeight: !p.hideWeight })}
           />
+        </SettingsSection>
+        <SettingsSection title="Comptes bloqués">
+          {blocked.length === 0 ? (
+            <SettingsRow label="Aucun compte bloqué" />
+          ) : (
+            blocked.map((u) => (
+              <SettingsRow
+                key={u}
+                label={`@${formatUsernameDisplay(u)}`}
+                value="Débloquer"
+                onPress={() => void unblock(u)}
+              />
+            ))
+          )}
         </SettingsSection>
       </AppScrollView>
     </SettingsScreen>

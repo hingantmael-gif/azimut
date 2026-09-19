@@ -37,7 +37,6 @@ import {
   passwordsMatch,
   validatePassword,
 } from '../../src/utils/passwordPolicy';
-import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useGoogleAuth } from '../../src/services/googleAuth';
 import {
   clearOnboardingCompleted,
@@ -45,14 +44,24 @@ import {
   markOnboardingCompleted,
 } from '../../src/storage/onboardingPersistence';
 import { colors, radii, spacing } from '../../src/theme/tokens';
+import {
+  isOwnerPremiumEmail,
+  OWNER_GOOGLE_ONLY_MESSAGE,
+} from '../../src/engines/ownerAccess';
+import { isGiftedPremiumEmail } from '../../src/storage/ownerPremiumGifts';
+import { CountryPicker } from '../../src/ui/CountryPicker';
+import { useI18n, clearPendingSignupLocale } from '../../src/i18n/I18nContext';
+import { localeFromCountry } from '../../src/i18n/locales';
 
-type Step = 'options' | 'email' | 'password' | 'profile';
+type Step = 'country' | 'options' | 'email' | 'password' | 'profile';
 
 export default function RegisterScreen() {
   const { state, dispatch } = useApp();
   const { colors: themeColors } = useThemeColors();
+  const { t, setCountryAndLocale, pendingCountry, locale } = useI18n();
   const router = useRouter();
-  const [step, setStep] = useState<Step>('options');
+  const [step, setStep] = useState<Step>('country');
+  const [countryId, setCountryId] = useState<string | null>(pendingCountry);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -64,6 +73,23 @@ export default function RegisterScreen() {
   const [busy, setBusy] = useState(false);
 
   const passwordRules = useMemo(() => getPasswordRules(password), [password]);
+
+  useEffect(() => {
+    if (pendingCountry && !countryId) setCountryId(pendingCountry);
+  }, [pendingCountry, countryId]);
+
+  const signupLocale = countryId ? localeFromCountry(countryId) : locale;
+
+  const withCountryPayload = <T extends Record<string, unknown>>(payload: T) => ({
+    ...payload,
+    ...(countryId
+      ? {
+          country: countryId,
+          language: signupLocale,
+          countryLocked: true,
+        }
+      : { language: locale }),
+  });
 
   const finishGoogleAccount = async (
     payload: {
@@ -85,11 +111,14 @@ export default function RegisterScreen() {
     }
     dispatch({
       type: 'AUTH_WITH_PROVIDER',
-      payload: {
+      payload: withCountryPayload({
         ...payload,
+        provider: 'google' as const,
         onboardingCompleted: done,
-      },
+        giftedPremium: await isGiftedPremiumEmail(payload.email),
+      }),
     });
+    await clearPendingSignupLocale();
   };
 
   const google = useGoogleAuth(
@@ -160,6 +189,10 @@ export default function RegisterScreen() {
       return;
     }
     const normalized = emailCheck.email;
+    if (isOwnerPremiumEmail(normalized)) {
+      setError(OWNER_GOOGLE_ONLY_MESSAGE);
+      return;
+    }
     setEmail(normalized);
     setBusy(true);
     try {
@@ -190,6 +223,10 @@ export default function RegisterScreen() {
 
   const finishLocalAccount = async (handle: string) => {
     const emailNorm = normalizeEmailInput(email);
+    if (isOwnerPremiumEmail(emailNorm)) {
+      setError(OWNER_GOOGLE_ONLY_MESSAGE);
+      return;
+    }
     await clearSession();
     await clearOnboardingCompleted(emailNorm, handle);
     await saveLocalCredential({
@@ -211,14 +248,16 @@ export default function RegisterScreen() {
     );
     dispatch({
       type: 'AUTH_WITH_PROVIDER',
-      payload: {
+      payload: withCountryPayload({
         token: `local_${id}`,
         email: emailNorm,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         username: handle,
+        provider: 'local' as const,
         onboardingCompleted: false,
-      },
+        giftedPremium: await isGiftedPremiumEmail(emailNorm),
+      }),
     });
   };
 
@@ -246,6 +285,10 @@ export default function RegisterScreen() {
     setBusy(true);
     setError('');
     const emailNorm = normalizeEmailInput(email);
+    if (isOwnerPremiumEmail(emailNorm)) {
+      setError(OWNER_GOOGLE_ONLY_MESSAGE);
+      return;
+    }
     try {
       const res = await apiSignup({
         email: emailNorm,
@@ -275,15 +318,18 @@ export default function RegisterScreen() {
         );
         dispatch({
           type: 'AUTH_WITH_PROVIDER',
-          payload: {
+          payload: withCountryPayload({
             token: res.token,
             email: res.user.email,
             firstName: res.user.firstName || firstName.trim(),
             lastName: res.user.lastName || lastName.trim(),
             username: res.user.username || handle,
+            provider: 'email' as const,
             onboardingCompleted: false,
-          },
+            giftedPremium: await isGiftedPremiumEmail(res.user.email),
+          }),
         });
+        await clearPendingSignupLocale();
         return;
       }
       if (
@@ -322,12 +368,50 @@ export default function RegisterScreen() {
     }
   };
 
+  if (step === 'country') {
+    return (
+      <AuthScreen>
+        <BrandMark size="md" surfaceColor={themeColors.bg} />
+        <AuthTitle>{t('auth.countryTitle')}</AuthTitle>
+        <AuthSubtitle>{t('auth.countrySubtitle')}</AuthSubtitle>
+        <CountryPicker
+          selectedId={countryId}
+          onSelect={(c) => {
+            setCountryId(c.id);
+            setCountryAndLocale(c.id);
+            setError('');
+          }}
+        />
+        <Text style={{ color: themeColors.textMuted, fontSize: 12, marginTop: 4 }}>
+          {t('auth.countryLockedHint')}
+        </Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <OrangeButton
+          label={t('auth.countryConfirm')}
+          disabled={!countryId}
+          onPress={() => {
+            if (!countryId) {
+              setError(t('auth.countryTitle'));
+              return;
+            }
+            setStep('options');
+          }}
+        />
+        <TextLink
+          label={t('auth.alreadyHaveAccount')}
+          accent
+          onPress={() => router.push('/(auth)/login')}
+        />
+      </AuthScreen>
+    );
+  }
+
   if (step === 'options') {
     return (
       <AuthScreen>
         <BrandMark size="md" surfaceColor={themeColors.bg} />
-        <AuthTitle>Inscription</AuthTitle>
-        <AuthSubtitle>Google ou e-mail.</AuthSubtitle>
+        <AuthTitle>{t('welcome.signup')}</AuthTitle>
+        <AuthSubtitle>{t('auth.orEmail').replace(/^ou |^or |^o |^oder |^oppure /i, '')}</AuthSubtitle>
 
         <TermsCheckbox
           checked={terms}
@@ -340,9 +424,11 @@ export default function RegisterScreen() {
 
         <SocialAuthButtons
           loading={busy}
+          label={t('auth.google')}
+          loadingLabel={t('auth.googleBusy')}
           onGoogle={() => {
             if (!terms) {
-              setError('Accepte les conditions pour continuer.');
+              setError(t('auth.terms'));
               return;
             }
             setError('');
@@ -354,10 +440,10 @@ export default function RegisterScreen() {
         <AuthDivider />
 
         <OrangeButton
-          label="S'inscrire avec l'e-mail"
+          label={t('auth.email')}
           onPress={() => {
             if (!terms) {
-              setError('Accepte les conditions pour continuer.');
+              setError(t('auth.terms'));
               return;
             }
             setStep('email');
@@ -367,10 +453,11 @@ export default function RegisterScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TextLink
-          label={AUTH_LABELS.alreadyHaveAccount}
+          label={t('auth.alreadyHaveAccount')}
           accent
           onPress={() => router.push('/(auth)/login')}
         />
+        <TextLink label={t('common.back')} onPress={() => setStep('country')} />
       </AuthScreen>
     );
   }
@@ -378,10 +465,9 @@ export default function RegisterScreen() {
   if (step === 'email') {
     return (
       <AuthScreen>
-        <AuthTitle>Ton e-mail</AuthTitle>
-        <AuthSubtitle>Ex. toi@orange.fr</AuthSubtitle>
+        <AuthTitle>{t('auth.email')}</AuthTitle>
         <StravaInput
-          label="E-mail"
+          label={t('auth.email')}
           value={email}
           onChangeText={setEmail}
           autoFocus
@@ -390,15 +476,15 @@ export default function RegisterScreen() {
           autoComplete="email"
           keyboardType="email-address"
           textContentType="emailAddress"
-          placeholder="toi@orange.fr"
+          placeholder="you@email.com"
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <OrangeButton
-          label={busy ? 'Vérification…' : 'Continuer'}
+          label={busy ? t('common.loading') : t('common.continue')}
           disabled={!email.trim() || busy}
           onPress={() => void onEmailContinue()}
         />
-        <TextLink label="Retour" onPress={() => setStep('options')} />
+        <TextLink label={t('common.back')} onPress={() => setStep('options')} />
       </AuthScreen>
     );
   }
@@ -406,10 +492,9 @@ export default function RegisterScreen() {
   if (step === 'password') {
     return (
       <AuthScreen>
-        <AuthTitle>Mot de passe</AuthTitle>
-        <AuthSubtitle>Majuscule, minuscule, chiffre, spécial.</AuthSubtitle>
+        <AuthTitle>{t('auth.password')}</AuthTitle>
         <StravaInput
-          label="Mot de passe"
+          label={t('auth.password')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -427,7 +512,7 @@ export default function RegisterScreen() {
           ))}
         </View>
         <StravaInput
-          label="Confirmation"
+          label={t('auth.passwordConfirm')}
           value={passwordConfirm}
           onChangeText={setPasswordConfirm}
           secureTextEntry
@@ -435,42 +520,46 @@ export default function RegisterScreen() {
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <OrangeButton
-          label="Continuer"
+          label={t('common.continue')}
           disabled={!password.trim() || !passwordConfirm.trim() || busy}
           onPress={onPassword}
         />
-        <TextLink label="Retour" onPress={() => setStep('email')} />
+        <TextLink label={t('common.back')} onPress={() => setStep('email')} />
       </AuthScreen>
     );
   }
 
   return (
     <AuthScreen>
-      <AuthTitle>Ton profil</AuthTitle>
-      <AuthSubtitle>Prénom, nom, identifiant.</AuthSubtitle>
+      <AuthTitle>{t('auth.createAccount')}</AuthTitle>
       <StravaInput
-        label="Prénom"
+        label={t('auth.firstName')}
         value={firstName}
         onChangeText={setFirstName}
         autoFocus
-        placeholder="Prénom"
+        placeholder={t('auth.firstName')}
       />
-      <StravaInput label="Nom" value={lastName} onChangeText={setLastName} placeholder="Nom" />
       <StravaInput
-        label="Identifiant"
+        label={t('auth.lastName')}
+        value={lastName}
+        onChangeText={setLastName}
+        placeholder={t('auth.lastName')}
+      />
+      <StravaInput
+        label={t('auth.username')}
         value={username}
-        onChangeText={(t) => setUsername(limitUsernameInput(t))}
+        onChangeText={(text) => setUsername(limitUsernameInput(text))}
         autoCapitalize="none"
         autoCorrect={false}
         placeholder="nathan42"
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <OrangeButton
-        label={busy ? 'Création…' : 'Créer mon compte'}
+        label={busy ? t('common.loading') : t('auth.createAccount')}
         disabled={!firstName.trim() || !lastName.trim() || !username.trim() || busy}
         onPress={() => void onJoin()}
       />
-      <TextLink label="Retour" onPress={() => setStep('password')} />
+      <TextLink label={t('common.back')} onPress={() => setStep('password')} />
     </AuthScreen>
   );
 }

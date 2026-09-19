@@ -69,7 +69,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    // @ts-expect-error web shadow
     boxShadow: '0 24px 80px rgba(0,0,0,0.55)',
   },
   mobileWeb: {

@@ -2,31 +2,43 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { PhoneModal } from '../PhoneModal';
 import { radii, spacing } from '../../theme/tokens';
+import { BRAND } from '../../constants/brand';
 
 type Props = {
   visible: boolean;
   onAllow: () => void;
   onDeny: () => void;
+  /** Si true : wording alertes dans l’app (pas téléphone). */
+  inAppOnly?: boolean;
 };
 
 /**
  * Demande unique d’autorisation notifications (après refus : Réglages → Notifications).
  */
-export function NotificationPermissionModal({ visible, onAllow, onDeny }: Props) {
+export function NotificationPermissionModal({
+  visible,
+  onAllow,
+  onDeny,
+  inAppOnly = false,
+}: Props) {
   const { colors } = useThemeColors();
 
   return (
     <PhoneModal visible={visible} transparent animationType="fade" onRequestClose={onDeny}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-          <Text style={[styles.eyebrow, { color: colors.accent }]}>NOTIFICATIONS</Text>
+          <Text style={[styles.eyebrow, { color: colors.accent }]}>
+            {BRAND.name.toUpperCase()}
+          </Text>
           <Text style={[styles.title, { color: colors.text }]}>
-            Souhaitez-vous autoriser les notifications ?
+            {inAppOnly
+              ? 'Activer les alertes dans Azimut ?'
+              : 'Souhaitez-vous autoriser les notifications ?'}
           </Text>
           <Text style={[styles.body, { color: colors.textSecondary }]}>
-            On pourra vous rappeler votre séance du jour, vous prévenir d’un nouvel abonné, ou
-            quand quelqu’un like votre programme — comme sur votre téléphone, uniquement si vous
-            acceptez.
+            {inAppOnly
+              ? 'Les rappels séance, likes et abonnés apparaissent dans l’app Azimut — pas comme des notifications de votre téléphone.'
+              : 'On pourra vous rappeler votre séance du jour, vous prévenir d’un nouvel abonné, ou quand quelqu’un like votre programme.'}
           </Text>
           <View style={styles.bullets}>
             <Text style={[styles.bullet, { color: colors.text }]}>
@@ -43,7 +55,9 @@ export function NotificationPermissionModal({ visible, onAllow, onDeny }: Props)
             style={[styles.primary, { backgroundColor: colors.accent }]}
             onPress={onAllow}
           >
-            <Text style={styles.primaryText}>Autoriser les notifications</Text>
+            <Text style={styles.primaryText}>
+              {inAppOnly ? 'Activer les alertes Azimut' : 'Autoriser les notifications'}
+            </Text>
           </Pressable>
           <Pressable style={styles.secondary} onPress={onDeny}>
             <Text style={[styles.secondaryText, { color: colors.textMuted }]}>Refuser</Text>

@@ -10,6 +10,7 @@ import {
 import { useApp } from '../../src/store/AppContext';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { requestPushPermission, syncLocalReminders } from '../../src/services/pushNotifications';
+import { markNotificationPromptHandled } from '../../src/storage/notificationPrompt';
 import {
   getCameraPermission,
   getMediaLibraryPermission,
@@ -56,6 +57,11 @@ export default function DataPermissionsScreen() {
     setBusy('push');
     try {
       if (pushOn) {
+        void markNotificationPromptHandled(
+          state.profile.id,
+          state.profile.email,
+          state.profile.username,
+        );
         dispatch({
           type: 'UPDATE_PROFILE',
           patch: { pushEnabled: false, pushPermissionAsked: true },
@@ -64,6 +70,11 @@ export default function DataPermissionsScreen() {
         return;
       }
       const granted = await requestPushPermission();
+      void markNotificationPromptHandled(
+        state.profile.id,
+        state.profile.email,
+        state.profile.username,
+      );
       dispatch({
         type: 'UPDATE_PROFILE',
         patch: {

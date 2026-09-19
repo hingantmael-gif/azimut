@@ -295,7 +295,7 @@ export function enforceFamilyDisciplines(
     swim: new Set(['swim', 'ppg', 'mobility', 'strength']),
     triathlon: new Set(['run', 'bike', 'swim', 'brick', 'ppg', 'mobility', 'strength']),
     strength: new Set(['strength', 'ppg', 'mobility']),
-    other: new Set(['run', 'bike', 'brick', 'ppg', 'mobility', 'strength']),
+    other: new Set(['strength', 'ppg', 'mobility']),
   };
   const ok = allowed[family] ?? allowed.run;
   return plan.filter((w) => ok.has(w.discipline));

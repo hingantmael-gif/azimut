@@ -84,12 +84,6 @@ export const APP_FEATURES: AppFeature[] = [
     focus: 'rpe',
   },
   {
-    id: 'coach-vokal',
-    label: 'Coach vocal',
-    section: 'coaching',
-    href: '/coach-vokal' as Href,
-  },
-  {
     id: 'adaptive-plan',
     label: 'Adaptation RPE + sommeil',
     hint: 'Le plan s’ajuste après feedback et nuit',
@@ -116,7 +110,7 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: 'send-strava',
-    label: 'Envoyer / partager la séance vers Strava',
+    label: 'Envoyer la séance vers Strava (fichier GPX/TCX)',
     section: 'activities',
     href: '/(tabs)/training' as Href,
     focus: 'strava',
@@ -253,7 +247,7 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: 'social-feed',
-    label: 'Fil social & kudos',
+    label: 'Fil social & likes',
     section: 'social',
     href: '/(tabs)/social' as Href,
   },

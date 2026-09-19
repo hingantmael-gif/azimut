@@ -60,7 +60,8 @@ export function formatStepTarget(step: WorkoutStep): string | null {
 }
 
 export function describeWorkoutStep(step: WorkoutStep): { title: string; detail: string } {
-  const title = step.label?.trim() || STEP_TYPE_LABELS[step.type];
+  const raw = step.label?.trim() || STEP_TYPE_LABELS[step.type];
+  const title = raw.replace(/^\[calis:[a-z_]+(?:\|[^\]]+)*\]\s*/i, '');
   const measure = formatStepMeasure(step);
   const withRepeat =
     step.repeat && step.repeat > 1 && !title.includes(`${step.repeat} ×`)

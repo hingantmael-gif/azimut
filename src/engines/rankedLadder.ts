@@ -247,6 +247,28 @@ export function buildLadderRows(
 }
 
 /**
+ * Pondération légère progression ~4 semaines :
+ * bonus de tri très faible (≤ ~8 XP) pour ne pas bouleverser le classement
+ * XP de la semaine. Streak / seed simulent une dynamique relative.
+ */
+function progressionSortBonus(opts: {
+  weekXp: number;
+  streakWeeks?: number;
+  seed: string;
+  isYou?: boolean;
+}): number {
+  const streak = Math.max(0, opts.streakWeeks ?? 0);
+  if (opts.isYou) {
+    // Toi : streak weeks → +0..8 (progression relative douce)
+    return Math.min(8, streak * 2);
+  }
+  // Rivaux : jitter faible ancré sur seed (+ progression pseudo 4 sem.)
+  const fourWeekSlope = ((hashSeed(opts.seed + 'prog4w') % 17) - 4) / 10; // ~-0.4..1.2
+  const soft = Math.round(Math.min(8, Math.max(-2, opts.weekXp * 0.02 * fourWeekSlope)));
+  return soft;
+}
+
+/**
  * Classement division : peloton ~100, classé sur XP de la semaine (ladder).
  * `viewTier` / `viewDivision` = ligue consultée (chips) — peloton distinct par palier.
  */
@@ -271,6 +293,11 @@ export function buildDivisionLeaderboard(opts: {
    * pour simuler un peloton vivant — ton XP reste la source de vérité.
    */
   liveTick?: number;
+  /**
+   * Compte ultra-sécurisé : Champion privé, hors listes publiques.
+   * Le peloton est rempli uniquement de rivaux (pas de ligne « toi »).
+   */
+  hideYouFromBoard?: boolean;
 }): {
   rows: LadderRow[];
   players: LadderPlayer[];
@@ -278,6 +305,8 @@ export function buildDivisionLeaderboard(opts: {
   divisionSize: number;
   label: string;
   isYourDivision: boolean;
+  /** Compte fantôme (owner) — pas dans le board */
+  youHidden?: boolean;
 } {
   const yourTier = normalizeTier(opts.ranked.tier);
   const yourDivision =
@@ -299,6 +328,7 @@ export function buildDivisionLeaderboard(opts: {
       ? true
       : (division ?? 3) === (yourDivision ?? 3));
 
+  const hideYou = Boolean(opts.hideYouFromBoard);
   const poolSize = opts.poolSize ?? DIVISION_POOL_SIZE;
   const weekXp = clampXp(opts.ranked.weekXp ?? 0);
   const weekKey = opts.ranked.ladderWeekKey ?? 'W';
@@ -335,7 +365,12 @@ export function buildDivisionLeaderboard(opts: {
 
   const demo = DEMO_DIRECTORY.filter((m) => m.username !== you.username);
   const rivals: LadderPlayer[] = [];
-  const rivalCount = isYourDivision ? Math.max(0, poolSize - 1) : poolSize;
+  // Fantôme : peloton plein sans « toi » ; sinon poolSize - 1 rivaux dans ta division
+  const rivalCount = hideYou
+    ? poolSize
+    : isYourDivision
+      ? Math.max(0, poolSize - 1)
+      : poolSize;
 
   for (let i = 0; i < rivalCount; i++) {
     const demoOffset =
@@ -349,7 +384,7 @@ export function buildDivisionLeaderboard(opts: {
     const liveBump =
       liveTick * pace + (hashSeed(`${seed}-t${liveTick}`) % 5);
     let xp = clampXp(Math.round(leagueBase + weekSpan * (0.5 - t) + jitter + liveBump));
-    if (isYourDivision && xp === you.xp) {
+    if (!hideYou && isYourDivision && xp === you.xp) {
       xp = clampXp(you.xp + (i % 2 === 0 ? 3 : -3));
     }
     const profileXp = clampXp(
@@ -377,10 +412,25 @@ export function buildDivisionLeaderboard(opts: {
     });
   }
 
-  const players = (isYourDivision ? [...rivals, you] : rivals).sort(
-    (a, b) => b.xp - a.xp || a.username.localeCompare(b.username, 'fr'),
+  // Tri : XP semaine + léger bonus progression 4 sem. (ne casse pas l’ordre de base)
+  const sortKey = (p: LadderPlayer, seedExtra: string) =>
+    p.xp +
+    progressionSortBonus({
+      weekXp: p.xp,
+      streakWeeks: p.isYou ? opts.ranked.streakWeeks : undefined,
+      seed: seedExtra + p.id,
+      isYou: p.isYou,
+    });
+
+  const players = (
+    hideYou ? rivals : isYourDivision ? [...rivals, you] : rivals
+  ).sort(
+    (a, b) =>
+      sortKey(b, weekKey) - sortKey(a, weekKey) ||
+      a.username.localeCompare(b.username, 'fr'),
   );
-  const yourRank = isYourDivision ? players.findIndex((p) => p.isYou) + 1 : 0;
+  const yourRank =
+    hideYou || !isYourDivision ? 0 : players.findIndex((p) => p.isYou) + 1;
   const rows = buildLadderRows(players, yourRank, { expanded: opts?.expanded });
 
   return {
@@ -392,6 +442,7 @@ export function buildDivisionLeaderboard(opts: {
     divisionSize: players.length,
     label: formatRankLabel(tier, division),
     isYourDivision,
+    youHidden: hideYou,
   };
 }
 

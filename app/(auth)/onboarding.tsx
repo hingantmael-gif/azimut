@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { AppTextInput } from '../../src/ui/AppTextInput';
 import { useRouter } from 'expo-router';
 import {
@@ -24,6 +24,7 @@ import {
   buildFullOnboardingSteps,
   campusStepTitle,
   defaultTrainingDaysForSessions,
+  AVAILABILITY_COPY,
   EXPERIENCE_COPY,
   EXPERIENCE_OPTIONS,
   IDENTITY_COPY,
@@ -66,8 +67,16 @@ import {
 } from '../../src/ui/onboarding/sportOnboardingConfig';
 import { StrengthEquipmentPicker } from '../../src/ui/onboarding/StrengthSetupFields';
 import { Body, Chip, Muted, PrimaryButton, Screen } from '../../src/ui/primitives';
+import { WizardDayGrid } from '../../src/ui/program/WizardPickers';
 import { AppScrollView } from '../../src/ui/scrolling';
-import { DISCIPLINE_META } from '../../src/constants/disciplines';
+import { SportCover } from '../../src/ui/program/SportCover';
+import { PressableScale } from '../../src/ui/motion/softMotion';
+import {
+  COVER_CROP_CENTER,
+  SPORT_HERO_IMAGES,
+  imageForProgram,
+  programImageFocus,
+} from '../../src/constants/sportVisuals';
 import type {
   StrengthEquipment,
   StrengthGoalFocus,
@@ -81,21 +90,6 @@ import {
   TRIAL_EMAIL_INPUT,
 } from '../../src/utils/demoAuth';
 import { colors, radii, spacing } from '../../src/theme/tokens';
-
-const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-
-function sportColor(cat: ProgramSportCategory): string {
-  const map: Record<ProgramSportCategory, string> = {
-    run: DISCIPLINE_META.run.color,
-    bike: DISCIPLINE_META.bike.color,
-    swim: DISCIPLINE_META.swim.color,
-    triathlon: DISCIPLINE_META.brick.color,
-    strength: DISCIPLINE_META.strength.color,
-    ironman: DISCIPLINE_META.brick.color,
-    other: colors.textMuted,
-  };
-  return map[cat] ?? colors.textMuted;
-}
 
 function parseDurationToSec(raw: string): number | undefined {
   const parts = raw.trim().split(':').map((p) => Number(p));
@@ -125,7 +119,7 @@ export default function OnboardingScreen() {
   const [fcMax, setFcMax] = useState('');
   const [includePpg, setIncludePpg] = useState<boolean | null>(null);
   const [strengthEquipment, setStrengthEquipment] = useState<StrengthEquipment[]>([]);
-  const [strengthGoal, setStrengthGoal] = useState<StrengthGoalFocus | null>(null);
+  const [strengthGoal, setStrengthGoal] = useState<string | null>(null);
   const [sportGoalId, setSportGoalId] = useState<string | null>(null);
 
   const [gender, setGender] = useState<'femme' | 'homme' | null>(
@@ -193,6 +187,8 @@ export default function OnboardingScreen() {
       ? tpl.weeks
       : presets[Math.floor(presets.length / 2)] ?? tpl.weeks;
     setProgramWeeks(defaultW);
+    // Un tap suffit — avance vers la durée
+    setStepIndex((i) => i + 1);
   };
 
   const steps = useMemo(
@@ -266,6 +262,10 @@ export default function OnboardingScreen() {
           : 'fitness';
       setStrengthGoal(focus);
     }
+    if (sport === 'other') {
+      // Callisthénie : on réutilise strengthGoal pour stocker endurance|hypertrophy|strength|skill
+      setStrengthGoal(goalId);
+    }
     setStepIndex((i) => i + 1);
   };
 
@@ -304,6 +304,10 @@ export default function OnboardingScreen() {
     }
 
     if (currentStepId === 'weekly_rhythm' && sessionsTarget) {
+      setTrainingDays(defaultTrainingDaysForSessions(sessionsTarget));
+    }
+
+    if (currentStepId === 'availability' && sessionsTarget && trainingDays.length === 0) {
       setTrainingDays(defaultTrainingDaysForSessions(sessionsTarget));
     }
 
@@ -445,6 +449,14 @@ export default function OnboardingScreen() {
         return Boolean(volumeBand);
       case 'weekly_rhythm':
         return Boolean(sessionsTarget);
+      case 'availability': {
+        const needsVolume = runIntent !== 'start';
+        return (
+          Boolean(sessionsTarget) &&
+          trainingDays.length > 0 &&
+          (!needsVolume || Boolean(volumeBand))
+        );
+      }
       case 'reference_time':
         return Boolean(parseDurationToSec(refDuration));
       case 'plan_preview':
@@ -497,9 +509,11 @@ export default function OnboardingScreen() {
                 ? VOLUME_COPY.subtitle
                 : currentStepId === 'weekly_rhythm'
                   ? RHYTHM_COPY.subtitle
-                  : currentStepId === 'sport'
-                    ? 'Choisis ta discipline — les questions suivantes s’adaptent automatiquement.'
-                    : undefined;
+                  : currentStepId === 'availability'
+                    ? AVAILABILITY_COPY.subtitle
+                    : currentStepId === 'sport'
+                      ? 'Choisis ta discipline — les questions suivantes s’adaptent automatiquement.'
+                      : undefined;
 
   if (currentStepId === 'relay') {
     return (
@@ -518,10 +532,12 @@ export default function OnboardingScreen() {
   }
 
   const continueLabel =
-    currentStepId === 'weekly_rhythm'
-      ? RHYTHM_COPY.cta
+    currentStepId === 'weekly_rhythm' || currentStepId === 'availability'
+      ? currentStepId === 'availability'
+        ? AVAILABILITY_COPY.cta
+        : RHYTHM_COPY.cta
       : currentStepId === 'program_weeks'
-        ? 'Générer mon programme'
+        ? 'Voir mon programme'
         : stepIndex < stepCount - 1
           ? 'Continuer'
           : 'Terminer';
@@ -536,12 +552,15 @@ export default function OnboardingScreen() {
     currentStepId === 'experience' ||
     currentStepId === 'injury' ||
     currentStepId === 'usual_volume' ||
-    currentStepId === 'weekly_rhythm';
+    currentStepId === 'weekly_rhythm' ||
+    currentStepId === 'program_pick' ||
+    currentStepId === 'program_weeks';
 
   const showContinueFooter =
     currentStepId !== 'sport' &&
     currentStepId !== 'relay' &&
     currentStepId !== 'plan_preview' &&
+    currentStepId !== 'devices' &&
     !choiceAutoAdvances;
 
   return (
@@ -597,27 +616,30 @@ export default function OnboardingScreen() {
         {currentStepId === 'sport' && (
           <>
             {POPULAR_SPORT_CATEGORIES.map((cat) => (
-              <Pressable
+              <PressableScale
                 key={cat.id}
-                style={styles.sportCard}
+                variant="nav"
                 onPress={() => selectSport(cat.id)}
+                accessibilityRole="button"
+                accessibilityLabel={cat.label}
               >
-                <View style={[styles.sportDot, { backgroundColor: sportColor(cat.id) }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sportLabel}>{cat.label}</Text>
-                  <Text style={styles.sportDesc}>{cat.desc}</Text>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
+                <SportCover
+                  source={SPORT_HERO_IMAGES[cat.id]}
+                  minHeight={168}
+                  borderRadius={radii.lg}
+                  objectPosition={COVER_CROP_CENTER}
+                  scrim="rgba(7, 17, 31, 0.22)"
+                  style={styles.sportHero}
+                  contentStyle={styles.sportHeroContent}
+                >
+                  <View style={styles.sportHeroText}>
+                    <Text style={styles.sportHeroLabel}>{cat.label}</Text>
+                    <Text style={styles.sportHeroDesc}>{cat.desc}</Text>
+                  </View>
+                  <Text style={styles.sportHeroChevron}>›</Text>
+                </SportCover>
+              </PressableScale>
             ))}
-            <Pressable style={styles.sportCard} onPress={() => selectSport('other')}>
-              <View style={[styles.sportDot, { backgroundColor: colors.textMuted }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sportLabel}>Duathlon sprint</Text>
-                <Text style={styles.sportDesc}>Course · vélo · course — biathlon inclus</Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
           </>
         )}
 
@@ -717,6 +739,80 @@ export default function OnboardingScreen() {
             />
           ))}
 
+        {currentStepId === 'availability' && (
+          <>
+            <Body style={{ marginTop: 4, fontWeight: '700' }}>{AVAILABILITY_COPY.days}</Body>
+            <Muted style={{ marginTop: 4, lineHeight: 18 }}>
+              Ce ne sont pas forcément des jours de séance : l&apos;algo intègre le repos.
+            </Muted>
+            <View style={styles.daysRow}>
+              <WizardDayGrid
+                selected={trainingDays}
+                onToggle={toggleDay}
+                accent={colors.accent}
+                tone="surface"
+              />
+            </View>
+            <Body style={{ marginTop: spacing.md, fontWeight: '700' }}>
+              {AVAILABILITY_COPY.longRun}
+            </Body>
+            <View style={styles.daysRow}>
+              <WizardDayGrid
+                selected={[longRunDay]}
+                mode="long"
+                accent="#F59E0B"
+                tone="surface"
+                onToggle={(dow) => setLongRunDay(dow)}
+              />
+            </View>
+
+            {runIntent !== 'start' ? (
+              <>
+                <Body style={{ marginTop: spacing.md, fontWeight: '700' }}>
+                  {AVAILABILITY_COPY.volume}
+                </Body>
+                <View style={styles.row}>
+                  {VOLUME_OPTIONS.map((opt) => (
+                    <Chip
+                      key={opt.id}
+                      label={opt.label}
+                      selected={volumeBand === opt.id}
+                      onPress={() => {
+                        setVolumeBand(opt.id);
+                        setWeeklyKmInput(String(opt.weeklyKm));
+                      }}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            <Body style={{ marginTop: spacing.md, fontWeight: '700' }}>
+              {AVAILABILITY_COPY.rhythm}
+            </Body>
+            <View style={styles.row}>
+              {RHYTHM_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.sessions}
+                  label={`${opt.sessions}×`}
+                  selected={sessionsTarget === opt.sessions}
+                  onPress={() => {
+                    setSessionsTarget(opt.sessions);
+                    if (trainingDays.length === 0) {
+                      setTrainingDays(defaultTrainingDaysForSessions(opt.sessions));
+                    }
+                  }}
+                />
+              ))}
+            </View>
+            {sessionsTarget ? (
+              <Muted style={{ marginTop: 6, lineHeight: 18 }}>
+                {RHYTHM_OPTIONS.find((o) => o.sessions === sessionsTarget)?.kmLabel}
+              </Muted>
+            ) : null}
+          </>
+        )}
+
         {currentStepId === 'reference_time' && (
           <ReferenceRaceCard duration={refDuration} onDurationChange={setRefDuration} />
         )}
@@ -743,13 +839,29 @@ export default function OnboardingScreen() {
                     : 'Choisis le type de programme adapté à ton objectif. L’application générera ton plan personnalisé à partir de tes réponses.'}
             </Muted>
             {programCatalog.map((tpl) => (
-              <IntakeChoiceCard
+              <PressableScale
                 key={tpl.id}
-                title={tpl.title}
-                subtitle={tpl.subtitle}
-                selected={selectedProgramId === tpl.id}
+                variant="nav"
                 onPress={() => selectProgram(tpl)}
-              />
+                accessibilityRole="button"
+                accessibilityLabel={tpl.title}
+              >
+                <SportCover
+                  source={imageForProgram(tpl.sportCategory, tpl.id)}
+                  minHeight={128}
+                  borderRadius={radii.lg}
+                  objectPosition={programImageFocus(tpl.id)}
+                  scrim="rgba(7,17,31,0.28)"
+                  style={styles.sportHero}
+                  contentStyle={styles.sportHeroContent}
+                >
+                  <View style={styles.sportHeroText}>
+                    <Text style={styles.sportHeroLabel}>{tpl.title}</Text>
+                    <Text style={styles.sportHeroDesc}>{tpl.subtitle}</Text>
+                  </View>
+                  <Text style={styles.sportHeroChevron}>›</Text>
+                </SportCover>
+              </PressableScale>
             ))}
           </>
         )}
@@ -767,7 +879,17 @@ export default function OnboardingScreen() {
                   key={w}
                   label={`${w} sem.`}
                   selected={programWeeks === w}
-                  onPress={() => setProgramWeeks(w)}
+                  onPress={() => {
+                    setProgramWeeks(w);
+                    // Un tap valide la durée et enchaîne (ou termine)
+                    setTimeout(() => {
+                      if (stepIndex < stepCount - 1) {
+                        setStepIndex((i) => i + 1);
+                      } else {
+                        finish();
+                      }
+                    }, 80);
+                  }}
                 />
               ))}
             </View>
@@ -826,15 +948,13 @@ export default function OnboardingScreen() {
             <Muted style={{ marginTop: 4, lineHeight: 18 }}>
               L&apos;algorithme intègre le repos nécessaire entre les séances.
             </Muted>
-            <View style={styles.row}>
-              {DAYS.map((label, i) => (
-                <Chip
-                  key={label}
-                  label={label}
-                  selected={trainingDays.includes(i)}
-                  onPress={() => toggleDay(i)}
-                />
-              ))}
+            <View style={styles.daysRow}>
+              <WizardDayGrid
+                selected={trainingDays}
+                onToggle={toggleDay}
+                accent={colors.accent}
+                tone="surface"
+              />
             </View>
           </>
         )}
@@ -846,26 +966,23 @@ export default function OnboardingScreen() {
               Ce ne sont pas forcément des jours de séance : l&apos;algorithme intègre le repos
               nécessaire.
             </Muted>
-            <View style={styles.row}>
-              {DAYS.map((label, i) => (
-                <Chip
-                  key={label}
-                  label={label}
-                  selected={trainingDays.includes(i)}
-                  onPress={() => toggleDay(i)}
-                />
-              ))}
+            <View style={styles.daysRow}>
+              <WizardDayGrid
+                selected={trainingDays}
+                onToggle={toggleDay}
+                accent={colors.accent}
+                tone="surface"
+              />
             </View>
             <Body style={{ marginTop: 12 }}>Jour sortie longue préféré</Body>
-            <View style={styles.row}>
-              {DAYS.map((label, i) => (
-                <Chip
-                  key={`long-${label}`}
-                  label={label}
-                  selected={longRunDay === i}
-                  onPress={() => setLongRunDay(i)}
-                />
-              ))}
+            <View style={styles.daysRow}>
+              <WizardDayGrid
+                selected={[longRunDay]}
+                mode="long"
+                accent="#F59E0B"
+                tone="surface"
+                onToggle={(dow) => setLongRunDay(dow)}
+              />
             </View>
           </>
         )}
@@ -953,7 +1070,30 @@ export default function OnboardingScreen() {
           </>
         )}
 
-        {currentStepId === 'devices' && null}
+        {currentStepId === 'devices' && (
+          <View style={{ marginTop: spacing.md, gap: spacing.md }}>
+            <Muted>
+              Connecte une montre plus tard dans Paramètres — ce n’est pas
+              obligatoire pour démarrer.
+            </Muted>
+            <PrimaryButton
+              label="Configurer plus tard"
+              onPress={goNext}
+            />
+            <PressableScale variant="subtle" onPress={goNext}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  color: colors.accent,
+                  fontWeight: '700',
+                  fontSize: 15,
+                }}
+              >
+                Continuer sans montre
+              </Text>
+            </PressableScale>
+          </View>
+        )}
       </AppScrollView>
       {showContinueFooter ? (
         <View style={styles.continueFooter}>
@@ -989,6 +1129,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSecondary,
   },
   row: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md },
+  daysRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    marginTop: spacing.md,
+    gap: 4,
+    width: '100%',
+  },
   input: {
     marginTop: spacing.md,
     borderWidth: 1,
@@ -999,25 +1146,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
-  sportCard: {
+  sportHero: {
+    marginBottom: spacing.sm,
+  },
+  sportHeroContent: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
+    alignItems: 'flex-end',
     padding: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bgElevated,
-    // @ts-expect-error web cursor
-    cursor: 'pointer',
   },
-  sportDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: spacing.md,
+  sportHeroText: { flex: 1, zIndex: 1 },
+  sportHeroLabel: {
+    fontWeight: '800',
+    fontSize: 18,
+    color: '#fff',
+    letterSpacing: 0.2,
   },
-  sportLabel: { color: colors.text, fontWeight: '600', fontSize: 16 },
-  sportDesc: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
-  chevron: { color: colors.textMuted, fontSize: 22, marginLeft: 8 },
+  sportHeroDesc: {
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  sportHeroChevron: {
+    fontSize: 26,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '300',
+    zIndex: 1,
+    marginLeft: spacing.sm,
+    marginBottom: 2,
+  },
 });

@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View, type TextInputProps, type 
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 import { AppScrollView } from '../scrolling';
 import { AppTextInput } from '../AppTextInput';
+import { PressableScale } from '../motion/softMotion';
 
 export function AuthScreen({ children, style, ...props }: ViewProps) {
   return (
@@ -69,16 +70,17 @@ export function OrangeButton({
 }) {
   const plain = String(label ?? '').replace(/[\u2066\u2069]/g, '');
   return (
-    <Pressable
+    <PressableScale
       disabled={disabled}
       onPress={onPress}
-      accessibilityRole="button"
+      variant="nav"
       accessibilityLabel={plain}
       style={[
         styles.orangeBtn,
         variant === 'outline' && styles.orangeBtnOutline,
         disabled && styles.orangeBtnDisabled,
       ]}
+      contentStyle={styles.orangeBtnContent}
     >
       <Text
         style={[
@@ -88,7 +90,7 @@ export function OrangeButton({
       >
         {plain}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -103,14 +105,15 @@ export function TextLink({
 }) {
   const plain = String(label ?? '').replace(/[\u2066\u2069]/g, '');
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={styles.textLinkWrap}
+      variant="subtle"
       accessibilityRole="link"
       accessibilityLabel={plain}
+      style={styles.textLinkWrap}
     >
       <Text style={[styles.textLink, accent && styles.textLinkAccent]}>{plain}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -198,8 +201,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: radii.pill,
-    alignItems: 'center',
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
+  },
+  orangeBtnContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   orangeBtnOutline: {
     backgroundColor: 'transparent',

@@ -129,7 +129,11 @@ export default function AccountScreen() {
     const isTrial =
       state.profile.email === TRIAL_ACCOUNT_EMAIL || state.profile.username === '1';
     try {
-      await clearNotificationPromptHandled(userId);
+      await clearNotificationPromptHandled(
+        userId,
+        state.profile.email,
+        state.profile.username,
+      );
       if (isTrial) {
         await resetRegistryToSeedOnly();
         await clearOnboardingCompleted(TRIAL_ACCOUNT_EMAIL, '1', state.profile.username);

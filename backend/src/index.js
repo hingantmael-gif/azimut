@@ -4,6 +4,8 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mountCommunityRoutes } from './community.js';
+import { mountBillingRoutes } from './billing.js';
 
 /** Charge backend/.env si présent (sans dépendance dotenv) */
 function loadEnvFile() {
@@ -168,12 +170,21 @@ function storeOtp(email, code) {
 const TRIAL_LOGIN_ID = '1';
 const TRIAL_EMAIL = '1@demo.local';
 
+/** Compte propriétaire : Premium gratuit, Google uniquement. */
+const OWNER_PREMIUM_EMAIL = 'hingant.mael@gmail.com';
+const OWNER_GOOGLE_ONLY_MESSAGE =
+  'Ce compte ultra-sécurisé doit se connecter uniquement avec Google.';
+
 function normalizeEmail(email) {
   return String(email ?? '')
     .trim()
     .toLowerCase()
     .replace(/\uFF20/g, '@')
     .replace(/\s+/g, '');
+}
+
+function isOwnerPremiumEmail(email) {
+  return normalizeEmail(email) === OWNER_PREMIUM_EMAIL;
 }
 
 function isValidEmail(email) {
@@ -248,6 +259,9 @@ async function handleRequestOtp(req, res) {
     return res.status(400).json({
       error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
     });
+  }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
   }
   // Compte essai réservé + comptes déjà finalisés → pas de nouvelle inscription
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
@@ -361,6 +375,9 @@ app.post('/auth/signup', (req, res) => {
       error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
     });
   }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
     return res.status(409).json({ error: 'Cet e-mail est déjà utilisé.' });
   }
@@ -440,6 +457,9 @@ app.post('/auth/complete-profile', (req, res) => {
   if (handle === TRIAL_LOGIN_ID || email === TRIAL_EMAIL || email === TRIAL_LOGIN_ID) {
     return res.status(409).json({ error: 'Cet identifiant est déjà utilisé.' });
   }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   const users = loadUsers();
   let user = users.find((u) => u.email === email);
   if (!user || !user.emailVerified) {
@@ -498,8 +518,14 @@ app.post('/auth/login', (req, res) => {
       },
     });
   }
+  if (isOwnerPremiumEmail(id)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   const users = loadUsers();
   const user = users.find((u) => u.email === id || u.username === id);
+  if (user && isOwnerPremiumEmail(user.email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ error: 'E-mail ou mot de passe incorrect' });
   }
@@ -586,12 +612,16 @@ app.post('/auth/google', async (req, res) => {
       };
       users.push(user);
     } else {
-      user.provider = user.provider || 'google';
+      user.provider = 'google';
       user.googleId = g.id || user.googleId;
       user.emailVerified = true;
       if (!user.firstName && g.given_name) user.firstName = g.given_name;
       if (!user.lastName && g.family_name) user.lastName = g.family_name;
       user.updatedAt = new Date().toISOString();
+    }
+    if (isOwnerPremiumEmail(email)) {
+      user.plan = 'premium_yearly';
+      user.provider = 'google';
     }
     saveUsers(users);
     res.json({
@@ -605,6 +635,8 @@ app.post('/auth/google', async (req, res) => {
         lastName: user.lastName ?? '',
         username: user.username ?? '',
         emailVerified: true,
+        plan: user.plan || 'free',
+        provider: 'google',
       },
     });
   } catch (e) {
@@ -986,6 +1018,9 @@ app.post('/webhooks/strava', (req, res) => {
   activities.push({ at: new Date().toISOString(), event: req.body });
   res.status(200).json({ ok: true });
 });
+
+mountCommunityRoutes(app, { authMiddleware, loadUsers });
+mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
 
 const port = Number(process.env.PORT || 8787);
 app.listen(port, () => {

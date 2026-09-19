@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../store/AppContext';
 import { useThemeColors } from '../theme/ThemeContext';
 import type { ColorPalette } from '../theme/palettes';
 import { ProfileAvatar } from './profile/ProfileAvatar';
+import { PressableScale } from './motion/softMotion';
 
 /** Avatar en-tête — thème sombre */
 export function ProfileHeaderButton() {
@@ -16,8 +17,9 @@ export function ProfileHeaderButton() {
   const initials = `${p.firstName?.[0] || '?'}${p.lastName?.[0] || ''}`;
 
   return (
-    <Pressable
+    <PressableScale
       style={styles.wrap}
+      variant="pop"
       onPress={() => router.push('/(tabs)/profile')}
       accessibilityLabel="Mon profil"
     >
@@ -27,7 +29,7 @@ export function ProfileHeaderButton() {
         size={34}
         borderColor={colors.accent}
       />
-    </Pressable>
+    </PressableScale>
   );
 }
 

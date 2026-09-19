@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { colors } from '../../src/theme/tokens';
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
@@ -32,6 +32,8 @@ export default function AuthLayout() {
         contentStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         headerBackTitle: 'Retour',
+        animation: 'slide_from_right',
+        animationDuration: 380,
         headerLeft: () => (
           <AlwaysBackButton
             tintColor={colors.text}
@@ -55,6 +57,14 @@ export default function AuthLayout() {
           title: 'Inscription',
           headerShown: true,
           headerTitle: () => <AuthHeaderTitle title="Inscription" />,
+          headerLeft: () => (
+            <View style={{ paddingLeft: 8 }}>
+              <AlwaysBackButton
+                tintColor={colors.text}
+                fallbackHref="/(auth)/welcome"
+              />
+            </View>
+          ),
         }}
       />
       <Stack.Screen

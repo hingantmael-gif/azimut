@@ -28,7 +28,9 @@ export default function ProgramsScreen() {
   return (
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 48 }}>
       <ProgramUsageBoard
-        countedTemplateId={state.profile.programUsageCountedId}
+        countedTemplateIds={
+          state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId
+        }
         limit={8}
         mixed
       />
@@ -38,6 +40,14 @@ export default function ProgramsScreen() {
         onPress={() => router.push('/program/new')}
       >
         <NewProgramLabel color="#fff" size={16} style={styles.newBtnText} />
+      </PressableScale>
+
+      <PressableScale
+        style={styles.calisBtn}
+        onPress={() => router.push('/calisthenics')}
+      >
+        <Text style={styles.calisBtnText}>Arbre callisthénie</Text>
+        <Text style={styles.calisBtnHint}>Compétences · programmes type</Text>
       </PressableScale>
 
       <Text style={styles.section}>En cours</Text>
@@ -64,15 +74,16 @@ export default function ProgramsScreen() {
       ) : (
         history.map((prog) => {
           const evo = computeProgramEvolution(prog);
+          const stopped = Boolean(prog.abandoned);
           return (
             <ProgramCard
-              key={`${prog.id}-${prog.completedAt ?? prog.startedAt}`}
+              key={`${prog.id}-${prog.completedAt ?? prog.abandonedAt ?? prog.startedAt}`}
               prog={prog}
-              badge="Terminé"
+              badge={stopped ? 'Arrêté' : 'Terminé'}
               badgeColor={colors.textMuted}
               styles={styles}
               gain={
-                evo.hasBaseline && evo.hasCurrent && evo.gainLabel
+                !stopped && evo.hasBaseline && evo.hasCurrent && evo.gainLabel
                   ? {
                       label: evo.gainLabel,
                       metric: evo.label,
@@ -82,7 +93,7 @@ export default function ProgramsScreen() {
               }
               onPress={() =>
                 router.push(
-                  `/program/detail?scope=history&id=${encodeURIComponent(prog.id)}&at=${encodeURIComponent(prog.completedAt ?? prog.startedAt)}`,
+                  `/program/detail?scope=history&id=${encodeURIComponent(prog.id)}&at=${encodeURIComponent(prog.completedAt ?? prog.abandonedAt ?? prog.startedAt)}`,
                 )
               }
             />
@@ -153,9 +164,11 @@ function ProgramCard({
           {formatProgramDurationLabel(prog)}
           {prog.completedAt
             ? ` · ${new Date(prog.completedAt).toLocaleDateString('fr-FR')}`
-            : prog.startedAt
-              ? ` · démarré ${new Date(prog.startedAt).toLocaleDateString('fr-FR')}`
-              : ''}
+            : prog.abandonedAt
+              ? ` · arrêté ${new Date(prog.abandonedAt).toLocaleDateString('fr-FR')}`
+              : prog.startedAt
+                ? ` · démarré ${new Date(prog.startedAt).toLocaleDateString('fr-FR')}`
+                : ''}
           {' · ouvrir →'}
         </Text>
       </ProgramSportCover>
@@ -173,8 +186,23 @@ function makeStyles(colors: ColorPalette) {
       borderRadius: radii.lg,
       backgroundColor: colors.accent,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    newBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
+    newBtnText: { color: colors.white, fontWeight: '800', fontSize: 15, textAlign: 'center' },
+    calisBtn: {
+      marginHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      paddingVertical: 14,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bgElevated,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    calisBtnText: { color: colors.text, fontWeight: '800', fontSize: 15, textAlign: 'center' },
+    calisBtnHint: { color: colors.textMuted, fontSize: 12, marginTop: 2, textAlign: 'center' },
     section: {
       marginHorizontal: spacing.md,
       marginTop: spacing.lg,

@@ -114,7 +114,7 @@ export function assignRolesWithConstraints(input: RoleAssignmentInput): Map<numb
   const sorted = [...days].sort((a, b) => a - b);
   const assignments = new Map<number, SessionRole>();
 
-  if (family === 'strength') {
+  if (family === 'strength' || family === 'other') {
     sorted.forEach((d) => assignments.set(d, 'strength'));
     return assignments;
   }
@@ -167,15 +167,6 @@ export function assignRolesWithConstraints(input: RoleAssignmentInput): Map<numb
   } else if (family === 'bike') {
     sorted.forEach((d) => {
       if (!assignments.has(d)) assignments.set(d, 'easy');
-    });
-  } else if (family === 'other') {
-    // Biathlon / duathlon : brick + vélo + course (easy)
-    if (sorted.includes(longDow) && sorted.length >= 3) {
-      assignments.set(longDow, 'brick');
-    }
-    const free = sorted.filter((d) => !assignments.has(d));
-    free.forEach((d, i) => {
-      assignments.set(d, i % 2 === 0 ? 'bike' : 'easy');
     });
   } else {
     // run — easy par défaut

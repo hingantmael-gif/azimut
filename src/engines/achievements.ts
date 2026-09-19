@@ -33,6 +33,8 @@ export type BadgeContext = {
   followers: number;
   hasActiveProgram: boolean;
   programHistoryCount: number;
+  /** Nombre de programmes lancés (compteur monotone) */
+  programsLaunched: number;
   /** Nuits sommeil saisies / importées */
   sleepNights: number;
   /** Série de nuits consécutives */
@@ -67,46 +69,124 @@ function badge(
   };
 }
 
-/** Paliers likes envoyés — progression douce puis légendaire */
-const LIKE_MILESTONES: {
-  n: number;
-  title: string;
-  emoji: string;
-  difficulty: BadgeDifficulty;
-}[] = [
-  { n: 1, title: 'Coup de pouce', emoji: '♡', difficulty: 'easy' },
-  { n: 5, title: 'Cinq cœurs', emoji: '💗', difficulty: 'easy' },
-  { n: 10, title: 'Dix likes', emoji: '❤️', difficulty: 'easy' },
-  { n: 25, title: 'Vingt-cinq likes', emoji: '💞', difficulty: 'easy' },
-  { n: 50, title: 'Cinquante likes', emoji: '💝', difficulty: 'medium' },
-  { n: 100, title: 'Cent likes', emoji: '💖', difficulty: 'medium' },
-  { n: 250, title: 'Deux cent cinquante', emoji: '💓', difficulty: 'medium' },
-  { n: 500, title: 'Cinq cents likes', emoji: '🔥', difficulty: 'medium' },
-  { n: 750, title: 'Sept cent cinquante', emoji: '✨', difficulty: 'hard' },
-  { n: 1000, title: 'Mille likes', emoji: '🌟', difficulty: 'hard' },
-  { n: 2500, title: 'Deux mille cinq cents', emoji: '⭐', difficulty: 'hard' },
-  { n: 5000, title: 'Cinq mille likes', emoji: '🏅', difficulty: 'hard' },
-  { n: 7500, title: 'Sept mille cinq cents', emoji: '🎖️', difficulty: 'legendary' },
-  { n: 10000, title: 'Dix mille likes', emoji: '👑', difficulty: 'legendary' },
-  { n: 25000, title: 'Vingt-cinq mille', emoji: '💎', difficulty: 'legendary' },
-  { n: 50000, title: 'Cinquante mille likes', emoji: '🌌', difficulty: 'legendary' },
-];
+/**
+ * Seuil cumulé pour le niveau L (1-based).
+ * Deltas entre niveaux : 1, 1, 2, 3, 4, 5… → totaux 1, 2, 4, 7, 11…
+ */
+export function progressiveThreshold(level: number): number {
+  if (level < 1) return 0;
+  return 1 + (level * (level - 1)) / 2;
+}
 
-function likeMilestoneBadges(): BadgeDef[] {
-  return LIKE_MILESTONES.map(({ n, title, emoji, difficulty }) =>
-    badge({
-      id: n === 1 ? 'like-one' : `likes-${n}`,
-      title,
-      description:
-        n === 1
-          ? 'Like 1 programme ou séance d’un autre athlète.'
-          : `Envoie ${n.toLocaleString('fr-FR')} likes (programmes ou séances).`,
-      emoji,
-      difficulty,
-      progress: (c) => pct(c.likesGiven, n),
-      unlocked: (c) => c.likesGiven >= n,
-    }),
-  );
+/** Plus haut niveau atteint pour un compteur donné. */
+export function progressiveLevelFromCount(count: number): number {
+  const n = Math.max(0, Math.floor(count));
+  let level = 0;
+  while (progressiveThreshold(level + 1) <= n) level += 1;
+  return level;
+}
+
+/** Combien d’actions supplémentaires pour passer du niveau L-1 au niveau L. */
+export function progressiveDeltaForLevel(level: number): number {
+  if (level <= 1) return 1;
+  if (level === 2) return 1;
+  return level - 1;
+}
+
+function progressiveDifficulty(level: number): BadgeDifficulty {
+  if (level <= 3) return 'easy';
+  if (level <= 8) return 'medium';
+  if (level <= 15) return 'hard';
+  return 'legendary';
+}
+
+function progressiveXp(level: number): number {
+  const d = progressiveDifficulty(level);
+  const base = BADGE_XP_BY_DIFFICULTY[d];
+  return Math.min(300, base + Math.max(0, level - 1) * 5);
+}
+
+type InfiniteLadderKind = 'programs' | 'likes';
+
+const LADDER_META: Record<
+  InfiniteLadderKind,
+  { idPrefix: string; emoji: string; noun: string; verb: string; unit: string }
+> = {
+  programs: {
+    idPrefix: 'prog-launch-lv',
+    emoji: '📋',
+    noun: 'Programmes',
+    verb: 'Lance',
+    unit: 'programme',
+  },
+  likes: {
+    idPrefix: 'likes-lv',
+    emoji: '♡',
+    noun: 'Likes',
+    verb: 'Envoie',
+    unit: 'like',
+  },
+};
+
+function ladderCount(ctx: BadgeContext, kind: InfiniteLadderKind): number {
+  return kind === 'programs' ? ctx.programsLaunched : ctx.likesGiven;
+}
+
+function infiniteLadderBadge(kind: InfiniteLadderKind, level: number): BadgeDef {
+  const meta = LADDER_META[kind];
+  const need = progressiveThreshold(level);
+  const delta = progressiveDeltaForLevel(level);
+  const difficulty = progressiveDifficulty(level);
+  const unit =
+    delta > 1 ? `${meta.unit}s` : meta.unit;
+  return badge({
+    id: `${meta.idPrefix}-${level}`,
+    title: `${meta.noun} · Niv. ${level}`,
+    description:
+      level === 1
+        ? `${meta.verb} ton 1ᵉʳ ${meta.unit}.`
+        : `${meta.verb} ${delta} ${unit} de plus (total ${need.toLocaleString('fr-FR')}).`,
+    emoji: meta.emoji,
+    difficulty,
+    xpReward: progressiveXp(level),
+    progress: (c) => pct(ladderCount(c, kind), need),
+    unlocked: (c) => ladderCount(c, kind) >= need,
+  });
+}
+
+/**
+ * Niveaux à afficher : derniers niveaux débloqués + les 2 suivants
+ * (échelle infinie sans saturer la grille).
+ */
+export function infiniteLadderLevels(
+  count: number,
+  extraAhead = 2,
+  maxUnlockedShown = 8,
+): number[] {
+  const current = progressiveLevelFromCount(count);
+  const maxLevel = Math.max(current + extraAhead, extraAhead);
+  const minShown =
+    current > maxUnlockedShown ? current - maxUnlockedShown + 1 : 1;
+  return Array.from({ length: maxLevel - minShown + 1 }, (_, i) => minShown + i);
+}
+
+function infiniteLadderBadgesForContext(ctx: BadgeContext): BadgeDef[] {
+  const programLevels = infiniteLadderLevels(ctx.programsLaunched);
+  const likeLevels = infiniteLadderLevels(ctx.likesGiven);
+  return [
+    ...programLevels.map((lv) => infiniteLadderBadge('programs', lv)),
+    ...likeLevels.map((lv) => infiniteLadderBadge('likes', lv)),
+  ];
+}
+
+/** Tous les niveaux déjà gagnés (pour déblocage XP), même au-delà de l’affichage. */
+function infiniteLadderUnlockDefs(ctx: BadgeContext): BadgeDef[] {
+  const progLv = progressiveLevelFromCount(ctx.programsLaunched);
+  const likeLv = progressiveLevelFromCount(ctx.likesGiven);
+  const out: BadgeDef[] = [];
+  for (let lv = 1; lv <= progLv; lv++) out.push(infiniteLadderBadge('programs', lv));
+  for (let lv = 1; lv <= likeLv; lv++) out.push(infiniteLadderBadge('likes', lv));
+  return out;
 }
 
 /** Paliers d’import / saisie manuelle du sommeil */
@@ -221,15 +301,6 @@ export const BADGE_CATALOG: BadgeDef[] = [
     difficulty: 'easy',
     progress: (c) => pct(c.feedbacks.length, 1),
     unlocked: (c) => c.feedbacks.length >= 1,
-  }),
-  badge({
-    id: 'program-starter',
-    title: 'Au programme',
-    description: 'Démarre un programme d’entraînement.',
-    emoji: '📋',
-    difficulty: 'easy',
-    progress: (c) => (c.hasActiveProgram || c.programHistoryCount > 0 ? 1 : 0),
-    unlocked: (c) => c.hasActiveProgram || c.programHistoryCount > 0,
   }),
   badge({
     id: 'social-hello',
@@ -607,8 +678,7 @@ export const BADGE_CATALOG: BadgeDef[] = [
     unlocked: (c) => c.programHistoryCount >= 10,
   }),
 
-  // Likes progressifs (1 → 50 000)
-  ...likeMilestoneBadges(),
+  // Échelles infinies programmes lancés + likes (générées dynamiquement)
   // Sommeil : nuits importées + régularité
   ...sleepImportBadges(),
   ...sleepStreakBadges(),
@@ -638,6 +708,7 @@ function buildContext(input: {
   followers?: number;
   hasActiveProgram?: boolean;
   programHistoryCount?: number;
+  programsLaunched?: number;
   sleepNights?: number;
   sleepStreak?: number;
 }): BadgeContext {
@@ -658,6 +729,7 @@ function buildContext(input: {
     followers: input.followers ?? 0,
     hasActiveProgram: input.hasActiveProgram ?? false,
     programHistoryCount: input.programHistoryCount ?? 0,
+    programsLaunched: input.programsLaunched ?? 0,
     sleepNights: input.sleepNights ?? 0,
     sleepStreak: input.sleepStreak ?? 0,
   };
@@ -677,6 +749,7 @@ export function unlockAchievements(input: {
   followers?: number;
   hasActiveProgram?: boolean;
   programHistoryCount?: number;
+  programsLaunched?: number;
   sleepNights?: number;
   sleepStreak?: number;
 }): UnlockAchievementsResult {
@@ -685,7 +758,8 @@ export function unlockAchievements(input: {
   const newlyUnlocked: NewlyUnlockedBadge[] = [];
 
   const byId = new Map(input.achievements.map((a) => [a.id, { ...a }]));
-  for (const badgeDef of BADGE_CATALOG) {
+  const catalog = [...BADGE_CATALOG, ...infiniteLadderUnlockDefs(ctx)];
+  for (const badgeDef of catalog) {
     const existing = byId.get(badgeDef.id) ?? {
       id: badgeDef.id,
       title: badgeDef.title,
@@ -713,7 +787,7 @@ export function unlockAchievements(input: {
   };
 }
 
-/** Seed / sync : une entrée par badge du catalogue */
+/** Seed / sync : catalogue fixe (les échelles infinies s’ajoutent à l’usage) */
 export function defaultAchievementsFromCatalog(): Achievement[] {
   return BADGE_CATALOG.map((b) => ({
     id: b.id,
@@ -736,17 +810,17 @@ export type BadgeViewModel = {
   progressLabel: string;
 };
 
-/** En cours (proche de la fin en haut) → pas commencé → débloqués en bas. */
+/** Terminés en tête, puis proches du déblocage. */
 export function sortBadgesByProgress(badges: BadgeViewModel[]): BadgeViewModel[] {
   return [...badges].sort((a, b) => {
-    if (a.unlocked !== b.unlocked) return a.unlocked ? 1 : -1;
-    if (!a.unlocked && !b.unlocked) {
-      if (b.progress !== a.progress) return b.progress - a.progress;
+    if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+    if (a.unlocked && b.unlocked) {
+      const aAt = a.unlockedAt ? Date.parse(a.unlockedAt) : 0;
+      const bAt = b.unlockedAt ? Date.parse(b.unlockedAt) : 0;
+      if (aAt !== bAt) return bAt - aAt;
       return a.title.localeCompare(b.title, 'fr');
     }
-    const aAt = a.unlockedAt ? Date.parse(a.unlockedAt) : 0;
-    const bAt = b.unlockedAt ? Date.parse(b.unlockedAt) : 0;
-    if (aAt !== bAt) return aAt - bAt;
+    if (b.progress !== a.progress) return b.progress - a.progress;
     return a.title.localeCompare(b.title, 'fr');
   });
 }
@@ -763,13 +837,15 @@ export function badgeViewModels(input: {
   followers?: number;
   hasActiveProgram?: boolean;
   programHistoryCount?: number;
+  programsLaunched?: number;
   sleepNights?: number;
   sleepStreak?: number;
 }): BadgeViewModel[] {
   const ctx = buildContext(input);
   const unlockedMap = new Map(input.achievements.map((a) => [a.id, a]));
+  const defs = [...BADGE_CATALOG, ...infiniteLadderBadgesForContext(ctx)];
 
-  return BADGE_CATALOG.map((b) => {
+  return defs.map((b) => {
     const a = unlockedMap.get(b.id);
     const unlocked = Boolean(a?.unlockedAt) || b.unlocked(ctx);
     const progress = b.progress(ctx);

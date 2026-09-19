@@ -605,22 +605,26 @@ export function buildStrengthSession(opts: {
     {
       id: 'wu',
       type: 'warmup',
-      label: 'Échauffement (articulations + 2 séries très légères)',
+      label: 'Échauffement 3 min — articulations + 2 séries très légères',
       endCondition: 'duration',
-      durationSec: 6 * 60,
+      durationSec: 3 * 60,
     },
     ...exercises.map((ex, i) => {
-      const workSec = scheme.sets * (45 + scheme.restSec);
+      const workSec = scheme.sets * 40 + (scheme.sets - 1) * scheme.restSec;
       const pct = ex.oneRmPct
         ? equipment.includes('home_dumbbells') && !equipment.includes('gym')
           ? Math.round(ex.oneRmPct * dumbbellOneRmFactor(opts.level))
           : ex.oneRmPct
         : scheme.oneRmPct;
-      const cue = ex.cue ? ` · ${ex.cue}` : '';
+      const cue = ex.cue ? ` — ${ex.cue}` : '';
+      const isHold = /chaise|wall.?sit|planche|gainage|hollow|tenue/i.test(ex.name);
+      const workCore = isHold
+        ? `${ex.name} · ${scheme.sets} × 30s · repos ${scheme.restSec}s`
+        : `${ex.name} · ${scheme.sets} × ${scheme.repsLabel} · repos ${scheme.restSec}s`;
       return {
         id: `ex-${i}`,
         type: 'active' as const,
-        label: `${ex.name} · ${scheme.sets} séries de ${scheme.repsLabel} · ${scheme.restSec}s de repos · charge ≈ ${pct}% de ton max · ${scheme.loadHint}${cue}`,
+        label: `${workCore} · charge ≈ ${pct}% de ton max · ${scheme.loadHint}${cue}`,
         endCondition: 'duration' as const,
         durationSec: Math.min(12 * 60, Math.max(3 * 60, workSec)),
       };
@@ -628,9 +632,9 @@ export function buildStrengthSession(opts: {
     {
       id: 'cd',
       type: 'cooldown',
-      label: 'Étirements 5 min',
+      label: 'Retour au calme 3 min — étirements',
       endCondition: 'duration',
-      durationSec: 5 * 60,
+      durationSec: 3 * 60,
     },
   ];
 

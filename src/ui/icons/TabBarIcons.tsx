@@ -1,14 +1,16 @@
 import type { ColorValue } from 'react-native';
+import { SoftPulse } from '../motion/softMotion';
 import {
   IconAdd,
   IconBody,
   IconCalendar,
   IconHome,
   IconPerson,
+  IconRecord,
 } from './AppIcons';
 
 type TabIconProps = {
-  name: 'accueil' | 'plan' | 'corps' | 'vous' | 'record';
+  name: 'accueil' | 'plan' | 'corps' | 'vous' | 'record' | 'create';
   focused: boolean;
   color: ColorValue;
   size?: number;
@@ -16,20 +18,32 @@ type TabIconProps = {
 
 export function TabIcon({ name, focused, color, size = 24 }: TabIconProps) {
   const stroke = color;
+  let icon = null;
   switch (name) {
     case 'accueil':
-      return <IconHome size={size} color={stroke} />;
+      icon = <IconHome size={size} color={stroke} />;
+      break;
     case 'plan':
-      return <IconCalendar size={size} color={stroke} />;
+      icon = <IconCalendar size={size} color={stroke} />;
+      break;
     case 'corps':
-      return <IconBody size={size} color={stroke} />;
+      icon = <IconBody size={size} color={stroke} />;
+      break;
     case 'vous':
-      return <IconPerson size={size} color={stroke} />;
+      icon = <IconPerson size={size} color={stroke} />;
+      break;
     case 'record':
-      return <IconAdd size={size} color={stroke} />;
+      icon = <IconRecord size={size} color={stroke} />;
+      break;
+    case 'create':
+      icon = <IconAdd size={size} color={stroke} />;
+      break;
     default:
-      return null;
+      icon = null;
   }
+  return (
+    <SoftPulse intensity={focused ? 0.08 : 0.02}>{icon}</SoftPulse>
+  );
 }
 
 export const TAB_ICON_NAMES = {
@@ -38,9 +52,5 @@ export const TAB_ICON_NAMES = {
   corps: 'corps',
   vous: 'vous',
   record: 'record',
+  create: 'create',
 } as const;
-
-/** @deprecated use TabIcon with name prop */
-export function TabIconLegacy() {
-  return null;
-}

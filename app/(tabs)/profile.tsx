@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
@@ -27,6 +27,7 @@ import { AppScrollView } from '../../src/ui/scrolling';
 import { summarizeSportsData } from '../../src/engines/athleteProfile';
 import { GOAL_LABELS } from '../../src/constants/features';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
+import { communityHubSummary, type HubSummary } from '../../src/api/community';
 
 function programProgressPct(opts: {
   nonRestCount: number;
@@ -57,8 +58,25 @@ export default function ProfileScreen() {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const [hub, setHub] = useState<HubSummary | null>(null);
   const p = state.profile;
   const ranked = p.ranked;
+
+  useEffect(() => {
+    let cancelled = false;
+    void communityHubSummary(state.authToken).then((res) => {
+      if (cancelled || !res) return;
+      setHub({
+        feedPosts: res.feedPosts ?? 0,
+        clubsJoined: res.clubsJoined ?? 0,
+        unreadSocial: res.unreadSocial ?? 0,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.authToken]);
+
   const tier = normalizeTier(ranked.tier);
   const meta = tierMeta(tier);
   const division = ranked.division !== undefined ? ranked.division : 3;
@@ -229,6 +247,66 @@ export default function ProfileScreen() {
         <Text style={[styles.linkRowLabel, { color: colors.text }]}>Badges</Text>
         <Text style={[styles.linkRowValue, { color: colors.textMuted }]}>Voir ›</Text>
       </Pressable>
+
+      <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+        <SectionHeader
+          title="Communauté (bêta)"
+          subtitle="Social, cartes et groupes — fonctionnalités en test"
+          accentColor={colors.accent}
+          delay={50}
+        />
+      </View>
+      <FadeInUp delay={50}>
+        <View style={[styles.linkGroup, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.push('/(tabs)/social')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Fil social</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                {hub
+                  ? hub.unreadSocial > 0
+                    ? `${hub.unreadSocial} nouveauté${hub.unreadSocial > 1 ? 's' : ''} · ${hub.feedPosts} posts`
+                    : `${hub.feedPosts} activité${hub.feedPosts > 1 ? 's' : ''} dans le fil`
+                  : 'Activités des athlètes que tu suis'}
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+          </PressableScale>
+          <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.push('/(tabs)/maps')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Cartes & parcours</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                Tes traces — heatmap communauté bientôt
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+          </PressableScale>
+          <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.push('/(tabs)/groups')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Groupes</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                {hub && hub.clubsJoined > 0
+                  ? `${hub.clubsJoined} club${hub.clubsJoined > 1 ? 's' : ''} rejoint${hub.clubsJoined > 1 ? 's' : ''}`
+                  : `${state.clubs?.length ?? 0} club${(state.clubs?.length ?? 0) !== 1 ? 's' : ''} sur cet appareil`}
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+          </PressableScale>
+        </View>
+      </FadeInUp>
 
       <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
         <SectionHeader
@@ -468,8 +546,9 @@ function makeStyles(colors: ColorPalette) {
       borderRadius: radii.md,
       borderWidth: 1,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    actionBtnText: { fontWeight: '700', fontSize: 13 },
+    actionBtnText: { fontWeight: '700', fontSize: 13, textAlign: 'center', width: '100%' },
     statsGrid: {
       marginHorizontal: spacing.lg,
       marginTop: spacing.md,
@@ -542,6 +621,7 @@ function makeStyles(colors: ColorPalette) {
     },
     linkRule: { height: StyleSheet.hairlineWidth, marginLeft: spacing.md },
     linkRowLabel: { fontWeight: '600', fontSize: 15 },
+    hubPreview: { fontSize: 12, fontWeight: '600', marginTop: 2 },
     linkRowValue: { fontSize: 13, flexShrink: 1, maxWidth: '48%', textAlign: 'right' },
     sectionTitle: {
       fontSize: 16,

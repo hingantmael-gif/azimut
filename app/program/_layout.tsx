@@ -12,11 +12,14 @@ export default function ProgramLayout() {
         headerShadowVisible: false,
         headerBackTitle: 'Retour',
         headerLeft: () => <AlwaysBackButton tintColor={colors.text} />,
+        animation: 'fade_from_bottom',
+        animationDuration: 400,
       }}
     >
       <Stack.Screen name="new" options={{ headerShown: false }} />
       <Stack.Screen name="progress" options={{ title: 'Évolution' }} />
       <Stack.Screen name="detail" options={{ title: 'Programme' }} />
+      <Stack.Screen name="adjust" options={{ title: 'Ajuster' }} />
     </Stack>
   );
 }

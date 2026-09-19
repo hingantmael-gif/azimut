@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -10,6 +11,9 @@ import React, {
 import type {
   Achievement,
   AthleteProfile,
+  Club,
+  ClubPost,
+  ClubVisibility,
   HealthSnapshot,
   OnboardingAnswers,
   PlannedWorkout,
@@ -21,6 +25,7 @@ import type {
   StravaActivity,
   WatchBrandId,
 } from '../types/domain';
+import { catalogClubToClub, CATALOG_CLUBS } from '../constants/catalogClubs';
 import {
   applyAdaptiveToWorkout,
   applyXp,
@@ -34,8 +39,17 @@ import {
   RPE_SUBMIT_XP,
   claimDailyPresenceXp,
   todayIsoDate,
-  updateBanister,
 } from '../engines/core';
+import {
+  defaultDigitalTwin,
+  learnFromSession,
+  type AthleteDigitalTwin,
+} from '../engines/athleteDigitalTwin';
+import {
+  eccentricLoadFactor,
+  updateBanisterPlus,
+} from '../engines/banisterPlus';
+import { predictSessionRpe } from '../engines/sessionPrediction';
 import { upsertSleepNight, removeSleepNight, computeSleepStreak, sleepNightsLogged } from '../engines/sleepCalendar';
 import {
   applySleepAdaptiveToWorkout,
@@ -52,6 +66,11 @@ import { claimAllKmOdysseyLevels } from '../engines/kmOdyssey';
 import { buildProgramPlan, type ProgramBuildInput } from '../engines/programBuilder';
 import { applySleepStartupRamp } from '../engines/sleepProgramRamp';
 import { applyIntentStartupRamp } from '../engines/intentStartupRamp';
+import {
+  adaptPlanFromAthleteLoad,
+  applyAthleteLoadStartupRamp,
+  computeAthleteLoadSnapshot,
+} from '../engines/athleteLoadBridge';
 import {
   createProgramInstanceId,
   mergeProgramPlans,
@@ -71,19 +90,42 @@ import { normalizeIntegrations } from '../services/integrationLinks';
 import { isRemoteAuthToken, apiFetchIntegrations } from '../services/integrationsApi';
 import { isPremium, withPremiumXpBonus } from '../engines/subscription';
 import {
+  applyOwnerPremiumPolicy,
+  forceOwnerChampionRank,
+  isOwnerGooglePremiumGrant,
+  isOwnerPremiumEmail,
+  isPaidPremiumSource,
+  ownerPremiumPlan,
+  type AuthProviderId,
+  type PremiumSource,
+} from '../engines/ownerAccess';
+import { localeFromCountry } from '../i18n/locales';
+import {
   ladderWeekKey,
   normalizeRankedLadder,
   settleMissedLadderWeeks,
   PREMIUM_RELEGATION_SHIELDS,
 } from '../engines/rankedSeason';
+import { resolveGiftedPremiumStatus } from '../storage/ownerPremiumGifts';
+import {
+  canStackAnotherProgram,
+  hasPremiumAccess,
+  shouldEnforceFreeLimits,
+} from '../premium/entitlement';
 import { resolveLockedCountry } from '../engines/countryLock';
 import { applyActivityToProgramProgress } from '../engines/programProgress';
-import { isRankableProgramId } from '../engines/programPopularity';
+import { promoteChronoToOnboarding } from '../engines/athleteProfile';
+import {
+  calendarDayKey,
+  isRankableProgramId,
+  normalizeCountedTemplateIds,
+} from '../engines/programPopularity';
 import { findDuplicateActivity } from '../engines/activityDuplicate';
 import {
   adaptPlanAfterUnplannedActivity,
   completedWorkoutIdsFromAnalyses,
   fillPlanGaps,
+  rebuildFutureWorkoutPacing,
   reschedulePlanToNewDays,
 } from '../engines/planAdaptation';
 import {
@@ -97,16 +139,20 @@ import {
   emptyHealth,
 } from '../data/seed';
 import { deviceLabel, getOrCreateRsid } from '../storage/deviceSession';
+import { clearAllSocialInbox } from '../storage/socialInbox';
 import {
   clearSession,
+  flushPendingSessionSave,
   isSessionValidForDevice,
   loadSession,
   saveSession,
+  saveSessionImmediate,
   type PersistedAppState,
 } from '../storage/sessionPersistence';
 import { profileToRegistryUser, upsertRegistryUser } from '../storage/userRegistry';
 import { persistAvatarUri } from '../utils/persistAvatar';
 import { markOnboardingCompleted } from '../storage/onboardingPersistence';
+import { fanOutSocialSideEffect } from '../engines/socialFanOut';
 
 export type SessionMeta = {
   rsid: string;
@@ -134,19 +180,38 @@ type Action =
         lastName?: string;
         username?: string;
         onboardingCompleted?: boolean;
+        /** google | email | apple | local | trial */
+        provider?: AuthProviderId;
+        plan?: AthleteProfile['plan'];
+        country?: string;
+        language?: string;
+        countryLocked?: boolean;
+        /** gift | paid — appliqué hors compte owner */
+        premiumSource?: PremiumSource | null;
+        giftedPremium?: boolean;
       };
     }
   | { type: 'LOGOUT' }
   | { type: 'DELETE_ACCOUNT' }
   | { type: 'RESTORE_SESSION'; state: PersistedAppState }
+  | { type: 'SYNC_PREMIUM_ENTITLEMENT'; gifted: boolean; confirmed?: boolean }
+  | {
+      type: 'APPLY_SUBSCRIPTION';
+      subscription: NonNullable<AthleteProfile['subscription']>;
+      plan: AthleteProfile['plan'];
+    }
   | { type: 'COMPLETE_ONBOARDING'; answers: OnboardingAnswers }
   | { type: 'UPDATE_ONBOARDING'; patch: Partial<OnboardingAnswers> }
   | { type: 'RESCHEDULE_TRAINING_DAYS'; trainingDays: number[]; longRunDay: number }
   | {
+      type: 'ADJUST_ACTIVE_PROGRAM';
+      patch: Partial<OnboardingAnswers>;
+    }
+  | {
       type: 'CREATE_PROGRAM';
       input: ProgramBuildInput;
-      /** stack = mêmes jours (allégés) · spread = répartir sur jours libres */
-      scheduleMode?: 'stack' | 'spread';
+      /** stack = superposer · replace = remplacer l’actif · spread = autres jours (legacy) */
+      scheduleMode?: 'stack' | 'spread' | 'replace';
     }
   | { type: 'CANCEL_PROGRAM'; programId?: string }
   | { type: 'PRUNE_FINISHED_PROGRAM' }
@@ -157,7 +222,13 @@ type Action =
   | { type: 'MARK_GARMIN_EXPORTED'; workoutId: string }
   | { type: 'EXPORT_GARMIN'; workoutId: string }
   | { type: 'EXPORT_STRAVA'; workoutId: string }
-  | { type: 'INGEST_STRAVA'; activity: StravaActivity; plannedId?: string }
+  | {
+      type: 'INGEST_STRAVA';
+      activity: StravaActivity;
+      plannedId?: string;
+      /** false = ne pas rattacher au plan (séance libre) */
+      linkPlan?: boolean;
+    }
   | {
       type: 'RECORD_PROGRAM_TEST_TIME';
       timeSec: number;
@@ -177,8 +248,10 @@ type Action =
   | { type: 'SET_WATCH'; brandId: WatchBrandId | null }
   | { type: 'SIMULATE_STRAVA_SYNC' }
   | { type: 'SUBMIT_RPE'; feedback: RpeFeedback }
+  | { type: 'COMPLETE_SESSION_DONE'; sessionId: string }
   | { type: 'DISMISS_RPE' }
   | { type: 'MOVE_WORKOUT'; id: string; newDate: string }
+  | { type: 'REMOVE_WORKOUT'; id: string }
   | { type: 'UPDATE_WORKOUT'; id: string; patch: Partial<PlannedWorkout> }
   | { type: 'SET_PLAN'; plan: PlannedWorkout[] }
   | { type: 'REFRESH_REMINDERS' }
@@ -209,6 +282,7 @@ type Action =
   | { type: 'CELEBRATE_LEVEL'; level: number }
   | { type: 'CLAIM_DAILY_PRESENCE_XP' }
   | { type: 'LOCK_COMPETITIVE_COUNTRY' }
+  | { type: 'SYNC_PLAN_TO_LOAD' }
   | {
       type: 'CLAIM_RANKING_REWARD';
       rewardId: string;
@@ -216,10 +290,130 @@ type Action =
       profileTitle?: string;
       shieldBonus?: number;
       weekKey: string;
+    }
+  | {
+      type: 'CREATE_CLUB';
+      id?: string;
+      name: string;
+      description: string;
+      city?: string;
+      sportLabel?: string;
+      visibility?: ClubVisibility;
+    }
+  | { type: 'JOIN_CATALOG_CLUB'; catalogId: string }
+  | { type: 'LEAVE_CLUB'; clubId: string }
+  | { type: 'DELETE_CLUB'; clubId: string }
+  | { type: 'POST_CLUB_MESSAGE'; clubId: string; text: string }
+  | {
+      type: 'SHARE_ACTIVITY_TO_CLUB';
+      clubId: string;
+      activityId: string;
+      note?: string;
+    }
+  | {
+      type: 'SHARE_PROGRAM_TO_CLUB';
+      clubId: string;
+      programId: string;
+      programTitle: string;
+      note?: string;
     };
+
+function syncPlanToAthleteLoad(state: AppState): AppState {
+  if (resolveActivePrograms(state.profile).length === 0) return state;
+  if (state.plan.length === 0) return state;
+  const twin = resolveDigitalTwin(state);
+  const snap = computeAthleteLoadSnapshot({
+    formTsb: state.banister.formTsb,
+    health: state.health,
+    activities: state.activities,
+    feedbacks: state.feedbacks,
+    plan: state.plan,
+    onboarding: state.profile.onboarding,
+    twin,
+  });
+  if (state.profile.lastLoadPlanSyncKey === snap.syncKey) return state;
+  const adapted = adaptPlanFromAthleteLoad(state.plan, snap, {
+    fromDateIso: new Date().toISOString().slice(0, 10),
+    completedWorkoutIds: completedWorkoutIdsFromAnalyses(state.analyses),
+  });
+  if (!adapted.changed) {
+    return {
+      ...state,
+      profile: {
+        ...state.profile,
+        lastLoadPlanSyncKey: snap.syncKey,
+      },
+    };
+  }
+  return {
+    ...state,
+    plan: adapted.plan,
+    profile: {
+      ...state.profile,
+      lastLoadPlanSyncKey: snap.syncKey,
+    },
+    coachAdaptations: [adapted.message, ...(state.coachAdaptations ?? [])]
+      .filter(Boolean)
+      .slice(0, 12) as string[],
+  };
+}
 
 function genCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+/** Jumeau numérique : profil stocké ou défaut depuis l’onboarding. */
+export function resolveDigitalTwin(state: {
+  profile: AthleteProfile;
+}): AthleteDigitalTwin {
+  return (
+    state.profile.digitalTwin ??
+    defaultDigitalTwin({
+      birthDate: state.profile.birthDate,
+      level: state.profile.onboarding?.level,
+    })
+  );
+}
+
+function activityElevationLossM(activity: StravaActivity): number | undefined {
+  const alt = activity.streams?.altitude;
+  if (!alt || alt.length < 2) return undefined;
+  let loss = 0;
+  for (let i = 1; i < alt.length; i++) {
+    const d = alt[i - 1]! - alt[i]!;
+    if (d > 0) loss += d;
+  }
+  return loss > 0 ? Math.round(loss) : undefined;
+}
+
+function activityAvgCadence(activity: StravaActivity): number | undefined {
+  const c = activity.streams?.cadence;
+  if (!c || c.length < 5) return undefined;
+  const sum = c.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  return sum / c.length;
+}
+
+function applyBanisterLoad(
+  state: AppState,
+  baseLoad: number,
+  date: string,
+  activity?: StravaActivity,
+  prev = state.banister,
+) {
+  let load = Math.max(0, baseLoad);
+  if (activity) {
+    const elevLoss = activityElevationLossM(activity);
+    if (elevLoss != null || activity.sport === 'run') {
+      const factor = eccentricLoadFactor({
+        elevationLossM: elevLoss,
+        discipline: activity.sport,
+        cadence: activityAvgCadence(activity),
+      });
+      load = Math.round(load * factor * 10) / 10;
+    }
+  }
+  const twin = resolveDigitalTwin(state);
+  return updateBanisterPlus(prev, load, date, twin.response);
 }
 
 function emptyState(): AppState {
@@ -237,6 +431,7 @@ function emptyState(): AppState {
     progress: demoProgress,
     authToken: null,
     reminders: [],
+    clubs: [],
   };
 }
 
@@ -244,13 +439,46 @@ function withReminders(state: AppState): AppState {
   const today = new Date().toISOString().slice(0, 10);
   const workout = state.plan.find((w) => w.date === today);
   const sessionDone = state.activities.some((a) => a.startDate.slice(0, 10) === today);
+  const hasSession = Boolean(workout && workout.discipline !== 'rest');
   return {
     ...state,
     reminders: buildDailyReminders(
       state.profile.notifications,
-      Boolean(workout && workout.discipline !== 'rest'),
+      hasSession,
       sessionDone,
       state.health.sleep?.score,
+      {
+        sessionTitle: workout?.title,
+        formTsb: state.banister.formTsb,
+        todayWorkout: workout,
+      },
+    ),
+  };
+}
+
+function patchClubPost(
+  state: AppState,
+  clubId: string,
+  partial: Omit<ClubPost, 'id' | 'authorUsername' | 'authorDisplayName' | 'createdAt'>,
+): AppState {
+  const clubs = state.clubs ?? [];
+  const club = clubs.find((c) => c.id === clubId);
+  if (!club) return state;
+  const me = state.profile.username.trim().toLowerCase();
+  if (!club.members.some((m) => m.username === me)) return state;
+  const display =
+    [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') || me;
+  const post: ClubPost = {
+    id: `post-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    authorUsername: me,
+    authorDisplayName: display,
+    createdAt: new Date().toISOString(),
+    ...partial,
+  };
+  return {
+    ...state,
+    clubs: clubs.map((c) =>
+      c.id !== clubId ? c : { ...c, posts: [post, ...c.posts].slice(0, 80) },
     ),
   };
 }
@@ -271,6 +499,7 @@ function badgeUnlockInput(
   const likedPrograms = (state.profile.likedProgramKeys ?? []).length;
   const likedSessions = (state.profile.likedSessionKeys ?? []).length;
   const sleepHistory = state.health.sleepHistory;
+  const programsLaunched = resolveProgramsLaunchedCount(state.profile);
   return {
     achievements: state.profile.achievements,
     lifetime: state.lifetime,
@@ -283,21 +512,63 @@ function badgeUnlockInput(
     following: (state.profile.followingUsernames ?? []).length,
     followers: (state.profile.followerUsernames ?? []).length,
     hasActiveProgram: resolveActivePrograms(state.profile).length > 0,
-    programHistoryCount: (state.profile.programHistory ?? []).length,
+    programHistoryCount: (state.profile.programHistory ?? []).filter(
+      (p) => !p.abandoned && Boolean(p.completedAt),
+    ).length,
+    programsLaunched,
     sleepNights: sleepNightsLogged(sleepHistory),
     sleepStreak: computeSleepStreak(sleepHistory),
   };
 }
 
-/** Débloque badges + crédite l’XP selon difficulté (1 re-passe si XP débloque d’autres) */
+/** Compteur programmes lancés (monotone) — backfill depuis l’historique si besoin. */
+function resolveProgramsLaunchedCount(profile: AthleteProfile): number {
+  const stored = profile.programsLaunchedCount ?? 0;
+  const inferred =
+    (profile.programHistory?.length ?? 0) +
+    resolveActivePrograms(profile).length;
+  return Math.max(stored, inferred);
+}
+
+function resolveUsageCountedIds(profile: AthleteProfile): string[] {
+  return normalizeCountedTemplateIds(
+    profile.programUsageCountedIds ?? profile.programUsageCountedId,
+  );
+}
+
+function resolveUsageFinishedIds(profile: AthleteProfile): string[] {
+  return normalizeCountedTemplateIds(profile.programUsageFinishedIds);
+}
+
+function withUsageIds(
+  profile: AthleteProfile,
+  countedIds: string[],
+  finishedIds?: string[],
+): AthleteProfile {
+  const counted = normalizeCountedTemplateIds(countedIds);
+  const finished = normalizeCountedTemplateIds(
+    finishedIds ?? profile.programUsageFinishedIds,
+  );
+  return {
+    ...profile,
+    programUsageCountedIds: counted,
+    programUsageFinishedIds: finished,
+    programUsageCountedId: counted[counted.length - 1] ?? null,
+  };
+}
+
+/** Débloque badges + crédite l’XP selon difficulté (1 re-passe si XP débloque d’autres). */
 function applyBadgeUnlocks(
   state: AppState,
   ranked: RankedProgress,
   sessionHour?: number,
-): { achievements: Achievement[]; ranked: RankedProgress } {
+  opts?: { awardXp?: boolean },
+): { achievements: Achievement[]; ranked: RankedProgress; badgeXpAwarded: number } {
+  const awardXp = opts?.awardXp !== false;
   const premium = isPremium(state.profile.plan);
   let nextRanked = ranked;
   let workingState = state;
+  let totalBadgeXp = 0;
 
   for (let pass = 0; pass < 2; pass++) {
     const result = unlockAchievements(
@@ -313,20 +584,39 @@ function applyBadgeUnlocks(
       },
     };
     if (badgeXp <= 0) {
-      return { achievements: result.achievements, ranked: nextRanked };
+      return {
+        achievements: result.achievements,
+        ranked: nextRanked,
+        badgeXpAwarded: totalBadgeXp,
+      };
     }
-    nextRanked = applyXp(nextRanked, withPremiumXpBonus(badgeXp, premium));
-    workingState = {
-      ...workingState,
-      profile: { ...workingState.profile, ranked: nextRanked },
-    };
+    if (awardXp) {
+      totalBadgeXp += badgeXp;
+      nextRanked = applyXp(nextRanked, withPremiumXpBonus(badgeXp, premium));
+      workingState = {
+        ...workingState,
+        profile: { ...workingState.profile, ranked: nextRanked },
+      };
+    } else {
+      // Badges débloqués sans XP (création déjà XP aujourd’hui, ou abandon programme)
+      return {
+        achievements: result.achievements,
+        ranked: nextRanked,
+        badgeXpAwarded: 0,
+      };
+    }
     if (pass === 1) {
-      return { achievements: result.achievements, ranked: nextRanked };
+      return {
+        achievements: result.achievements,
+        ranked: nextRanked,
+        badgeXpAwarded: totalBadgeXp,
+      };
     }
   }
   return {
     achievements: workingState.profile.achievements,
     ranked: nextRanked,
+    badgeXpAwarded: totalBadgeXp,
   };
 }
 
@@ -348,7 +638,26 @@ function lifetimeDistances(lifetime: AppState['lifetime']) {
   return { runKm, bikeKm, swimKm };
 }
 
-function reducer(state: AppState, action: Action): AppState {
+/** Compte ultra-sécurisé : Premium + Champion après chaque action. */
+function ensureOwnerAccountInvariants(state: AppState): AppState {
+  if (!isOwnerPremiumEmail(state.profile.email)) return state;
+  const profile = applyOwnerPremiumPolicy(state.profile);
+  if (profile === state.profile) return state;
+  if (
+    profile.plan === state.profile.plan &&
+    profile.premiumSource === state.profile.premiumSource &&
+    profile.authProvider === state.profile.authProvider &&
+    profile.ranked.xp === state.profile.ranked.xp &&
+    profile.ranked.level === state.profile.ranked.level &&
+    profile.ranked.tier === state.profile.ranked.tier &&
+    profile.ranked.division === state.profile.ranked.division
+  ) {
+    return state;
+  }
+  return { ...state, profile };
+}
+
+function reduceAppState(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'REGISTER': {
       const code = genCode();
@@ -446,44 +755,226 @@ function reducer(state: AppState, action: Action): AppState {
       return emptyState();
     case 'RESTORE_SESSION': {
       const incoming = action.state.profile;
-      const profile = {
+      const waitlistCalis = Boolean(incoming.waitlistCalisthenics);
+      const productNotifs: SocialNotification[] = waitlistCalis
+        ? [
+            {
+              id: `product-calis-${Date.now()}`,
+              kind: 'product',
+              fromUsername: 'azimut',
+              fromDisplayName: 'Azimut',
+              createdAt: new Date().toISOString(),
+              read: false,
+              programTitle:
+                'La callisthénie est disponible — Programmes → Arbre callisthénie',
+            },
+          ]
+        : [];
+      const token = action.state.authToken ?? '';
+      const inferredProvider: AuthProviderId | undefined =
+        (incoming.authProvider as AuthProviderId | undefined) ||
+        (token.startsWith('google_') ? 'google' : undefined);
+      let profile = applyOwnerPremiumPolicy({
         ...defaultProfile,
         ...incoming,
+        authProvider: inferredProvider ?? incoming.authProvider,
         followingUsernames: incoming.followingUsernames ?? [],
         followerUsernames: incoming.followerUsernames ?? [],
         outgoingFollowRequests: incoming.outgoingFollowRequests ?? [],
-        socialNotifications: trimSocialNotifications(
-          incoming.socialNotifications && incoming.socialNotifications.length > 0
-            ? incoming.socialNotifications
-            : (defaultProfile.socialNotifications ?? []),
-        ),
+        // Purge notifs démo/test — seules les vraies (inbox/API) + produit waitlist
+        socialNotifications: productNotifs,
+        waitlistCalisthenics: false,
         ranked: normalizeRankedLadder(incoming.ranked ?? defaultProfile.ranked),
         integrations: normalizeIntegrations(
           incoming.integrations ?? defaultProfile.integrations,
         ),
-      };
+      });
+      if (isOwnerPremiumEmail(profile.email)) {
+        profile = {
+          ...profile,
+          plan: ownerPremiumPlan(),
+          premiumSource: 'owner',
+          ranked: forceOwnerChampionRank(profile.ranked),
+        };
+      } else if (isPaidPremiumSource(profile.premiumSource)) {
+        // Abonnement payant : ne pas toucher
+      } else if (profile.premiumSource === 'gift' && isPremium(profile.plan)) {
+        // Cadeau déjà sur le profil — conservé jusqu’à SYNC_PREMIUM_ENTITLEMENT
+      }
+      if (isPremium(profile.plan) && profile.ranked.relegationShieldsLeft == null) {
+        profile = {
+          ...profile,
+          ranked: {
+            ...profile.ranked,
+            relegationShieldsLeft: PREMIUM_RELEGATION_SHIELDS,
+          },
+        };
+      }
       return withReminders({
         ...emptyState(),
         ...action.state,
+        clubs: action.state.clubs ?? [],
         profile,
         pending2faCode: null,
+      });
+    }
+    case 'SYNC_PREMIUM_ENTITLEMENT': {
+      if (isOwnerPremiumEmail(state.profile.email)) {
+        return withReminders({
+          ...state,
+          profile: {
+            ...state.profile,
+            plan: ownerPremiumPlan(),
+            premiumSource: 'owner',
+            ranked: forceOwnerChampionRank(state.profile.ranked),
+          },
+        });
+      }
+      // Payant : l’owner ne peut rien retirer
+      if (isPaidPremiumSource(state.profile.premiumSource)) {
+        return state;
+      }
+      if (action.gifted) {
+        return withReminders({
+          ...state,
+          profile: {
+            ...state.profile,
+            plan: ownerPremiumPlan(),
+            premiumSource: 'gift',
+            ranked: {
+              ...state.profile.ranked,
+              relegationShieldsLeft:
+                state.profile.ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS,
+            },
+          },
+        });
+      }
+      // Révoque uniquement si l’absence de cadeau est confirmée (API), pas si l’API est down
+      if (action.confirmed !== false && state.profile.premiumSource === 'gift') {
+        return withReminders({
+          ...state,
+          profile: {
+            ...state.profile,
+            plan: 'free',
+            premiumSource: null,
+            ranked: { ...state.profile.ranked, relegationShieldsLeft: 0 },
+          },
+        });
+      }
+      return state;
+    }
+    case 'APPLY_SUBSCRIPTION': {
+      if (isOwnerPremiumEmail(state.profile.email)) {
+        return withReminders({
+          ...state,
+          profile: {
+            ...state.profile,
+            plan: ownerPremiumPlan(),
+            premiumSource: 'owner',
+            subscription: {
+              ...action.subscription,
+              entitlement: 'premium',
+              status: 'active',
+            },
+            ranked: forceOwnerChampionRank(state.profile.ranked),
+          },
+        });
+      }
+      // Ne pas écraser un gift actif par un sync « expired » sans paid
+      if (
+        state.profile.premiumSource === 'gift' &&
+        action.subscription.entitlement !== 'premium'
+      ) {
+        return {
+          ...state,
+          profile: {
+            ...state.profile,
+            subscription: action.subscription,
+          },
+        };
+      }
+      const paid = action.subscription.entitlement === 'premium';
+      return withReminders({
+        ...state,
+        profile: {
+          ...state.profile,
+          plan: action.plan,
+          premiumSource: paid ? 'paid' : state.profile.premiumSource === 'gift' ? 'gift' : null,
+          subscription: action.subscription,
+          ranked: {
+            ...state.profile.ranked,
+            relegationShieldsLeft: paid
+              ? state.profile.ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS
+              : 0,
+          },
+        },
       });
     }
     case 'AUTH_WITH_PROVIDER': {
       const p = action.payload;
       const emailLocal = p.email.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'athlete';
+      const provider: AuthProviderId =
+        p.provider ||
+        (p.token.startsWith('google_') ? 'google' : 'email');
+      const grantOwner = isOwnerGooglePremiumGrant(p.email, provider);
+      if (isOwnerPremiumEmail(p.email) && !grantOwner) {
+        return emptyState();
+      }
+      const paid = p.premiumSource === 'paid';
+      const gifted = Boolean(p.giftedPremium) && !paid;
+      const plan = grantOwner || gifted || paid ? ownerPremiumPlan() : 'free';
+      const premiumSource: PremiumSource | null = grantOwner
+        ? 'owner'
+        : paid
+          ? 'paid'
+          : gifted
+            ? 'gift'
+            : null;
+      let ranked = {
+        ...defaultProfile.ranked,
+        ...(grantOwner || gifted || paid
+          ? { relegationShieldsLeft: PREMIUM_RELEGATION_SHIELDS }
+          : {}),
+      };
+      if (grantOwner) {
+        ranked = forceOwnerChampionRank(ranked);
+      }
+      const fresh = buildFreshAccountState(p.token, {
+        firstName: p.firstName || '',
+        lastName: p.lastName || '',
+        email: p.email,
+        username: p.username || emailLocal.slice(0, 20),
+        emailVerified: true,
+        onboardingCompleted: p.onboardingCompleted ?? false,
+        authProvider: provider,
+        plan,
+        premiumSource,
+        ranked,
+        ...(p.country
+          ? {
+              country: p.country,
+              countryLocked: p.countryLocked !== false,
+            }
+          : {}),
+        ...(p.language ? { language: p.language } : {}),
+      });
       return withReminders(
-        buildFreshAccountState(p.token, {
-          firstName: p.firstName || '',
-          lastName: p.lastName || '',
-          email: p.email,
-          username: p.username || emailLocal.slice(0, 20),
-          emailVerified: true,
-          onboardingCompleted: p.onboardingCompleted ?? false,
-        }),
+        grantOwner
+          ? {
+              ...fresh,
+              profile: applyOwnerPremiumPolicy(fresh.profile),
+            }
+          : fresh,
       );
     }
     case 'COMPLETE_ONBOARDING': {
+      const answers = action.answers;
+      const digitalTwin =
+        state.profile.digitalTwin ??
+        defaultDigitalTwin({
+          birthDate: state.profile.birthDate,
+          level: answers.level,
+        });
       return withReminders({
         ...state,
         plan: [],
@@ -493,7 +984,8 @@ function reducer(state: AppState, action: Action): AppState {
         profile: {
           ...state.profile,
           onboardingCompleted: true,
-          onboarding: action.answers,
+          onboarding: answers,
+          digitalTwin,
         },
       });
     }
@@ -549,6 +1041,79 @@ function reducer(state: AppState, action: Action): AppState {
         coachAdaptations: [...messages, ...(state.coachAdaptations ?? [])].slice(0, 12),
       });
     }
+    case 'ADJUST_ACTIVE_PROGRAM': {
+      const today = new Date().toISOString().slice(0, 10);
+      const prevOb = state.profile.onboarding ?? {
+        level: 'intermediaire' as const,
+        goal: '10k' as const,
+        trainingDays: [1, 3, 5],
+        longRunDay: 6,
+      };
+      const onboarding = { ...prevOb, ...action.patch };
+      if (action.patch.trainingDays) {
+        onboarding.trainingDays = [...action.patch.trainingDays].sort(
+          (a, b) => a - b,
+        );
+      }
+      const completed = completedWorkoutIdsFromAnalyses(state.analyses);
+      const messages: string[] = [];
+
+      const daysChanged =
+        action.patch.trainingDays != null || action.patch.longRunDay != null;
+      const paceChanged =
+        action.patch.recentTimeSec != null ||
+        action.patch.vmaKmh != null ||
+        action.patch.raceTimesSec != null ||
+        action.patch.recentDistanceKm != null;
+
+      let plan = state.plan;
+      if (paceChanged) {
+        const paced = rebuildFutureWorkoutPacing({
+          plan,
+          fromDateIso: today,
+          completedWorkoutIds: completed,
+          oldOnboarding: prevOb,
+          newOnboarding: onboarding,
+          activities: state.activities,
+        });
+        plan = paced.plan;
+        if (paced.changed > 0) {
+          messages.push(
+            `Allures recalées sur ${paced.changed} séance${paced.changed > 1 ? 's' : ''} à venir.`,
+          );
+        } else {
+          messages.push('Profil allure mis à jour.');
+        }
+      }
+      if (daysChanged && onboarding.trainingDays?.length) {
+        plan = reschedulePlanToNewDays({
+          plan,
+          fromDateIso: today,
+          trainingDays: onboarding.trainingDays,
+          longRunDay: onboarding.longRunDay ?? 6,
+          completedWorkoutIds: completed,
+        });
+        const gapFill = fillPlanGaps({
+          plan,
+          fromDateIso: today,
+          onboarding,
+          completedWorkoutIds: completed,
+        });
+        plan = gapFill.plan;
+        messages.push(`Jours mis à jour — séances futures décalées.`);
+        if (gapFill.message) messages.push(gapFill.message);
+      }
+
+      return withReminders({
+        ...state,
+        plan,
+        profile: { ...state.profile, onboarding },
+        coachAdaptations: [...messages, ...(state.coachAdaptations ?? [])].slice(
+          0,
+          12,
+        ),
+      });
+    }
     case 'CREATE_PROGRAM': {
       const { plan: newPlan, meta, answers } = buildProgramPlan(action.input);
       const catalogId = meta.catalogId ?? meta.id;
@@ -567,60 +1132,146 @@ function reducer(state: AppState, action: Action): AppState {
         startDateIso: programMeta.startedAt,
         programId: instanceId,
       });
+      const twinForLoad =
+        state.profile.digitalTwin ??
+        defaultDigitalTwin({
+          birthDate: state.profile.birthDate,
+          level: answers.level ?? state.profile.onboarding?.level,
+        });
+      const loadSnap = computeAthleteLoadSnapshot({
+        formTsb: state.banister.formTsb,
+        health: state.health,
+        activities: state.activities,
+        feedbacks: state.feedbacks,
+        plan: sleepRamp.plan,
+        onboarding: { ...(state.profile.onboarding ?? {}), ...answers },
+        twin: twinForLoad,
+      });
+      const loadRamp = applyAthleteLoadStartupRamp(sleepRamp.plan, loadSnap, {
+        startDateIso: programMeta.startedAt.slice(0, 10),
+        programId: instanceId,
+      });
       const scheduleMode = action.scheduleMode ?? 'stack';
-      let incoming = sleepRamp.plan;
-      if (scheduleMode === 'spread') {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const prevActiveRaw = resolveActivePrograms(state.profile);
+      const premiumUser = hasPremiumAccess({
+        plan: state.profile.plan,
+        subscription: state.profile.subscription,
+        premiumSource: state.profile.premiumSource,
+      });
+      // Gratuit : un seul programme actif — refuse « stack » si déjà un plan
+      if (
+        shouldEnforceFreeLimits({
+          plan: state.profile.plan,
+          subscription: state.profile.subscription,
+          premiumSource: state.profile.premiumSource,
+        }) &&
+        scheduleMode === 'stack' &&
+        !canStackAnotherProgram(prevActiveRaw.length, premiumUser)
+      ) {
+        return state;
+      }
+
+      // Remplacer : abandonne les programmes actifs et retire leurs séances futures
+      let basePlan = state.plan;
+      let prevActive = prevActiveRaw;
+      let historySeed = [...(state.profile.programHistory ?? [])];
+      if (scheduleMode === 'replace' && prevActiveRaw.length > 0) {
+        for (const cancelled of prevActiveRaw) {
+          historySeed.unshift({
+            ...cancelled,
+            abandoned: true,
+            abandonedAt: new Date().toISOString(),
+            completedAt: undefined,
+          });
+          basePlan = removeFutureProgramSessions(basePlan, cancelled.id, todayIso);
+        }
+        prevActive = [];
+        historySeed = historySeed.slice(0, 20);
+      }
+
+      let incoming = loadRamp.plan;
+      if (scheduleMode === 'spread' && prevActive.length > 0) {
         incoming = spreadIncomingSessions(
-          state.plan,
+          basePlan,
           incoming,
           action.input.trainingDays,
         );
-      } else if (resolveActivePrograms(state.profile).length > 0) {
+      } else if (scheduleMode === 'stack' && prevActive.length > 0) {
         // Superposer : on garde les jours, mais on décale si 2 qualités / renfos collent
         incoming = rebalanceIncomingAgainstPlan(
-          state.plan,
+          basePlan,
           incoming,
           action.input.trainingDays,
         );
       }
       const mergedPlan = applyConcurrentDaySoftening(
-        mergeProgramPlans(state.plan, incoming),
+        mergeProgramPlans(basePlan, incoming),
       );
 
-      const prevActive = resolveActivePrograms(state.profile);
       const activePrograms = [...prevActive, programMeta];
       const usageId = isRankableProgramId(catalogId) ? catalogId : null;
       const scheduleNote =
-        scheduleMode === 'spread' && prevActive.length > 0
-          ? 'Nouveau programme : séances sur d’autres jours, avec repos entre les qualités et les renfos.'
-          : scheduleMode === 'stack' && prevActive.length > 0
-            ? 'Nouveau programme : mêmes jours quand possible (allégés) ; qualités / renfos trop collés sont décalés.'
-            : null;
+        scheduleMode === 'replace' && prevActiveRaw.length > 0
+          ? 'Nouveau programme : l’ancien a été remplacé.'
+          : scheduleMode === 'spread' && prevActive.length > 0
+            ? 'Nouveau programme : séances sur d’autres jours, avec repos entre les qualités et les renfos.'
+            : scheduleMode === 'stack' && prevActive.length > 0
+              ? 'Nouveau programme : superposé aux jours existants (séances allégées si besoin).'
+              : null;
       const coachAdaptations = [
         scheduleNote,
         intentRamp.message,
         sleepRamp.message,
+        loadRamp.message,
         ...(state.coachAdaptations ?? []),
       ]
         .filter(Boolean)
         .slice(0, 12) as string[];
 
       return (() => {
-        const nextProfile = {
-          ...state.profile,
-          onboardingCompleted: true,
-          onboarding: {
-            ...(state.profile.onboarding ?? {}),
-            ...answers,
+        const todayKey = calendarDayKey();
+        const alreadyXpToday = state.profile.lastProgramCreateXpDay === todayKey;
+        const countedIds = resolveUsageCountedIds(state.profile);
+        const nextCounted =
+          usageId && !countedIds.includes(usageId)
+            ? [...countedIds, usageId]
+            : countedIds;
+        let nextProfile = withUsageIds(
+          {
+            ...state.profile,
+            onboardingCompleted: true,
+            onboarding: {
+              ...(state.profile.onboarding ?? {}),
+              ...answers,
+            },
+            activeProgram: programMeta,
+            activePrograms,
+            programHistory:
+              scheduleMode === 'replace' ? historySeed : state.profile.programHistory,
+            programsLaunchedCount: resolveProgramsLaunchedCount(state.profile) + 1,
+            lastLoadPlanSyncKey: loadSnap.syncKey,
+            digitalTwin:
+              state.profile.digitalTwin ??
+              defaultDigitalTwin({
+                birthDate: state.profile.birthDate,
+                level: answers.level ?? state.profile.onboarding?.level,
+              }),
           },
-          activeProgram: programMeta,
-          activePrograms,
-          programUsageCountedId: usageId,
-        };
+          nextCounted,
+        );
         const unlocked = applyBadgeUnlocks(
           { ...state, plan: mergedPlan, profile: nextProfile },
           state.profile.ranked,
+          undefined,
+          { awardXp: !alreadyXpToday },
         );
+        if (!alreadyXpToday && unlocked.badgeXpAwarded > 0) {
+          nextProfile = {
+            ...nextProfile,
+            lastProgramCreateXpDay: todayKey,
+          };
+        }
         return withReminders({
           ...state,
           plan: mergedPlan,
@@ -648,28 +1299,47 @@ function reducer(state: AppState, action: Action): AppState {
       if (cancelled) {
         history.unshift({
           ...cancelled,
-          completedAt: new Date().toISOString(),
+          abandoned: true,
+          abandonedAt: new Date().toISOString(),
+          completedAt: undefined,
         });
       }
 
       const plan = removeFutureProgramSessions(state.plan, targetId, today);
       const nextActive = remaining[remaining.length - 1];
+      const cancelledCatalog = cancelled
+        ? cancelled.catalogId ?? cancelled.id
+        : null;
+      const finishedIds = resolveUsageFinishedIds(state.profile);
+      let countedIds = resolveUsageCountedIds(state.profile);
+      if (
+        isRankableProgramId(cancelledCatalog) &&
+        !finishedIds.includes(cancelledCatalog)
+      ) {
+        const stillActiveSame = remaining.some(
+          (p) => (p.catalogId ?? p.id) === cancelledCatalog,
+        );
+        if (!stillActiveSame) {
+          countedIds = countedIds.filter((id) => id !== cancelledCatalog);
+        }
+      }
 
       return (() => {
-        const nextProfile = {
-          ...state.profile,
-          activeProgram: nextActive,
-          activePrograms: remaining.length ? remaining : undefined,
-          programHistory: history.slice(0, 20),
-          programUsageCountedId: nextActive
-            ? isRankableProgramId(nextActive.catalogId ?? nextActive.id)
-              ? (nextActive.catalogId ?? nextActive.id)
-              : null
-            : null,
-        };
+        const nextProfile = withUsageIds(
+          {
+            ...state.profile,
+            activeProgram: nextActive,
+            activePrograms: remaining.length ? remaining : undefined,
+            programHistory: history.slice(0, 20),
+          },
+          countedIds,
+          finishedIds,
+        );
         const unlocked = applyBadgeUnlocks(
           { ...state, plan, profile: nextProfile },
           state.profile.ranked,
+          undefined,
+          { awardXp: false },
         );
         return withReminders({
           ...state,
@@ -695,6 +1365,7 @@ function reducer(state: AppState, action: Action): AppState {
 
       const history = [...(state.profile.programHistory ?? [])];
       const newlyFinishedIds: string[] = [];
+      let onboarding = state.profile.onboarding;
       for (const prev of activeList) {
         if (!prev.completedAt) {
           history.unshift({
@@ -703,19 +1374,39 @@ function reducer(state: AppState, action: Action): AppState {
           });
           newlyFinishedIds.push(prev.id);
         }
+        const timeSec = prev.currentBestTimeSec ?? prev.baselineTimeSec;
+        const distKm = prev.baselineDistanceKm ?? prev.targetDistanceKm;
+        if (typeof timeSec === 'number' && timeSec > 0 && distKm && distKm > 0) {
+          onboarding =
+            promoteChronoToOnboarding(onboarding, {
+              distanceKm: distKm,
+              timeSec,
+              sport: prev.sportCategory,
+            }) ?? onboarding;
+        }
       }
       return (() => {
         // Garde l’historique passé — ne vide plus tout le calendrier
         const keptPlan = state.plan.filter((w) => w.date < today);
-        const nextProfile = {
-          ...state.profile,
-          activeProgram: undefined,
-          activePrograms: undefined,
-          programHistory: history.slice(0, 20),
-          programUsageCountedId: null,
-          pendingProgramReviewId:
-            newlyFinishedIds[0] ?? state.profile.pendingProgramReviewId ?? null,
-        };
+        const countedIds = resolveUsageCountedIds(state.profile);
+        const finishedIds = new Set(resolveUsageFinishedIds(state.profile));
+        for (const prev of activeList) {
+          const cid = prev.catalogId ?? prev.id;
+          if (isRankableProgramId(cid)) finishedIds.add(cid);
+        }
+        const nextProfile = withUsageIds(
+          {
+            ...state.profile,
+            onboarding,
+            activeProgram: undefined,
+            activePrograms: undefined,
+            programHistory: history.slice(0, 20),
+            pendingProgramReviewId:
+              newlyFinishedIds[0] ?? state.profile.pendingProgramReviewId ?? null,
+          },
+          countedIds,
+          [...finishedIds],
+        );
         const unlocked = applyBadgeUnlocks(
           { ...state, plan: keptPlan, profile: nextProfile },
           state.profile.ranked,
@@ -724,7 +1415,7 @@ function reducer(state: AppState, action: Action): AppState {
           ...state,
           plan: keptPlan,
           coachAdaptations: [
-            'Programme terminé — ton historique de séances est conservé. Crée un nouveau cycle quand tu veux.',
+            'Programme terminé — ton chrono de référence est enregistré pour le prochain cycle.',
             ...(state.coachAdaptations ?? []),
           ].slice(0, 12),
           profile: {
@@ -736,18 +1427,21 @@ function reducer(state: AppState, action: Action): AppState {
       })();
     }
     case 'SYNC_PROGRAM_USAGE': {
-      const active = state.profile.activeProgram;
-      const current = state.profile.programUsageCountedId;
-      if (current !== undefined) return state;
-      if (!active || !isRankableProgramId(active.id)) {
-        return {
-          ...state,
-          profile: { ...state.profile, programUsageCountedId: null },
-        };
+      const actives = resolveActivePrograms(state.profile);
+      const counted = new Set(resolveUsageCountedIds(state.profile));
+      const finished = resolveUsageFinishedIds(state.profile);
+      let changed = state.profile.programUsageCountedIds == null;
+      for (const p of actives) {
+        const cid = p.catalogId ?? p.id;
+        if (isRankableProgramId(cid) && !counted.has(cid)) {
+          counted.add(cid);
+          changed = true;
+        }
       }
+      if (!changed && state.profile.programUsageCountedIds != null) return state;
       return {
         ...state,
-        profile: { ...state.profile, programUsageCountedId: active.id },
+        profile: withUsageIds(state.profile, [...counted], finished),
       };
     }
     case 'UPDATE_PROFILE': {
@@ -757,9 +1451,39 @@ function reducer(state: AppState, action: Action): AppState {
         delete patch.country;
         delete patch.countryLocked;
       }
-      let profile = { ...state.profile, ...patch };
-      if (action.patch.plan != null) {
-        if (isPremium(action.patch.plan)) {
+      // Impossible de s’auto-attribuer le Premium (sauf compte Google propriétaire)
+      if (patch.plan != null && isPremium(patch.plan)) {
+        if (
+          !isOwnerGooglePremiumGrant(
+            state.profile.email,
+            state.profile.authProvider,
+          )
+        ) {
+          delete patch.plan;
+          delete patch.premiumSource;
+        }
+      }
+      if (patch.authProvider != null) {
+        delete patch.authProvider;
+      }
+      if (patch.premiumSource === 'owner' && !isOwnerPremiumEmail(state.profile.email)) {
+        delete patch.premiumSource;
+      }
+      // Empêcher de forger un abonnement « paid » depuis le client (sauf owner)
+      if (patch.premiumSource === 'paid' && !isOwnerPremiumEmail(state.profile.email)) {
+        delete patch.premiumSource;
+      }
+      let profile = applyOwnerPremiumPolicy({ ...state.profile, ...patch });
+      if (isOwnerPremiumEmail(profile.email)) {
+        profile = {
+          ...profile,
+          ranked: forceOwnerChampionRank(profile.ranked),
+          plan: ownerPremiumPlan(),
+          premiumSource: 'owner',
+        };
+      }
+      if (action.patch.plan != null && patch.plan != null) {
+        if (isPremium(profile.plan)) {
           if (profile.ranked.relegationShieldsLeft == null) {
             profile = {
               ...profile,
@@ -915,21 +1639,23 @@ function reducer(state: AppState, action: Action): AppState {
       }
       const activityDay = action.activity.startDate.slice(0, 10);
       const linkedIds = new Set(state.analyses.map((a) => a.plannedWorkoutId));
-      const planned =
-        state.plan.find((p) => p.id === action.plannedId) ??
-        state.plan.find((p) => p.date === activityDay && p.discipline !== 'rest') ??
-        // Rattrapage : séance d’hier non encore liée
-        (() => {
-          const y = new Date(`${activityDay}T12:00:00`);
-          y.setDate(y.getDate() - 1);
-          const yIso = y.toISOString().slice(0, 10);
-          return state.plan.find(
-            (p) =>
-              p.date === yIso &&
-              p.discipline !== 'rest' &&
-              !linkedIds.has(p.id),
-          );
-        })();
+      const skipPlan = action.linkPlan === false;
+      const planned = skipPlan
+        ? undefined
+        : state.plan.find((p) => p.id === action.plannedId) ??
+          state.plan.find((p) => p.date === activityDay && p.discipline !== 'rest') ??
+          // Rattrapage : séance d’hier non encore liée
+          (() => {
+            const y = new Date(`${activityDay}T12:00:00`);
+            y.setDate(y.getDate() - 1);
+            const yIso = y.toISOString().slice(0, 10);
+            return state.plan.find(
+              (p) =>
+                p.date === yIso &&
+                p.discipline !== 'rest' &&
+                !linkedIds.has(p.id),
+            );
+          })();
       let analyses = state.analyses;
       let plan = state.plan;
       let ranked = state.profile.ranked;
@@ -981,13 +1707,14 @@ function reducer(state: AppState, action: Action): AppState {
           ranked,
           withPremiumXpBonus(sessionGain, isPremium(state.profile.plan)),
         );
-        banister = updateBanister(
-          banister,
+        banister = applyBanisterLoad(
+          state,
           banisterLoadFromSession(
             action.activity.movingSec,
             planned.expectedRpe ?? 6,
           ),
           action.activity.startDate.slice(0, 10),
+          action.activity,
         );
         if (shoes[0]) {
           shoes = addShoeKm(shoes, shoes[0].id, action.activity.distanceM / 1000);
@@ -1023,10 +1750,11 @@ function reducer(state: AppState, action: Action): AppState {
           );
         }
       } else {
-        banister = updateBanister(
-          banister,
+        banister = applyBanisterLoad(
+          state,
           banisterLoadFromSession(action.activity.movingSec, 5),
           action.activity.startDate.slice(0, 10),
+          action.activity,
         );
         const activityDay = action.activity.startDate.slice(0, 10);
         const isFirstSessionOfDay = !state.activities.some(
@@ -1076,6 +1804,8 @@ function reducer(state: AppState, action: Action): AppState {
       ranked = unlocked.ranked;
 
       let activeProgram = state.profile.activeProgram;
+      const prevBest = activeProgram?.currentBestTimeSec;
+      let onboarding = state.profile.onboarding;
       if (activeProgram) {
         activeProgram = applyActivityToProgramProgress(activeProgram, action.activity);
         const ids = activeProgram.activityIds ?? [];
@@ -1085,12 +1815,46 @@ function reducer(state: AppState, action: Action): AppState {
             activityIds: [action.activity.id, ...ids].slice(0, 200),
           };
         }
+        const nextBest = activeProgram.currentBestTimeSec;
+        if (
+          typeof nextBest === 'number' &&
+          nextBest > 0 &&
+          nextBest !== prevBest
+        ) {
+          const trackKm =
+            activeProgram.baselineDistanceKm ?? activeProgram.targetDistanceKm;
+          if (trackKm && trackKm > 0) {
+            onboarding =
+              promoteChronoToOnboarding(onboarding, {
+                distanceKm: trackKm,
+                timeSec: nextBest,
+                sport: activeProgram.sportCategory,
+              }) ?? onboarding;
+          }
+        }
       }
 
-      const profileBase = { ...state.profile, ranked, shoes, achievements };
+      const profileBase = {
+        ...state.profile,
+        ranked,
+        shoes,
+        achievements,
+        onboarding,
+        digitalTwin: state.profile.digitalTwin ?? resolveDigitalTwin(state),
+      };
       const profile = activeProgram
         ? syncActiveProgramInProfile(profileBase, activeProgram)
         : profileBase;
+
+      const twinForPred = profile.digitalTwin ?? resolveDigitalTwin({ profile });
+      const sleepScore = state.health.sleep?.score;
+      const readinessApprox =
+        sleepScore != null
+          ? Math.round((sleepScore + Math.max(0, Math.min(100, 50 + state.banister.formTsb))) / 2)
+          : Math.max(40, Math.min(90, 55 + state.banister.formTsb));
+      const pendingPredictedRpe = planned
+        ? predictSessionRpe(planned, readinessApprox, twinForPred.response.rpeBias)
+        : null;
 
       return withReminders({
         ...state,
@@ -1100,6 +1864,7 @@ function reducer(state: AppState, action: Action): AppState {
         banister,
         lifetime,
         pendingRpeActivityId: action.activity.id,
+        pendingPredictedRpe,
         coachAdaptations,
         profile,
       });
@@ -1126,9 +1891,19 @@ function reducer(state: AppState, action: Action): AppState {
         if (!next.baselineDistanceKm) next.baselineDistanceKm = dist;
       }
 
+      const onboarding =
+        promoteChronoToOnboarding(state.profile.onboarding, {
+          distanceKm: dist,
+          timeSec,
+          sport: next.sportCategory,
+        }) ?? state.profile.onboarding;
+
       return withReminders({
         ...state,
-        profile: syncActiveProgramInProfile(state.profile, next),
+        profile: {
+          ...syncActiveProgramInProfile(state.profile, next),
+          onboarding,
+        },
       });
     }
     case 'SAVE_PROGRAM_REVIEW': {
@@ -1164,7 +1939,7 @@ function reducer(state: AppState, action: Action): AppState {
       const sid = action.feedback.sessionId;
       const already = state.feedbacks.some((f) => f.sessionId === sid);
       if (already) {
-        return { ...state, pendingRpeActivityId: null };
+        return { ...state, pendingRpeActivityId: null, pendingPredictedRpe: null };
       }
       const ranked = applyXp(
         state.profile.ranked,
@@ -1220,6 +1995,39 @@ function reducer(state: AppState, action: Action): AppState {
             : 'Feedback enregistré — plan maintenu pour l’instant.');
       }
 
+      const twin = resolveDigitalTwin(state);
+      const hrv = state.health.hrv;
+      const observedHrvRatio =
+        hrv && hrv.baseline7d > 0
+          ? hrv.rmssdNight / hrv.baseline7d
+          : hrv?.deltaPct != null
+            ? 1 + hrv.deltaPct / 100
+            : undefined;
+      const predictedRpe =
+        state.pendingPredictedRpe ??
+        (planned
+          ? predictSessionRpe(
+              planned,
+              state.health.sleep?.score ?? 65,
+              twin.response.rpeBias,
+            )
+          : undefined);
+      const learned = learnFromSession(twin, {
+        predictedRpe,
+        actualRpe: action.feedback.rpe,
+        predictedFormTsb: state.banister.formTsb,
+        observedHrvRatio,
+        recoveryFeltVsExpected:
+          action.feedback.mental === 'excellent'
+            ? 0.5
+            : action.feedback.mental === 'epuise'
+              ? -0.6
+              : 0,
+      });
+      const learnNote = learned.insight
+        ? `Azimut vient d’apprendre : ${learned.insight}`
+        : null;
+
       const unlocked = applyBadgeUnlocks(
         {
           ...state,
@@ -1228,18 +2036,60 @@ function reducer(state: AppState, action: Action): AppState {
         ranked,
       );
       const coachAdaptations = [
+        learnNote,
         adaptationMsg,
         ...(state.coachAdaptations ?? []),
       ]
         .filter(Boolean)
         .slice(0, 12) as string[];
 
+      return withReminders(
+        syncPlanToAthleteLoad({
+          ...state,
+          feedbacks: [...state.feedbacks, action.feedback],
+          plan,
+          coachAdaptations,
+          pendingRpeActivityId: null,
+          pendingPredictedRpe: null,
+          profile: {
+            ...state.profile,
+            ranked: unlocked.ranked,
+            achievements: unlocked.achievements,
+            digitalTwin: learned.twin,
+          },
+        }),
+      );
+    }
+    case 'COMPLETE_SESSION_DONE': {
+      const sid = action.sessionId;
+      const already = state.feedbacks.some((f) => f.sessionId === sid);
+      if (already) return { ...state, pendingRpeActivityId: null };
+      const ranked = applyXp(
+        state.profile.ranked,
+        withPremiumXpBonus(RPE_SUBMIT_XP, isPremium(state.profile.plan)),
+      );
+      const feedback: RpeFeedback = {
+        sessionId: sid,
+        rpe: 5,
+        muscle: 'aucune_gene',
+        mental: 'neutre',
+        submittedAt: new Date().toISOString(),
+      };
+      const unlocked = applyBadgeUnlocks(
+        {
+          ...state,
+          feedbacks: [...state.feedbacks, feedback],
+        },
+        ranked,
+      );
       return withReminders({
         ...state,
-        feedbacks: [...state.feedbacks, action.feedback],
-        plan,
-        coachAdaptations,
+        feedbacks: [...state.feedbacks, feedback],
         pendingRpeActivityId: null,
+        coachAdaptations: [
+          'Séance callisthénie validée — pas d’ajustement RPE.',
+          ...(state.coachAdaptations ?? []),
+        ].slice(0, 12),
         profile: {
           ...state.profile,
           ranked: unlocked.ranked,
@@ -1248,13 +2098,22 @@ function reducer(state: AppState, action: Action): AppState {
       });
     }
     case 'DISMISS_RPE':
-      return { ...state, pendingRpeActivityId: null };
+      return { ...state, pendingRpeActivityId: null, pendingPredictedRpe: null };
     case 'MOVE_WORKOUT':
       return {
         ...state,
         plan: state.plan.map((w) =>
           w.id === action.id ? { ...w, date: action.newDate } : w,
         ),
+      };
+    case 'REMOVE_WORKOUT':
+      return {
+        ...state,
+        plan: state.plan.filter((w) => w.id !== action.id),
+        coachAdaptations: [
+          'Séance retirée du plan.',
+          ...(state.coachAdaptations ?? []),
+        ].slice(0, 12),
       };
     case 'UPDATE_WORKOUT':
       return {
@@ -1490,12 +2349,19 @@ function reducer(state: AppState, action: Action): AppState {
         (withKm.kmOdysseyPaid?.bike ?? 0) !== (prev.kmOdysseyPaid?.bike ?? 0) ||
         (withKm.kmOdysseyPaid?.swim ?? 0) !== (prev.kmOdysseyPaid?.swim ?? 0) ||
         withKm.xp !== ranked.xp;
-      if (!ladderTouched && !kmTouched) {
+      const ownerChampion = isOwnerPremiumEmail(state.profile.email)
+        ? forceOwnerChampionRank(withKm)
+        : withKm;
+      const championTouched =
+        ownerChampion.tier !== withKm.tier ||
+        ownerChampion.level !== withKm.level ||
+        ownerChampion.division !== withKm.division;
+      if (!ladderTouched && !kmTouched && !championTouched) {
         return state;
       }
       return {
         ...state,
-        profile: { ...state.profile, ranked: withKm },
+        profile: { ...state.profile, ranked: ownerChampion },
       };
     }
     case 'CELEBRATE_LEVEL': {
@@ -1531,15 +2397,23 @@ function reducer(state: AppState, action: Action): AppState {
         countryLocked: state.profile.countryLocked,
       });
       if (!resolved.changed && state.profile.countryLocked) return state;
+      const hadExplicitCountry = Boolean(state.profile.country?.trim());
+      const nextLanguage =
+        hadExplicitCountry && state.profile.language
+          ? state.profile.language
+          : localeFromCountry(resolved.country);
       return {
         ...state,
         profile: {
           ...state.profile,
           country: resolved.country,
           countryLocked: true,
+          language: nextLanguage,
         },
       };
     }
+    case 'SYNC_PLAN_TO_LOAD':
+      return withReminders(syncPlanToAthleteLoad(state));
     case 'CLAIM_RANKING_REWARD': {
       const claimed = state.profile.ranked.rankingRewardsClaimed ?? [];
       if (claimed.some((c) => c.id === action.rewardId)) return state;
@@ -1577,9 +2451,118 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
     }
+    case 'CREATE_CLUB': {
+      const name = action.name.trim();
+      if (!name) return state;
+      const me = state.profile.username.trim().toLowerCase();
+      const display =
+        [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') ||
+        me;
+      const id =
+        action.id?.trim() ||
+        `club-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      if ((state.clubs ?? []).some((c) => c.id === id)) return state;
+      const now = new Date().toISOString();
+      const club: Club = {
+        id,
+        name,
+        description: action.description.trim() || 'Groupe créé sur Azimut.',
+        city: action.city?.trim() || undefined,
+        sportLabel: action.sportLabel?.trim() || undefined,
+        visibility: action.visibility ?? 'public',
+        createdAt: now,
+        createdByUsername: me,
+        members: [
+          {
+            username: me,
+            displayName: display,
+            role: 'owner',
+            joinedAt: now,
+          },
+        ],
+        posts: [
+          {
+            id: `${id}-welcome`,
+            authorUsername: me,
+            authorDisplayName: display,
+            createdAt: now,
+            kind: 'message',
+            text: `Bienvenue dans ${name} — partagez séances, programmes et infos ici.`,
+          },
+        ],
+      };
+      return { ...state, clubs: [club, ...(state.clubs ?? [])] };
+    }
+    case 'JOIN_CATALOG_CLUB': {
+      const catalog = CATALOG_CLUBS.find((c) => c.id === action.catalogId);
+      if (!catalog) return state;
+      const clubs = state.clubs ?? [];
+      if (clubs.some((c) => c.id === catalog.id || c.catalogId === catalog.id)) {
+        return state;
+      }
+      const me = state.profile.username.trim().toLowerCase();
+      const display =
+        [state.profile.firstName, state.profile.lastName].filter(Boolean).join(' ') ||
+        me;
+      const club = catalogClubToClub(catalog, { username: me, displayName: display });
+      return { ...state, clubs: [club, ...clubs] };
+    }
+    case 'LEAVE_CLUB': {
+      const clubs = state.clubs ?? [];
+      const club = clubs.find((c) => c.id === action.clubId);
+      if (!club) return state;
+      const me = state.profile.username.trim().toLowerCase();
+      if (!club.members.some((m) => m.username === me)) return state;
+      // Local-first : quitter = retirer le club de mon appareil
+      return { ...state, clubs: clubs.filter((c) => c.id !== action.clubId) };
+    }
+    case 'DELETE_CLUB': {
+      const me = state.profile.username.trim().toLowerCase();
+      const clubs = state.clubs ?? [];
+      const club = clubs.find((c) => c.id === action.clubId);
+      if (!club) return state;
+      const isOwner = club.members.some((m) => m.username === me && m.role === 'owner');
+      if (!isOwner && club.createdByUsername !== me) return state;
+      return { ...state, clubs: clubs.filter((c) => c.id !== action.clubId) };
+    }
+    case 'POST_CLUB_MESSAGE': {
+      const text = action.text.trim();
+      if (!text) return state;
+      return patchClubPost(state, action.clubId, {
+        kind: 'message',
+        text,
+      });
+    }
+    case 'SHARE_ACTIVITY_TO_CLUB': {
+      const activity = state.activities.find((a) => a.id === action.activityId);
+      if (!activity) return state;
+      const km = activity.distanceM
+        ? Math.round((activity.distanceM / 1000) * 10) / 10
+        : undefined;
+      return patchClubPost(state, action.clubId, {
+        kind: 'activity',
+        text: action.note?.trim() || undefined,
+        activityId: activity.id,
+        activityTitle: activity.name,
+        activityDistanceKm: km,
+      });
+    }
+    case 'SHARE_PROGRAM_TO_CLUB': {
+      if (!action.programId || !action.programTitle.trim()) return state;
+      return patchClubPost(state, action.clubId, {
+        kind: 'program',
+        text: action.note?.trim() || undefined,
+        programId: action.programId,
+        programTitle: action.programTitle.trim(),
+      });
+    }
     default:
       return state;
   }
+}
+
+function reducer(state: AppState, action: Action): AppState {
+  return ensureOwnerAccountInvariants(reduceAppState(state, action));
 }
 
 const initial: AppState = emptyState();
@@ -1592,10 +2575,40 @@ const Ctx = createContext<{
 } | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initial);
+  const [state, rawDispatch] = useReducer(reducer, initial);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionMeta, setSessionMeta] = useState<SessionMeta | null>(null);
   const hydrated = useRef(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const sessionMetaRef = useRef(sessionMeta);
+  sessionMetaRef.current = sessionMeta;
+
+  /** Dispatch + fan-out social ; flush immédiat sur mutations critiques. */
+  const dispatch = useCallback((action: Action) => {
+    const prev = stateRef.current;
+    const next = reducer(prev, action);
+    stateRef.current = next;
+    rawDispatch(action);
+    fanOutSocialSideEffect(action, prev);
+
+    const critical =
+      action.type === 'LOGOUT' ||
+      action.type === 'INGEST_STRAVA' ||
+      action.type === 'COMPLETE_SESSION_DONE' ||
+      action.type === 'LOGIN' ||
+      action.type === 'RESTORE_SESSION' ||
+      action.type === 'ADJUST_ACTIVE_PROGRAM' ||
+      action.type === 'RESCHEDULE_TRAINING_DAYS';
+    if (!critical) return;
+    const meta = sessionMetaRef.current;
+    if (!meta?.rsid) return;
+    if (!next.authToken) {
+      void clearSession();
+      return;
+    }
+    void saveSessionImmediate(meta.rsid, next, meta.deviceLabel);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1613,6 +2626,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const persisted = await loadSession();
 
         if (!cancelled && persisted && (await isSessionValidForDevice(persisted))) {
+          await clearAllSocialInbox();
           dispatch({ type: 'RESTORE_SESSION', state: persisted.state });
           if (persisted.state.profile.onboardingCompleted) {
             void markOnboardingCompleted(
@@ -1654,7 +2668,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!sessionReady || !hydrated.current) return;
     dispatch({ type: 'PRUNE_FINISHED_PROGRAM' });
     dispatch({ type: 'SYNC_PROGRAM_USAGE' });
+    dispatch({ type: 'SYNC_PLAN_TO_LOAD' });
   }, [sessionReady, dispatch]);
+
+  /** Premium offert (liste owner) ↔ plan local — ne touche jamais un abonnement payant. */
+  useEffect(() => {
+    if (!sessionReady || !hydrated.current) return;
+    if (!state.authToken || !state.profile.email) return;
+    let cancelled = false;
+    void (async () => {
+      const status = await resolveGiftedPremiumStatus(
+        state.profile.email,
+        state.authToken,
+      );
+      if (!cancelled) {
+        dispatch({
+          type: 'SYNC_PREMIUM_ENTITLEMENT',
+          gifted: status.gifted,
+          confirmed: status.confirmed,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionReady, state.authToken, state.profile.email, dispatch]);
 
   /** Présence quotidienne → XP ligue (1× / jour). */
   useEffect(() => {
@@ -1730,6 +2768,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void clearSession();
     }
   }, [state, sessionReady, sessionMeta?.rsid, sessionMeta?.deviceLabel]);
+
+  useEffect(() => {
+    return () => {
+      void flushPendingSessionSave();
+    };
+  }, []);
 
   const value = useMemo(
     () => ({ state, dispatch, sessionReady, sessionMeta }),

@@ -35,6 +35,34 @@ import {
 } from '../../src/storage/userRegistry';
 import { ProfileAvatar } from '../../src/ui/profile/ProfileAvatar';
 import { BioRichText } from '../../src/ui/profile/BioRichText';
+import { RankBadge } from '../../src/ui/ranked/RankBadge';
+import { SoftPulse } from '../../src/ui/motion/softMotion';
+import { ReportSheet } from '../../src/ui/social/ReportSheet';
+import {
+  communityBlockUser,
+  communityFollow,
+  communityReport,
+  communityUnfollow,
+} from '../../src/api/community';
+import { addLocalBlock } from '../../src/storage/communityBlocks';
+import type { RankTier } from '../../src/types/domain';
+
+function demoRank(username: string): { tier: RankTier; division: 1 | 2 | 3 } {
+  const tiers: RankTier[] = [
+    'bronze',
+    'argent',
+    'or',
+    'diamant',
+    'platine',
+    'elite',
+  ];
+  let h = 0;
+  for (let i = 0; i < username.length; i++) h = (h * 31 + username.charCodeAt(i)) >>> 0;
+  return {
+    tier: tiers[h % tiers.length]!,
+    division: ((h % 3) + 1) as 1 | 2 | 3,
+  };
+}
 
 function demoPrivacy(username: string): {
   visibility: ProfileVisibility;
@@ -75,6 +103,8 @@ export default function UserProfileScreen() {
   const member = useMemo(() => findDemoMember(username), [username]);
   const [registryUser, setRegistryUser] = useState<RegistryUser | null>(null);
   const [registryReady, setRegistryReady] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const crest = useMemo(() => demoRank(username), [username]);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,17 +195,21 @@ export default function UserProfileScreen() {
   const onFollowPress = () => {
     if (viewerFollows) {
       dispatch({ type: 'UNFOLLOW_USER', username });
+      void communityUnfollow(state.authToken, username);
       return;
     }
     if (requestPending) {
       dispatch({ type: 'CANCEL_FOLLOW_REQUEST', username });
+      void communityUnfollow(state.authToken, username);
       return;
     }
+    const requiresApproval = needsApproval && !theyFollowMe;
     dispatch({
       type: 'FOLLOW_USER',
       username,
-      requiresApproval: needsApproval && !theyFollowMe,
+      requiresApproval,
     });
+    void communityFollow(state.authToken, username, requiresApproval);
   };
 
   const onLikeProgram = (programId: string, programTitle: string) => {
@@ -240,12 +274,21 @@ export default function UserProfileScreen() {
     return (
       <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.header}>
-          <ProfileAvatar
-            uri={registryUser.avatarUri}
-            initials={`${registryUser.firstName?.[0] || '?'}${registryUser.lastName?.[0] || ''}`}
-            size={72}
-            borderColor={colors.accent}
-          />
+          <View style={styles.crestRow}>
+            {!viewerFollows ? (
+              <SoftPulse>
+                <RankBadge tier={crest.tier} division={crest.division} size={72} />
+              </SoftPulse>
+            ) : (
+              <RankBadge tier={crest.tier} division={crest.division} size={72} />
+            )}
+            <ProfileAvatar
+              uri={registryUser.avatarUri}
+              initials={`${registryUser.firstName?.[0] || '?'}${registryUser.lastName?.[0] || ''}`}
+              size={72}
+              borderColor={colors.accent}
+            />
+          </View>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.handle}>
             {formatUsernameDisplay(registryUser.username)}
@@ -259,23 +302,47 @@ export default function UserProfileScreen() {
               {[registryUser.city, registryUser.sport].filter(Boolean).join(' · ')}
             </Text>
           )}
-          <Pressable
-            style={[
-              styles.followBtn,
-              (viewerFollows || requestPending) && styles.followingBtn,
-            ]}
-            onPress={onFollowPress}
-          >
-            <Text
+          <View style={styles.actionRow}>
+            <Pressable
               style={[
-                styles.followText,
-                (viewerFollows || requestPending) && styles.followingText,
+                styles.followBtn,
+                (viewerFollows || requestPending) && styles.followingBtn,
               ]}
+              onPress={onFollowPress}
             >
-              {followLabel}
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.followText,
+                  (viewerFollows || requestPending) && styles.followingText,
+                ]}
+              >
+                {followLabel}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.moreBtn} onPress={() => setReportOpen(true)}>
+              <Text style={styles.moreBtnText}>···</Text>
+            </Pressable>
+          </View>
         </View>
+        <ReportSheet
+          visible={reportOpen}
+          targetLabel="ce profil"
+          onClose={() => setReportOpen(false)}
+          onReport={(reason) => {
+            void communityReport(state.authToken, {
+              targetType: 'user',
+              targetId: username,
+              reason,
+            });
+            Alert.alert('Signalement envoyé', 'Merci — notre équipe va regarder.');
+          }}
+          onBlock={() => {
+            void communityBlockUser(state.authToken, username);
+            void addLocalBlock(username);
+            Alert.alert('Bloqué', `@${username} ne pourra plus interagir.`);
+            router.back();
+          }}
+        />
       </AppScrollView>
     );
   }
@@ -321,16 +388,25 @@ export default function UserProfileScreen() {
       ) : null}
 
       <View style={styles.header}>
-        <ProfileAvatar
-          uri={registryUser?.avatarUri}
-          initials={demo.name
-            .split(' ')
-            .map((p) => p[0])
-            .join('')
-            .slice(0, 2)}
-          size={72}
-          borderColor={colors.accent}
-        />
+        <View style={styles.crestRow}>
+          {!viewerFollows ? (
+            <SoftPulse>
+              <RankBadge tier={crest.tier} division={crest.division} size={72} />
+            </SoftPulse>
+          ) : (
+            <RankBadge tier={crest.tier} division={crest.division} size={72} />
+          )}
+          <ProfileAvatar
+            uri={registryUser?.avatarUri}
+            initials={demo.name
+              .split(' ')
+              .map((p) => p[0])
+              .join('')
+              .slice(0, 2)}
+            size={72}
+            borderColor={colors.accent}
+          />
+        </View>
         <Text style={styles.name}>{demo.name}</Text>
         <Text style={styles.handle}>{formatUsernameDisplay(demo.username)}</Text>
         {registryUser?.bio?.trim() ? (
@@ -340,22 +416,27 @@ export default function UserProfileScreen() {
         <Text style={styles.city}>
           {demo.city} · {demo.sport}
         </Text>
-        <Pressable
-          style={[
-            styles.followBtn,
-            (viewerFollows || requestPending) && styles.followingBtn,
-          ]}
-          onPress={onFollowPress}
-        >
-          <Text
+        <View style={styles.actionRow}>
+          <Pressable
             style={[
-              styles.followText,
-              (viewerFollows || requestPending) && styles.followingText,
+              styles.followBtn,
+              (viewerFollows || requestPending) && styles.followingBtn,
             ]}
+            onPress={onFollowPress}
           >
-            {followLabel}
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.followText,
+                (viewerFollows || requestPending) && styles.followingText,
+              ]}
+            >
+              {followLabel}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.moreBtn} onPress={() => setReportOpen(true)}>
+            <Text style={styles.moreBtnText}>···</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Volumes : visibles même en privé (sauf masquage stats) */}
@@ -602,6 +683,25 @@ export default function UserProfileScreen() {
           ) : null}
         </>
       )}
+      <ReportSheet
+        visible={reportOpen}
+        targetLabel="ce profil"
+        onClose={() => setReportOpen(false)}
+        onReport={(reason) => {
+          void communityReport(state.authToken, {
+            targetType: 'user',
+            targetId: username,
+            reason,
+          });
+          Alert.alert('Signalement envoyé', 'Merci — notre équipe va regarder.');
+        }}
+        onBlock={() => {
+          void communityBlockUser(state.authToken, username);
+          void addLocalBlock(username);
+          Alert.alert('Bloqué', `@${username} ne pourra plus interagir.`);
+          router.back();
+        }}
+      />
     </AppScrollView>
   );
 }
@@ -691,8 +791,36 @@ function makeStyles(colors: ColorPalette) {
       overflow: 'hidden',
     },
     city: { marginTop: 8, color: colors.textSecondary, fontSize: 13 },
-    followBtn: {
+    crestRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 4,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
       marginTop: spacing.md,
+    },
+    moreBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bgElevated,
+    },
+    moreBtnText: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+    followBtn: {
+      marginTop: 0,
       backgroundColor: colors.accent,
       paddingHorizontal: 28,
       paddingVertical: 12,

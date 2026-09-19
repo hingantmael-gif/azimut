@@ -19,6 +19,10 @@ import {
 import { getWatchEntry } from '../../src/constants/watches';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
+import { useI18n } from '../../src/i18n/I18nContext';
+import { localeLabel } from '../../src/i18n/locales';
+import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
+import { hasPremiumAccess } from '../../src/premium/entitlement';
 
 /**
  * Hub paramètres — préférences app uniquement (comme Strava / Apple Fitness).
@@ -28,13 +32,18 @@ export default function SettingsIndex() {
   const router = useRouter();
   const { state, dispatch } = useApp();
   const { colors } = useThemeColors();
+  const { t, locale } = useI18n();
   const [query, setQuery] = useState(getSettingsSearchDraft);
   const isDark = state.profile.theme === 'dark';
   const watchLabel = state.profile.watch?.brandId
     ? getWatchEntry(state.profile.watch.brandId).label
-    : 'Non configurée';
+    : '—';
 
-  const searchResults = useMemo(() => searchSettings(query), [query]);
+  const searchResults = useMemo(() => {
+    const results = searchSettings(query);
+    if (isOwnerPremiumEmail(state.profile.email)) return results;
+    return results.filter((item) => item.id !== 'premium-manage');
+  }, [query, state.profile.email]);
   const searching = query.trim().length > 0;
 
   useFocusEffect(
@@ -51,13 +60,13 @@ export default function SettingsIndex() {
   return (
     <SettingsScreen>
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
-        <SettingsBrandHeader subtitle="Paramètres · affichage, sync, compte" />
+        <SettingsBrandHeader subtitle={t('settings.subtitle')} />
 
         <View style={styles.searchWrap}>
           <AppTextInput
             value={query}
             onChangeText={onChangeQuery}
-            placeholder="Rechercher (montre, notifications, compte…)"
+            placeholder={t('settings.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={[
               styles.searchInput,
@@ -99,10 +108,22 @@ export default function SettingsIndex() {
         ) : (
           <>
             <SettingsSection title="Compte">
+              {isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
+                  label="Gestion compte premium"
+                  value="Cadeaux Premium"
+                  onPress={() => router.push('/settings/premium-manage')}
+                />
+              ) : null}
               <SettingsRow
                 label="Modifier mon profil"
                 value={`${state.profile.firstName} ${state.profile.lastName}`.trim() || undefined}
                 onPress={() => router.push('/settings/profile')}
+              />
+              <SettingsRow
+                label="Profil sportif"
+                value="Objectifs · données · forme"
+                onPress={() => router.push('/settings/athlete-hub')}
               />
               <SettingsRow
                 label="Compte et sécurité"
@@ -110,10 +131,10 @@ export default function SettingsIndex() {
               />
             </SettingsSection>
 
-            <SettingsSection title="Affichage">
+            <SettingsSection title={t('settings.display')}>
               <SettingsToggleRow
-                label="Mode sombre"
-                subtitle="Interface sombre pour un confort visuel réduit"
+                label={t('settings.darkMode')}
+                subtitle={t('settings.darkModeSub')}
                 value={isDark}
                 onToggle={() =>
                   dispatch({
@@ -123,8 +144,15 @@ export default function SettingsIndex() {
                 }
               />
               <SettingsRow
-                label="Unités et carte"
-                value={state.profile.units === 'metric' ? 'Métrique' : 'Impérial'}
+                label={t('settings.language')}
+                value={localeLabel(locale)}
+                onPress={() => router.push('/settings/display')}
+              />
+              <SettingsRow
+                label={t('settings.unitsMap')}
+                value={
+                  state.profile.units === 'metric' ? t('settings.metric') : t('settings.imperial')
+                }
                 onPress={() => router.push('/settings/display')}
               />
             </SettingsSection>
@@ -168,6 +196,19 @@ export default function SettingsIndex() {
             </SettingsSection>
 
             <SettingsSection title="Explorer">
+              <SettingsRow
+                label="Abonnement Premium"
+                value={
+                  hasPremiumAccess({
+                    plan: state.profile.plan,
+                    subscription: state.profile.subscription,
+                    premiumSource: state.profile.premiumSource,
+                  })
+                    ? 'Actif'
+                    : 'Gratuit'
+                }
+                onPress={() => router.push('/settings/subscription')}
+              />
               <SettingsRow
                 label="Tout explorer"
                 value="Outils inclus"

@@ -1,4 +1,5 @@
-import type { NotificationPrefs } from '../types/domain';
+import type { NotificationPrefs, PlannedWorkout } from '../types/domain';
+import { generateReminderCopy } from './preSessionReminder';
 
 /** Rappels intelligents §5 — planification locale */
 export type ScheduledReminder = {
@@ -14,17 +15,29 @@ export function buildDailyReminders(
   hasSessionToday: boolean,
   sessionDone: boolean,
   sleepScore?: number,
+  opts?: {
+    sessionTitle?: string;
+    formTsb?: number;
+    todayWorkout?: PlannedWorkout | null;
+  },
 ): ScheduledReminder[] {
   const today = new Date().toISOString().slice(0, 10);
   const out: ScheduledReminder[] = [];
 
-  if (prefs.preSession && hasSessionToday) {
+  if (prefs.preSession && hasSessionToday && !sessionDone) {
+    const copy = generateReminderCopy({
+      sessionTitle: opts?.sessionTitle ?? opts?.todayWorkout?.title ?? 'Séance du jour',
+      formTsb: opts?.formTsb,
+      sleepScore,
+      hoursUntilApprox: 2,
+      sessionDate: today,
+    });
     out.push({
-      id: 'pre-1h',
+      id: 'pre-2h',
       type: 'pre_session',
-      title: 'Prépare-toi pour ta séance',
-      body: 'Ta séance du jour t’attend — consulte le détail et envoie-la à ta montre.',
-      at: `${today}T07:00:00`,
+      title: copy.title,
+      body: copy.body,
+      at: copy.at,
     });
   }
   if (prefs.morningSleep && sleepScore !== undefined) {

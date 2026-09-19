@@ -56,7 +56,7 @@ const FAQ: FaqItem[] = [
     id: 'program',
     title: 'Créer un programme',
     body:
-      'Depuis Accueil ou Profil, lance « Nouveau programme », choisis sport / durée / options, puis génère. Tu peux ajouter un programme en parallèle : Répartir (autres jours + repos entre qualités/renfos) ou Superposer (mêmes jours, séances allégées).',
+      'Depuis Accueil ou Profil, lance « Nouveau programme », choisis sport / durée / options, puis génère. Si un programme est déjà actif : Superposer (mêmes jours, allégé) ou Remplacer (arrête l’ancien).',
     actionLabel: 'Nouveau programme',
     href: '/program/new',
   },

@@ -11,6 +11,21 @@ export type SettingsSearchItem = {
 /** Catalogue searchable — chemins alignés sur la nouvelle IA */
 export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
   {
+    id: 'premium-manage',
+    label: 'Gestion compte premium',
+    path: 'Paramètres → Compte → Gestion compte premium',
+    keywords: [
+      'premium',
+      'cadeau',
+      'offrir',
+      'abonnement',
+      'gestion',
+      'owner',
+      'champion',
+    ],
+    href: '/settings/premium-manage' as Href,
+  },
+  {
     id: 'watch',
     label: 'Montre',
     path: 'Paramètres → Appareils & sync → Montre',
@@ -43,7 +58,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
   {
     id: 'sports-data',
     label: 'Données sportives',
-    path: 'Vous → Athlète → Données sportives',
+    path: 'Paramètres → Profil sportif → Données',
     keywords: [
       'chronos',
       'vma',
@@ -59,7 +74,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
       'performance',
       'discipline',
     ],
-    href: '/settings/sports-data' as Href,
+    href: '/settings/athlete-hub' as Href,
   },
   {
     id: 'profile-cover',
@@ -76,11 +91,30 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
     href: '/settings/profile' as Href,
   },
   {
+    id: 'athlete-hub',
+    label: 'Profil sportif',
+    path: 'Paramètres → Compte → Profil sportif',
+    keywords: [
+      'profil sportif',
+      'objectifs',
+      'but',
+      'niveau',
+      'volume',
+      'chronos',
+      'vma',
+      'ftp',
+      'forme',
+      'fitness',
+      'athlète',
+    ],
+    href: '/settings/athlete-hub' as Href,
+  },
+  {
     id: 'goals',
     label: 'Objectifs & niveau',
-    path: 'Vous → Athlète',
+    path: 'Paramètres → Profil sportif → Objectifs',
     keywords: ['objectifs', 'but', 'niveau', 'volume'],
-    href: '/settings/goals' as Href,
+    href: '/settings/athlete-hub' as Href,
   },
   {
     id: 'privacy',
@@ -98,9 +132,27 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
   },
   {
     id: 'display',
-    label: 'Unités et carte',
+    label: 'Unités, carte et langue',
     path: 'Paramètres → Affichage',
-    keywords: ['affichage', 'thème', 'unités', 'sombre', 'carte'],
+    keywords: [
+      'affichage',
+      'thème',
+      'unités',
+      'sombre',
+      'carte',
+      'langue',
+      'language',
+      'english',
+      'idioma',
+      'sprache',
+    ],
+    href: '/settings/display' as Href,
+  },
+  {
+    id: 'language',
+    label: 'Langue',
+    path: 'Paramètres → Affichage → Langue',
+    keywords: ['langue', 'language', 'traduction', 'english', 'español', 'deutsch'],
     href: '/settings/display' as Href,
   },
   {
@@ -156,9 +208,24 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchItem[] = [
     href: '/settings/account' as Href,
   },
   {
+    id: 'subscription',
+    label: 'Abonnement Premium',
+    path: 'Paramètres → Abonnement',
+    keywords: [
+      'premium',
+      'abonnement',
+      'payer',
+      'offre',
+      'mensuel',
+      'annuel',
+      'essai',
+    ],
+    href: '/settings/subscription' as Href,
+  },
+  {
     id: 'explorer',
     label: 'Tout explorer',
-    path: 'Paramètres → Explorer',
+    path: 'Paramètres → Abonnement',
     keywords: ['explorer', 'fonctionnalités', 'outils', 'catalogue'],
     href: '/settings/subscription' as Href,
   },

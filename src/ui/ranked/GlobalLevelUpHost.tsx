@@ -53,7 +53,9 @@ export function GlobalLevelUpHost() {
       return;
     }
     setLevel(pendingLevel);
-    setVisible(true);
+    // Différer ~1s après confirmation d’action (audit §4.2) — jamais en simultané.
+    const t = setTimeout(() => setVisible(true), 1000);
+    return () => clearTimeout(t);
   }, [pendingLevel, defer]);
 
   if (!visible || !level) return null;

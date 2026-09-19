@@ -23,6 +23,11 @@ import { AppScrollView } from '../src/ui/scrolling';
 import { openStravaWebForGpxExport } from '../src/engines/stravaExport';
 import { SportAtmosphereBanner } from '../src/ui/SportAtmosphereBanner';
 import { ATMOSPHERE_IMAGES } from '../src/constants/sportVisuals';
+import {
+  peekUsageQuotaAllowed,
+  takeUsageQuotaIfNeeded,
+} from '../src/premium/guardQuota';
+import { PaywallSheet } from '../src/ui/premium';
 
 export default function ImportActivityScreen() {
   const { dispatch, state } = useApp();
@@ -35,15 +40,21 @@ export default function ImportActivityScreen() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [openingStrava, setOpeningStrava] = useState(false);
+  const [paywall, setPaywall] = useState(false);
   const planned = todayWorkout(state.plan);
   const focusPick = useActionFocus('pick');
 
   const ingest = useCallback(
-    (activity: ImportedActivityMetrics) => {
+    async (activity: ImportedActivityMetrics) => {
       if (importing) return;
       const dup = findDuplicateActivity(activity, state.activities);
       if (dup) {
         setError(DUPLICATE_ACTIVITY_MESSAGE);
+        return;
+      }
+      const quota = await takeUsageQuotaIfNeeded('import', state.profile);
+      if (quota === 'paywall') {
+        setPaywall(true);
         return;
       }
       setImporting(true);
@@ -79,7 +90,7 @@ export default function ImportActivityScreen() {
         setImporting(false);
       }
     },
-    [dispatch, importing, planned, router, state.activities],
+    [dispatch, importing, planned, router, state.activities, state.profile],
   );
 
   const handleContent = useCallback((name: string, text: string) => {
@@ -107,6 +118,11 @@ export default function ImportActivityScreen() {
   }, [state.activities]);
 
   const pickFile = async () => {
+    const allowed = await peekUsageQuotaAllowed('import', state.profile);
+    if (!allowed) {
+      setPaywall(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -190,13 +206,16 @@ export default function ImportActivityScreen() {
             <View style={{ marginTop: spacing.sm }}>
               <Text style={styles.step}>
                 1. Appuyez sur <Text style={styles.em}>Ouvrir Strava Web</Text> (ci-dessous) —
-                connexion avec e-mail et mot de passe.
+                connectez-vous avec e-mail et mot de passe.
               </Text>
               <Text style={styles.step}>
-                2. Ouvrez <Text style={styles.em}>Mes activités</Text>, puis l’activité concernée.
+                2. Sur téléphone : dans le navigateur, activez{' '}
+                <Text style={styles.em}>Version ordinateur</Text> (menu ⋮ ou Aa) — sinon
+                l’export GPX n’apparaît souvent pas.
               </Text>
               <Text style={styles.step}>
-                3. Menu ··· → <Text style={styles.em}>Exporter GPX</Text> (ou TCX pour la FC).
+                3. Ouvrez l’activité → menu ··· →{' '}
+                <Text style={styles.em}>Exporter GPX</Text> (ou TCX pour la FC).
               </Text>
               <Text style={styles.step}>
                 4. Revenez ici → <Text style={styles.em}>Choisir un fichier GPX / TCX</Text> et
@@ -208,9 +227,9 @@ export default function ImportActivityScreen() {
 
         <View style={styles.warn}>
           <Text style={styles.warnText}>
-            « Partager mon activité » dans l’app Strava envoie surtout un lien web — pas la
-            distance, la FC ni l’allure détaillées. Il faut un fichier GPX ou TCX exporté depuis
-            Strava Web.
+            « Partager mon activité » dans l’app Strava envoie seulement un lien web — pas la
+            distance, la FC ni l’allure. Il faut un fichier GPX/TCX depuis le site Strava
+            (version ordinateur sur téléphone).
           </Text>
         </View>
 
@@ -229,7 +248,9 @@ export default function ImportActivityScreen() {
           />
         </View>
         <Text style={styles.hintUnder}>
-          Connectez-vous, exportez le GPX/TCX, puis revenez choisir le fichier ci-dessus.
+          Ouvre « Mes activités » (strava.com/athlete/training). Sur téléphone :
+          activez « Version ordinateur », exportez le GPX/TCX, puis choisissez le
+          fichier ci-dessus.
         </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -241,11 +262,16 @@ export default function ImportActivityScreen() {
             <PrimaryButton
               label={importing ? 'Import…' : 'Confirmer l’import'}
               disabled={importing}
-              onPress={() => ingest(preview)}
+              onPress={() => void ingest(preview)}
             />
           </View>
         ) : null}
       </AppScrollView>
+      <PaywallSheet
+        visible={paywall}
+        reason="import_quota"
+        onClose={() => setPaywall(false)}
+      />
     </Screen>
   );
 }

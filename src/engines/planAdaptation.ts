@@ -5,6 +5,7 @@
  * 1. Séance imprévue (hors plan) → adapter la séance suivante (volume / intensité)
  * 2. Changement de jours dispo → décaler les séances futures (sans regénérer le contenu)
  * 3. Trou ≥ N jours → insérer un footing récupération
+ * 4. Correction chrono / VMA → recaler les allures des séances futures (rebuildFutureWorkoutPacing)
  */
 
 import type {
@@ -407,4 +408,88 @@ export function completedWorkoutIdsFromAnalyses(
   analyses: { plannedWorkoutId: string }[],
 ): Set<string> {
   return new Set(analyses.map((a) => a.plannedWorkoutId));
+}
+
+/**
+ * Recale les allures (cibles pace) des séances futures non réalisées
+ * quand le chrono / VMA change — sans régénérer le type de séance.
+ */
+export function rebuildFutureWorkoutPacing(opts: {
+  plan: PlannedWorkout[];
+  fromDateIso: string;
+  completedWorkoutIds?: Set<string>;
+  oldOnboarding: OnboardingAnswers;
+  newOnboarding: OnboardingAnswers;
+  activities?: StravaActivity[];
+}): { plan: PlannedWorkout[]; changed: number } {
+  const oldRace = pickBestRaceReference(opts.oldOnboarding);
+  const newRace = pickBestRaceReference(opts.newOnboarding);
+  const oldZones = resolvePaceZones({
+    level: opts.oldOnboarding.level,
+    weeklyKmAvg: opts.oldOnboarding.weeklyKmAvg,
+    recentDistanceKm: oldRace?.km ?? opts.oldOnboarding.recentDistanceKm,
+    recentTimeSec: oldRace?.timeSec ?? opts.oldOnboarding.recentTimeSec,
+    vmaKmh: opts.oldOnboarding.vmaKmh,
+    activities: opts.activities,
+  });
+  const newZones = resolvePaceZones({
+    level: opts.newOnboarding.level,
+    weeklyKmAvg: opts.newOnboarding.weeklyKmAvg,
+    recentDistanceKm: newRace?.km ?? opts.newOnboarding.recentDistanceKm,
+    recentTimeSec: newRace?.timeSec ?? opts.newOnboarding.recentTimeSec,
+    vmaKmh: opts.newOnboarding.vmaKmh,
+    activities: opts.activities,
+  });
+
+  const oldVma = oldZones.vmaKmh;
+  const newVma = newZones.vmaKmh;
+  if (!(oldVma > 0) || !(newVma > 0) || Math.abs(oldVma - newVma) < 0.05) {
+    return { plan: opts.plan, changed: 0 };
+  }
+
+  // VMA ↑ → allures plus rapides (sec/km ↓)
+  const factor = oldVma / newVma;
+  let changed = 0;
+
+  const plan = opts.plan.map((w) => {
+    const locked =
+      w.date < opts.fromDateIso || opts.completedWorkoutIds?.has(w.id);
+    if (locked) return w;
+    if (w.discipline !== 'run') return w;
+
+    let touched = false;
+    const steps = w.steps.map((st) => {
+      if (!st.target || st.target.type !== 'pace') return st;
+      touched = true;
+      return {
+        ...st,
+        target: {
+          type: 'pace' as const,
+          minSecPerKm: clamp(
+            Math.round(st.target.minSecPerKm * factor),
+            140,
+            720,
+          ),
+          maxSecPerKm: clamp(
+            Math.round(st.target.maxSecPerKm * factor),
+            155,
+            720,
+          ),
+        },
+      };
+    });
+    if (!touched) return w;
+    changed += 1;
+    return {
+      ...w,
+      steps,
+      coachNote: w.coachNote?.includes('Allures recalées')
+        ? w.coachNote
+        : [w.coachNote, 'Allures recalées selon ton nouveau chrono.']
+            .filter(Boolean)
+            .join(' '),
+    };
+  });
+
+  return { plan, changed };
 }

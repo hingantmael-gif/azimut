@@ -8,10 +8,28 @@ import {
   type ProfileCoverDef,
   type ProfileCoverVisual,
 } from '../../engines/profileCovers';
+import {
+  resolvePremiumCoverIntensity,
+  resolveRankCoverIntensity,
+  type CoverIntensity,
+} from '../../engines/coverIntensity';
 import type { RankTier } from '../../types/domain';
 import type { RankDivision } from '../../engines/rankedLadder';
 import { normalizeTier } from '../../engines/rankedLadder';
 import { RankBadge, rimColors } from '../ranked/RankBadge';
+import {
+  FxAuroraVeilIntense,
+  FxBoltsIntense,
+  FxChampionApex,
+  FxCrystalsIntense,
+  FxCyberHexIntense,
+  FxFlamesIntense,
+  FxInfernoIntense,
+  FxLiquidGoldIntense,
+  FxMaelstromIntense,
+  FxMercuryIntense,
+  FxRippleIntense,
+} from './coverIntensityFx';
 
 const H = 136;
 
@@ -51,9 +69,27 @@ type Props = {
 
 export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
   const cover = getProfileCover(coverId);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const prevId = useRef(coverId);
+
+  useEffect(() => {
+    if (prevId.current === coverId) return;
+    prevId.current = coverId;
+    // Transition de palier : dissolve (cohérent GlobalLevelUpHost / brief §9.3)
+    opacity.setValue(0.15);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 720,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [coverId, opacity]);
+
   return (
     <View style={[styles.root, { height }]}>
-      <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
+        <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
+      </Animated.View>
       {cover.watermark ? (
         <View style={styles.markWrap} pointerEvents="none">
           <Text style={styles.watermark}>{cover.watermark}</Text>
@@ -133,11 +169,26 @@ function Scene({
 }) {
   const [c0, c1, c2] = cover.colors;
   const v = cover.visual;
-  const n = compact ? 0.6 : 1;
   const rank =
     cover.unlock.type === 'rank'
       ? { tier: cover.unlock.tier, division: cover.unlock.division }
       : null;
+
+  const intensity: CoverIntensity | null = useMemo(() => {
+    if (cover.unlock.type === 'rank') {
+      return resolveRankCoverIntensity(cover.unlock.tier, cover.unlock.division, {
+        compact,
+      });
+    }
+    if (cover.unlock.type === 'premium') {
+      return resolvePremiumCoverIntensity({ compact });
+    }
+    return null;
+  }, [cover.unlock, compact]);
+
+  const fxBase = intensity
+    ? { c0, c1, c2, height, intensity }
+    : null;
 
   let body: ReactNode;
   switch (v) {
@@ -156,41 +207,42 @@ function Scene({
       );
       break;
     case 'flames':
-      body = (
-        <FxFlames c0={c0} c1={c1} c2={c2} count={Math.round(10 * n + 6)} height={height} />
-      );
+      body = fxBase ? <FxFlamesIntense {...fxBase} /> : null;
       break;
     case 'mercury':
-      body = <FxMercury c0={c0} c1={c1} c2={c2} height={height} rich />;
+      body = fxBase ? <FxMercuryIntense {...fxBase} /> : null;
       break;
     case 'liquid-gold':
-      body = <FxLiquidGold c0={c0} c1={c1} c2={c2} height={height} rich />;
+      body =
+        fxBase && rank && normalizeTier(rank.tier) === 'champion' ? (
+          <FxChampionApex {...fxBase} />
+        ) : fxBase ? (
+          <FxLiquidGoldIntense {...fxBase} />
+        ) : null;
       break;
     case 'crystals':
-      body = (
-        <FxCrystals c0={c0} c1={c1} c2={c2} count={Math.round(11 * n + 4)} height={height} />
-      );
+      body = fxBase ? <FxCrystalsIntense {...fxBase} /> : null;
       break;
     case 'ripple':
-      body = <FxRipple c0={c0} c1={c1} c2={c2} height={height} rich />;
+      body = fxBase ? <FxRippleIntense {...fxBase} /> : null;
       break;
     case 'bolts':
-      body = <FxBolts c0={c0} c1={c1} c2={c2} height={height} rich />;
+      body = fxBase ? <FxBoltsIntense {...fxBase} /> : null;
       break;
     case 'constellation':
       body = <FxConstellation c0={c0} c1={c1} c2={c2} dense={!!compact} height={height} />;
       break;
     case 'aurora-veil':
-      body = <FxAuroraVeil c0={c0} c1={c1} c2={c2} height={height} />;
+      body = fxBase ? <FxAuroraVeilIntense {...fxBase} /> : <FxAuroraVeil c0={c0} c1={c1} c2={c2} height={height} />;
       break;
     case 'cyber-hex':
-      body = <FxCyberHex c0={c0} c1={c1} c2={c2} height={height} />;
+      body = fxBase ? <FxCyberHexIntense {...fxBase} /> : <FxCyberHex c0={c0} c1={c1} c2={c2} height={height} />;
       break;
     case 'maelstrom':
-      body = <FxMaelstrom c0={c0} c1={c1} c2={c2} height={height} />;
+      body = fxBase ? <FxMaelstromIntense {...fxBase} /> : <FxMaelstrom c0={c0} c1={c1} c2={c2} height={height} />;
       break;
     case 'inferno':
-      body = <FxInferno c0={c0} c1={c1} c2={c2} height={height} />;
+      body = fxBase ? <FxInfernoIntense {...fxBase} /> : <FxInferno c0={c0} c1={c1} c2={c2} height={height} />;
       break;
     case 'run-km':
     case 'bike-km':
@@ -245,6 +297,8 @@ function Scene({
           height={height}
           compact={compact}
           accent={c2}
+          glow={intensity?.glow ?? crestTierLevel(rank.tier) / 7}
+          reducedMotion={intensity?.reducedMotion}
         />
       ) : null}
     </View>
@@ -554,6 +608,8 @@ function RankCrestOverlay({
   height,
   compact,
   accent,
+  glow = 0.4,
+  reducedMotion,
 }: {
   tier: RankTier;
   division: RankDivision | null;
@@ -561,16 +617,24 @@ function RankCrestOverlay({
   height: number;
   compact?: boolean;
   accent: string;
+  glow?: number;
+  reducedMotion?: boolean;
 }) {
   const level = crestTierLevel(tier);
-  const float = usePulse(1800 - level * 30, 1800 - level * 30);
-  // Logo nettement plus grand — remplit le fond sans cadres parasites
+  const pulseMs = reducedMotion
+    ? 2800
+    : Math.round(2200 - glow * 700);
+  const float = usePulse(pulseMs, pulseMs);
   const size = compact
     ? Math.round(height * 0.78)
     : Math.round(height * (tier === 'champion' || tier === 'elite' ? 0.82 : 0.74));
   const sparkN = compact
-    ? Math.min(4 + Math.floor(level / 2), 8)
-    : Math.min(6 + level * 2, 16);
+    ? Math.min(3 + Math.floor(glow * 5), 8)
+    : Math.min(4 + Math.round(glow * 12), 18);
+
+  const glowRadius = size * (0.9 + glow * 0.55);
+  const glowMin = 0.03 + glow * 0.06;
+  const glowMax = 0.08 + glow * 0.18;
 
   const sparks = useMemo(
     () =>
@@ -583,27 +647,41 @@ function RankCrestOverlay({
     [size, sparkN],
   );
 
+  const isChampion = normalizeTier(tier) === 'champion';
+
   return (
     <View style={styles.crestLayer} pointerEvents="none">
-      {/* Lueur douce très diffuse — pas de cercle opaque */}
       {!compact ? (
         <Animated.View
           style={{
             position: 'absolute',
-            width: size * 1.15,
-            height: size * 1.15,
-            borderRadius: size,
-            backgroundColor: accent,
+            width: glowRadius,
+            height: glowRadius,
+            borderRadius: glowRadius,
+            backgroundColor: isChampion ? '#FBBF24' : accent,
             opacity: float.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.04, 0.1],
+              outputRange: [glowMin, glowMax],
             }),
           }}
         />
       ) : null}
 
-      {/* Étincelles autour du crest — dès Argent, densifiées avec le rang */}
-      {!compact && level >= 2
+      {isChampion && !compact ? (
+        <View
+          style={{
+            position: 'absolute',
+            width: size * 1.35,
+            height: size * 1.35,
+            borderRadius: size,
+            borderWidth: 1.5,
+            borderColor: '#DC2626',
+            opacity: 0.45,
+          }}
+        />
+      ) : null}
+
+      {!compact && glow >= 0.25
         ? sparks.map((s) => (
             <CrestSpark
               key={s.id}
@@ -615,7 +693,7 @@ function RankCrestOverlay({
                   ? accent
                   : rimColors(tier).hi
               }
-              size={3 + Math.min(level, 5) * 0.4}
+              size={3 + Math.min(level, 5) * 0.4 * (0.7 + glow * 0.5)}
               mode={visual}
             />
           ))
@@ -628,13 +706,13 @@ function RankCrestOverlay({
             {
               translateY: float.interpolate({
                 inputRange: [0, 1],
-                outputRange: [-2 - level * 0.25, 3 + level * 0.3],
+                outputRange: [-2 - glow * 3, 3 + glow * 3.5],
               }),
             },
             {
               scale: float.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0.985, 1.015],
+                outputRange: [0.985 - glow * 0.01, 1.01 + glow * 0.02],
               }),
             },
           ],
@@ -1121,7 +1199,7 @@ function FxLiquidGold({
       ))}
       <Animated.View
         style={{
-          ...StyleSheet.absoluteFill,
+          ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
           backgroundColor: c2,
           opacity: shine.interpolate({ inputRange: [0, 1], outputRange: [0.06, 0.28] }),
         }}
@@ -1132,7 +1210,7 @@ function FxLiquidGold({
   );
 }
 
-/* ——— Diamant ——— */
+/* ——— Diamant : pluie de diamants ——— */
 
 function FxCrystals({
   c0,
@@ -1147,36 +1225,74 @@ function FxCrystals({
   count: number;
   height: number;
 }) {
-  const spin = useLoop(3800);
-  const gems = useMemo(
+  const wash = useLoop(7000, Easing.inOut(Easing.sin));
+  const glow = usePulse(1600, 1600);
+  const fallN = Math.max(count, 14);
+  const diamonds = useMemo(
     () =>
-      Array.from({ length: Math.max(count, 16) }, (_, i) => ({
+      Array.from({ length: fallN }, (_, i) => ({
         id: i,
-        left: 3 + ((i * 23) % 90),
-        top: 4 + ((i * 17) % 78),
-        size: 14 + (i % 5) * 7,
-        delay: i * 90,
+        left: 2 + ((i * 37) % 94),
+        size: 10 + (i % 5) * 5,
+        delay: (i * 180) % 3200,
+        duration: 2800 + (i % 7) * 420,
+        drift: 8 + (i % 5) * 6,
+        spin: i % 2 === 0,
       })),
-    [count],
+    [fallN],
   );
-  const shards = useMemo(
+  const sparkles = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, i) => ({
+      Array.from({ length: Math.min(10, Math.round(fallN / 2)) }, (_, i) => ({
         id: i,
-        left: 8 + ((i * 19) % 85),
-        delay: i * 130,
+        left: 6 + ((i * 29) % 88),
+        delay: i * 160,
         size: 2 + (i % 3),
       })),
-    [],
+    [fallN],
   );
+
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: c0, overflow: 'hidden' }]}>
       <CoverGrad c0={c0} c1={c1} c2={c2} height={height} />
-      {gems.map((g, i) => (
-        <CrystalGem key={g.id} gem={g} i={i} c1={c1} c2={c2} spin={spin} />
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            opacity: wash.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.4] }),
+          },
+        ]}
+      >
+        <CoverGrad c0={c1} c1={c2} c2={c0} height={height} horizontal />
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.orb,
+          {
+            backgroundColor: c2,
+            width: height * 1.35,
+            height: height * 1.35,
+            top: -height * 0.35,
+            left: '22%',
+            opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] }),
+          },
+        ]}
+      />
+      {diamonds.map((d) => (
+        <FallingDiamond
+          key={d.id}
+          left={d.left}
+          size={d.size}
+          delay={d.delay}
+          duration={d.duration}
+          drift={d.drift}
+          spin={d.spin}
+          height={height}
+          fill={d.id % 3 === 0 ? '#FFFFFF' : d.id % 2 ? c2 : c1}
+        />
       ))}
-      {shards.map((e) => (
-        <RisingEmber key={`cs-${e.id}`} {...e} color="#E0F2FE" height={height} />
+      {sparkles.map((e) => (
+        <RisingEmber key={`ds-${e.id}`} {...e} color="#E0F2FE" height={height} />
       ))}
       <Shimmer color="#E0F2FE" height={height} />
       <Shimmer color="#FFFFFF" height={height} />
@@ -1184,74 +1300,94 @@ function FxCrystals({
   );
 }
 
-function CrystalGem({
-  gem,
-  i,
-  c1,
-  c2,
+/** Losange simple qui tombe du haut vers le bas. */
+function FallingDiamond({
+  left,
+  size,
+  delay,
+  duration,
+  drift,
   spin,
+  height,
+  fill,
 }: {
-  gem: { id: number; left: number; top: number; size: number; delay: number };
-  i: number;
-  c1: string;
-  c2: string;
-  spin: Animated.Value;
+  left: number;
+  size: number;
+  delay: number;
+  duration: number;
+  drift: number;
+  spin: boolean;
+  height: number;
+  fill: string;
 }) {
-  const twinkle = useRef(new Animated.Value(0)).current;
+  const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.delay(gem.delay),
-        Animated.timing(twinkle, {
+        Animated.delay(delay),
+        Animated.timing(t, {
           toValue: 1,
-          duration: 480,
-          easing: Easing.inOut(Easing.sin),
+          duration,
+          easing: Easing.in(Easing.quad),
           useNativeDriver: true,
         }),
-        Animated.timing(twinkle, {
-          toValue: 0,
-          duration: 520,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
+        Animated.timing(t, { toValue: 0, duration: 0, useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [twinkle, gem.delay]);
+  }, [t, delay, duration]);
+
+  const w = size;
+  const h = size * 1.25;
 
   return (
     <Animated.View
+      pointerEvents="none"
       style={{
         position: 'absolute',
-        left: `${gem.left}%`,
-        top: `${gem.top}%`,
-        width: gem.size,
-        height: gem.size * 1.25,
-        opacity: twinkle.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.5, 1],
+        left: `${left}%`,
+        top: -h,
+        width: w,
+        height: h,
+        opacity: t.interpolate({
+          inputRange: [0, 0.08, 0.75, 1],
+          outputRange: [0, 0.95, 0.75, 0],
         }),
         transform: [
           {
-            rotate: spin.interpolate({
+            translateY: t.interpolate({
               inputRange: [0, 1],
-              outputRange: ['0deg', i % 2 ? '180deg' : '-180deg'],
+              outputRange: [0, height + h * 2],
             }),
           },
           {
-            scale: twinkle.interpolate({
+            translateX: t.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0, spin ? drift : -drift, spin ? -drift * 0.4 : drift * 0.4],
+            }),
+          },
+          {
+            rotate: t.interpolate({
               inputRange: [0, 1],
-              outputRange: [0.8, 1.28],
+              outputRange: spin ? ['0deg', '220deg'] : ['0deg', '-180deg'],
+            }),
+          },
+          {
+            scale: t.interpolate({
+              inputRange: [0, 0.15, 1],
+              outputRange: [0.55, 1.05, 0.85],
             }),
           },
         ],
       }}
     >
-      <Svg width={gem.size} height={gem.size * 1.25} viewBox="0 0 40 50">
-        <Polygon points="20,2 36,18 20,48 4,18" fill={i % 2 ? c2 : c1} opacity={0.92} />
+      <Svg width={w} height={h} viewBox="0 0 40 50">
+        <Polygon points="20,2 36,18 20,48 4,18" fill={fill} opacity={0.9} />
         <Polygon points="20,2 28,18 20,18" fill="#FFFFFF" opacity={0.55} />
-        <Path d="M4 18 L36 18" stroke="#EFF6FF" strokeWidth={1} opacity={0.55} />
+        <Polygon points="20,2 12,18 20,18" fill="#FFFFFF" opacity={0.28} />
+        <Path d="M4 18 L36 18" stroke="#EFF6FF" strokeWidth={1.2} opacity={0.65} />
+        <Path d="M20 18 L20 48" stroke="#EFF6FF" strokeWidth={0.8} opacity={0.35} />
       </Svg>
     </Animated.View>
   );
@@ -1418,7 +1554,7 @@ function FxBolts({
       />
       <Animated.View
         style={{
-          ...StyleSheet.absoluteFill,
+          ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
           transform: [
             {
               translateX: drift.interpolate({
@@ -2021,7 +2157,7 @@ function FxInferno({
   );
 }
 
-/* ——— Distances : typographie km + silhouettes sport en action ——— */
+/* ——— Distances : typographie km + motifs sport (pas / vélo / bassin) ——— */
 
 function FxKmHero({
   label,
@@ -2085,8 +2221,8 @@ function FxKmHero({
 
       {run ? (
         <>
-          {/* Piste : bandes + tirets qui défilent */}
-          {[0.18, 0.32, 0.46, 0.6].map((y, i) => (
+          {/* Piste légère : bandes + tirets */}
+          {[0.22, 0.38, 0.54, 0.7].map((y, i) => (
             <Animated.View
               key={`lane-${i}`}
               style={{
@@ -2094,47 +2230,47 @@ function FxKmHero({
                 left: 0,
                 right: 0,
                 top: height * y,
-                height: i === 1 || i === 2 ? 3 : 2,
+                height: i === 1 || i === 2 ? 2 : 1.5,
                 backgroundColor: c2,
                 opacity: pulse.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0.18 + i * 0.05, 0.4 + i * 0.06],
+                  outputRange: [0.1 + i * 0.03, 0.22 + i * 0.04],
                 }),
                 transform: [
                   {
                     translateX: drift.interpolate({
                       inputRange: [0, 1],
-                      outputRange: i % 2 ? [-28, 32] : [30, -26],
+                      outputRange: i % 2 ? [-20, 24] : [22, -18],
                     }),
                   },
                 ],
               }}
             />
           ))}
-          {Array.from({ length: 7 }, (_, i) => (
+          {Array.from({ length: compact ? 5 : 7 }, (_, i) => (
             <Animated.View
               key={`dash-${i}`}
               style={{
                 position: 'absolute',
-                top: height * 0.39,
-                left: `${8 + i * 13}%`,
-                width: 18,
-                height: 3,
+                top: height * 0.45,
+                left: `${6 + i * (compact ? 18 : 13)}%`,
+                width: compact ? 12 : 16,
+                height: 2,
                 borderRadius: 2,
                 backgroundColor: '#FFF',
-                opacity: 0.35,
+                opacity: 0.18,
                 transform: [
                   {
                     translateX: stride.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0, -40],
+                      outputRange: [0, -36],
                     }),
                   },
                 ],
               }}
             />
           ))}
-          <RunnerSilhouette
+          <FootprintTrail
             color={c2}
             height={height}
             compact={!!compact}
@@ -2198,44 +2334,13 @@ function FxKmHero({
 
       {swim ? (
         <>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <Animated.View
-              key={`wave-${i}`}
-              style={{
-                position: 'absolute',
-                left: -30,
-                right: -30,
-                bottom: height * (0.02 + i * 0.1),
-                height: height * 0.22,
-                borderRadius: height,
-                backgroundColor: i % 2 ? c2 : c1,
-                opacity: wash.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.1 + i * 0.04, 0.22 + i * 0.05],
-                }),
-                transform: [
-                  {
-                    translateX: drift.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: i % 2 ? [-28, 30] : [24, -22],
-                    }),
-                  },
-                  {
-                    scaleX: pulse.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.95, 1.12],
-                    }),
-                  },
-                ],
-              }}
-            />
-          ))}
-          <SwimmerSilhouette
-            color="#FFFFFF"
-            accent={c2}
+          <SwimPoolScene
+            c1={c1}
+            c2={c2}
             height={height}
             compact={!!compact}
-            stroke={stride}
+            wash={wash}
+            drift={drift}
             pulse={pulse}
           />
           {particles.map((e) => (
@@ -2321,8 +2426,8 @@ function FxKmHero({
   );
 }
 
-/** Silhouette coureur en foulée (formes géométriques). */
-function RunnerSilhouette({
+/** Trace de pas de chaussures (gauche/droite) qui avance. */
+function FootprintTrail({
   color,
   height,
   compact,
@@ -2335,146 +2440,85 @@ function RunnerSilhouette({
   stride: Animated.Value;
   pulse: Animated.Value;
 }) {
-  const s = compact ? 0.72 : 1;
-  const base = height * 0.55 * s;
+  const count = compact ? 5 : 7;
+  const soleW = compact ? 9 : 12;
+  const soleH = compact ? 16 : 22;
+  const heelW = compact ? 6 : 8;
+  const heelH = compact ? 5 : 7;
+  const laneGap = compact ? 10 : 14;
+  const strideStep = compact ? 18 : 24;
+  const baseTop = height * (compact ? 0.28 : 0.3);
+
+  const prints = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => {
+        const isLeft = i % 2 === 0;
+        return {
+          id: i,
+          isLeft,
+          leftPct: 4 + i * (88 / Math.max(count - 1, 1)),
+          top: baseTop + (isLeft ? -laneGap / 2 : laneGap / 2),
+          rotate: isLeft ? '-18deg' : '18deg',
+          opacityBase: 0.28 + (i / count) * 0.45,
+        };
+      }),
+    [count, baseTop, laneGap],
+  );
+
   return (
     <Animated.View
       pointerEvents="none"
-      style={{
-        position: 'absolute',
-        right: '6%',
-        bottom: height * 0.08,
-        width: base * 0.7,
-        height: base,
-        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.9] }),
-        transform: [
-          {
-            translateX: stride.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-6, 10],
-            }),
-          },
-          {
-            translateY: stride.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0, -8, 0],
-            }),
-          },
-        ],
-      }}
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }),
+          transform: [
+            {
+              translateX: stride.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, -strideStep],
+              }),
+            },
+          ],
+        },
+      ]}
     >
-      {/* tête */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: '38%',
-          width: base * 0.18,
-          height: base * 0.18,
-          borderRadius: 99,
-          backgroundColor: color,
-        }}
-      />
-      {/* torse */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: base * 0.16,
-          left: '32%',
-          width: base * 0.28,
-          height: base * 0.32,
-          borderRadius: 8,
-          backgroundColor: color,
-          transform: [
-            {
-              rotate: stride.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['-8deg', '10deg'],
-              }),
-            },
-          ],
-        }}
-      />
-      {/* jambe avant */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: base * 0.42,
-          left: '48%',
-          width: base * 0.1,
-          height: base * 0.42,
-          borderRadius: 6,
-          backgroundColor: color,
-          transform: [
-            {
-              rotate: stride.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['28deg', '-32deg'],
-              }),
-            },
-          ],
-        }}
-      />
-      {/* jambe arrière */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: base * 0.42,
-          left: '30%',
-          width: base * 0.1,
-          height: base * 0.4,
-          borderRadius: 6,
-          backgroundColor: color,
-          opacity: 0.85,
-          transform: [
-            {
-              rotate: stride.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['-30deg', '26deg'],
-              }),
-            },
-          ],
-        }}
-      />
-      {/* bras */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: base * 0.2,
-          left: '18%',
-          width: base * 0.08,
-          height: base * 0.28,
-          borderRadius: 5,
-          backgroundColor: color,
-          transform: [
-            {
-              rotate: stride.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['35deg', '-40deg'],
-              }),
-            },
-          ],
-        }}
-      />
-      <Animated.View
-        style={{
-          position: 'absolute',
-          top: base * 0.2,
-          right: '8%',
-          width: base * 0.08,
-          height: base * 0.28,
-          borderRadius: 5,
-          backgroundColor: color,
-          transform: [
-            {
-              rotate: stride.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['-38deg', '32deg'],
-              }),
-            },
-          ],
-        }}
-      />
+      {prints.map((p) => (
+        <View
+          key={p.id}
+          style={{
+            position: 'absolute',
+            left: `${p.leftPct}%`,
+            top: p.top,
+            width: soleW,
+            height: soleH + heelH * 0.35,
+            opacity: p.opacityBase,
+            transform: [{ rotate: p.rotate }],
+            alignItems: 'center',
+          }}
+        >
+          {/* semelle */}
+          <View
+            style={{
+              width: soleW,
+              height: soleH,
+              borderRadius: soleW,
+              backgroundColor: color,
+            }}
+          />
+          {/* talon */}
+          <View
+            style={{
+              marginTop: -heelH * 0.35,
+              width: heelW,
+              height: heelH,
+              borderRadius: heelW,
+              backgroundColor: color,
+              opacity: 0.9,
+            }}
+          />
+        </View>
+      ))}
     </Animated.View>
   );
 }
@@ -2607,115 +2651,149 @@ function BikeSilhouette({
   );
 }
 
-/** Nageur crawl + bras. */
-function SwimmerSilhouette({
-  color,
-  accent,
+/** Bassin de natation : lignes de couloir + marquages, sans nageur. */
+function SwimPoolScene({
+  c1,
+  c2,
   height,
   compact,
-  stroke,
+  wash,
+  drift,
   pulse,
 }: {
-  color: string;
-  accent: string;
+  c1: string;
+  c2: string;
   height: number;
   compact: boolean;
-  stroke: Animated.Value;
+  wash: Animated.Value;
+  drift: Animated.Value;
   pulse: Animated.Value;
 }) {
-  const s = compact ? 0.75 : 1;
-  const bodyW = height * 0.55 * s;
+  const laneCount = compact ? 4 : 5;
+  const markerSize = compact ? 5 : 7;
+  const topPad = height * (compact ? 0.14 : 0.12);
+  const bottomPad = height * (compact ? 0.14 : 0.12);
+  const usable = Math.max(height - topPad - bottomPad, 24);
+
+  const lanes = useMemo(
+    () =>
+      Array.from({ length: laneCount }, (_, i) => ({
+        id: i,
+        top: topPad + (usable * i) / Math.max(laneCount - 1, 1),
+      })),
+    [laneCount, topPad, usable],
+  );
+
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left: '10%',
-        bottom: height * 0.28,
-        width: bodyW,
-        height: height * 0.22 * s,
-        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0.95] }),
-        transform: [
-          {
-            translateX: stroke.interpolate({
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      {/* Lavis d’eau subtil */}
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={`wash-${i}`}
+          style={{
+            position: 'absolute',
+            left: -24,
+            right: -24,
+            top: height * (0.08 + i * 0.28),
+            height: height * 0.32,
+            borderRadius: height,
+            backgroundColor: i % 2 ? c2 : c1,
+            opacity: wash.interpolate({
               inputRange: [0, 1],
-              outputRange: [-10, 18],
+              outputRange: [0.08 + i * 0.03, 0.16 + i * 0.04],
             }),
-          },
-          {
-            translateY: stroke.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0, -6, 2],
+            transform: [
+              {
+                translateX: drift.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: i % 2 ? [-18, 22] : [16, -14],
+                }),
+              },
+              {
+                scaleX: pulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.96, 1.06],
+                }),
+              },
+            ],
+          }}
+        />
+      ))}
+
+      {/* Lignes de couloir */}
+      {lanes.map((lane) => (
+        <Animated.View
+          key={`pl-${lane.id}`}
+          style={{
+            position: 'absolute',
+            left: compact ? 14 : 18,
+            right: compact ? 14 : 18,
+            top: lane.top,
+            height: compact ? 1.5 : 2,
+            backgroundColor: '#FFFFFF',
+            opacity: pulse.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.22, 0.38],
             }),
-          },
-        ],
-      }}
-    >
-      {/* tête */}
-      <View
-        style={{
-          position: 'absolute',
-          right: 0,
-          top: '20%',
-          width: height * 0.09 * s,
-          height: height * 0.09 * s,
-          borderRadius: 99,
-          backgroundColor: color,
-        }}
-      />
-      {/* corps horizontal */}
-      <View
-        style={{
-          position: 'absolute',
-          left: '8%',
-          top: '38%',
-          width: bodyW * 0.72,
-          height: height * 0.07 * s,
-          borderRadius: 20,
-          backgroundColor: color,
-        }}
-      />
-      {/* bras crawl */}
+          }}
+        />
+      ))}
+
+      {/* Marqueurs latéraux (murs / plots) */}
+      {lanes.map((lane) => (
+        <View key={`mk-${lane.id}`}>
+          <View
+            style={{
+              position: 'absolute',
+              left: compact ? 4 : 6,
+              top: lane.top - markerSize / 2,
+              width: markerSize,
+              height: markerSize,
+              borderRadius: markerSize,
+              backgroundColor: c2,
+              opacity: 0.55,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              right: compact ? 4 : 6,
+              top: lane.top - markerSize / 2,
+              width: markerSize,
+              height: markerSize,
+              borderRadius: markerSize,
+              backgroundColor: c2,
+              opacity: 0.55,
+            }}
+          />
+        </View>
+      ))}
+
+      {/* Reflet / shimmer doux */}
       <Animated.View
         style={{
           position: 'absolute',
+          left: '18%',
           right: '18%',
-          top: 0,
-          width: height * 0.055 * s,
-          height: height * 0.2 * s,
-          borderRadius: 8,
-          backgroundColor: accent,
+          top: height * 0.2,
+          height: height * 0.18,
+          borderRadius: 40,
+          backgroundColor: '#FFFFFF',
+          opacity: wash.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.04, 0.12],
+          }),
           transform: [
             {
-              rotate: stroke.interpolate({
+              translateX: drift.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['-50deg', '110deg'],
+                outputRange: [-12, 16],
               }),
             },
           ],
         }}
       />
-      <Animated.View
-        style={{
-          position: 'absolute',
-          left: '30%',
-          bottom: 0,
-          width: height * 0.05 * s,
-          height: height * 0.16 * s,
-          borderRadius: 8,
-          backgroundColor: accent,
-          opacity: 0.8,
-          transform: [
-            {
-              rotate: stroke.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['40deg', '-70deg'],
-              }),
-            },
-          ],
-        }}
-      />
-    </Animated.View>
+    </View>
   );
 }
 
@@ -2723,14 +2801,14 @@ function SwimmerSilhouette({
 const styles = StyleSheet.create({
   root: { width: '100%', overflow: 'hidden' },
   markWrap: {
-    ...StyleSheet.absoluteFill,
+    ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     paddingRight: 12,
     paddingBottom: 10,
   },
   crestLayer: {
-    ...StyleSheet.absoluteFill,
+    ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2774,7 +2852,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   centerFill: {
-    ...StyleSheet.absoluteFill,
+    ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
     alignItems: 'center',
     justifyContent: 'center',
   },

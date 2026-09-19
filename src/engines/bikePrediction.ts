@@ -1,6 +1,8 @@
 /**
  * Prédiction vélo — modèle distinct de la course et de la natation.
  *
+ * Shared core (CP / VMA) : `./performancePredictionCore`
+ *
  * Sources :
  * - Critical Power / FTP (Allen & Coggan ; CP literature) : puissance soutenable
  *   ~1 h ≈ FTP ; efforts plus courts > FTP, plus longs < FTP.

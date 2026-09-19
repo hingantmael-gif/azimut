@@ -92,18 +92,18 @@ function makeStyles(colors: ColorPalette, height: number) {
       opacity: 0.92,
     },
     image: {
-      ...StyleSheet.absoluteFill,
+      ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
       width: '100%',
       height: '100%',
       zIndex: 0,
     },
     scrim: {
-      ...StyleSheet.absoluteFill,
+      ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
       backgroundColor: 'rgba(8, 16, 28, 0.45)',
       zIndex: 1,
     },
     textBlock: {
-      ...StyleSheet.absoluteFill,
+      ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
       justifyContent: 'flex-end',
       padding: spacing.md,
       zIndex: 2,

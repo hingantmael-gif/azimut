@@ -5,7 +5,6 @@ export const COACHING_FEATURES = [
   { route: '/nutrition', label: 'Nutrition & hydratation', icon: '💧' },
   { route: '/race-predictor', label: 'Prédiction temps de course', icon: '⏱' },
   { route: '/multisport', label: 'Multi-sport / triathlon', icon: '🏊' },
-  { route: '/coach-vokal', label: 'Coach vocal', icon: '🎙' },
   { route: '/safety', label: 'Sécurité & alertes', icon: '🛡' },
 ] as const;
 

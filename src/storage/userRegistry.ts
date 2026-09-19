@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DEMO_DIRECTORY } from '../data/demoDirectory';
+import { isOwnerPremiumEmail } from '../engines/ownerAccess';
 import { normalizeUsername, validateUsernameFormat } from '../utils/username';
 
 const REGISTRY_KEY = '@training/user-registry';
@@ -152,6 +153,8 @@ export async function isEmailTaken(
 }
 
 export async function upsertRegistryUser(user: RegistryUser): Promise<void> {
+  // Compte ultra-sécurisé : jamais indexé pour la recherche / découverte
+  if (isOwnerPremiumEmail(user.email)) return;
   const u = normalizeUsername(user.username);
   if (!u) return;
   const registry = await loadRegistry();
@@ -224,6 +227,7 @@ export async function suggestProfiles(
 
   return registry
     .filter((u) => u.id !== opts?.excludeId)
+    .filter((u) => !isOwnerPremiumEmail(u.email))
     .map((u) => ({ u, score: suggestScore(u, q, opts) }))
     .filter((x) => x.score >= 0)
     .sort(

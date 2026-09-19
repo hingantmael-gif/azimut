@@ -1,8 +1,10 @@
 import { useMemo, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { usePathname } from 'expo-router';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
+import { PressableScale, ScreenEnter } from '../motion/softMotion';
 
 const webNoOutline =
   Platform.OS === 'web'
@@ -40,23 +42,31 @@ export function SettingsRow({
   showChevron = true,
 }: SettingsRowProps) {
   const styles = useSettingsStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.row,
-        pressed && onPress && styles.rowPressed,
-        webNoOutline,
-        onPress && Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null,
-      ]}
-    >
-      <Text style={[styles.rowLabel, destructive && styles.destructive]}>{label}</Text>
-      <View style={styles.rowRight}>
-        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-        {onPress && showChevron ? <Text style={styles.chevron}>›</Text> : null}
+  if (!onPress) {
+    return (
+      <View style={[styles.row, styles.rowInner, webNoOutline]}>
+        <Text style={[styles.rowLabel, destructive && styles.destructive]}>{label}</Text>
+        <View style={styles.rowRight}>
+          {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        </View>
       </View>
-    </Pressable>
+    );
+  }
+  return (
+    <PressableScale
+      onPress={onPress}
+      variant="nav"
+      style={[styles.row, webNoOutline]}
+      accessibilityLabel={label}
+    >
+      <View style={styles.rowInner}>
+        <Text style={[styles.rowLabel, destructive && styles.destructive]}>{label}</Text>
+        <View style={styles.rowRight}>
+          {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+          {showChevron ? <Text style={styles.chevron}>›</Text> : null}
+        </View>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -73,21 +83,28 @@ export function SettingsToggleRow({
 }) {
   const styles = useSettingsStyles();
   return (
-    <Pressable onPress={onToggle} style={styles.row}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.rowLabel}>{label}</Text>
-        {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
+    <PressableScale onPress={onToggle} variant="subtle" style={styles.row} accessibilityLabel={label}>
+      <View style={styles.rowInner}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowLabel}>{label}</Text>
+          {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
+        </View>
+        <View style={[styles.toggle, value && styles.toggleOn]}>
+          <View style={[styles.knob, value && styles.knobOn]} />
+        </View>
       </View>
-      <View style={[styles.toggle, value && styles.toggleOn]}>
-        <View style={[styles.knob, value && styles.knobOn]} />
-      </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 export function SettingsScreen({ children }: { children: ReactNode }) {
   const styles = useSettingsStyles();
-  return <View style={styles.screen}>{children}</View>;
+  const pathname = usePathname();
+  return (
+    <ScreenEnter resetKey={pathname} intensity="sm" style={styles.screen}>
+      {children}
+    </ScreenEnter>
+  );
 }
 
 function makeStyles(colors: ColorPalette) {
@@ -112,14 +129,18 @@ function makeStyles(colors: ColorPalette) {
       borderColor: colors.border,
     },
     row: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      minHeight: 48,
+    },
+    rowInner: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingVertical: 14,
       paddingHorizontal: spacing.md,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
       minHeight: 48,
+      width: '100%',
     },
     rowPressed: { backgroundColor: colors.bgSecondary },
     rowLabel: { fontSize: 16, color: colors.text, flex: 1 },

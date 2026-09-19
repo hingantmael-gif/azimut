@@ -124,7 +124,22 @@ const SPORT_BASE: Record<DetectedSport, MuscleLoadWeights> = {
   brick: EXERCISE_MUSCLE_MAP.brick,
   ppg: EXERCISE_MUSCLE_MAP.ppg,
   mobility: EXERCISE_MUSCLE_MAP.mobility,
-  other: EXERCISE_MUSCLE_MAP.run,
+  other: {
+    chest: 0.9,
+    deltoids: 0.92,
+    triceps: 0.85,
+    lats: 0.88,
+    biceps: 0.78,
+    forearms: 0.7,
+    abs: 0.82,
+    obliques: 0.72,
+    quads: 0.7,
+    hamstrings: 0.65,
+    glutes: 0.68,
+    hip_flexors: 0.6,
+    traps: 0.55,
+    erector: 0.5,
+  },
 };
 
 /** Modulateurs d'intensité : threshold/VO2 recrute plus ischio/mollets/haut du corps */

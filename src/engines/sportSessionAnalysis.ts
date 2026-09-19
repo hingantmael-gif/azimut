@@ -8,6 +8,8 @@ import {
 } from '../data/muscleExerciseMap';
 import { resolvePaceZones, type PaceZones } from './paceZones';
 import { formatPace } from './core';
+import { isCalisthenicsWorkout } from './calisthenicsProgramming';
+import { resolveCalisSessionRecovery } from './calisthenicsSkillTree';
 
 /**
  * Analyse de séance multi-sport (modèle physiologique simplifié) :
@@ -36,6 +38,11 @@ export interface SessionMuscleAnalysis {
   sessionTrimp: number;
   /** Facteur dommage musculaire (excentrique) */
   eccentricFactor: number;
+  /**
+   * Majoration τ callisthénie (1.0 dynamique · 1.5 isométrique · 1.8 excentrique).
+   * Appliquée par groupe primaire dans muscleRecovery.
+   */
+  calisRecoveryByMuscle?: Partial<Record<MuscleGroupId, number>>;
   durationH: number;
   distanceKm: number;
   avgPaceSecPerKm?: number;
@@ -96,9 +103,13 @@ export function detectSportFromActivity(
   if (activity.sport) {
     const s = activity.sport;
     if (s === 'run' || s === 'bike' || s === 'swim' || s === 'strength') return s;
+    if (s === 'other') return 'other';
   }
 
+  if (planned && isCalisthenicsWorkout(planned)) return 'other';
+
   const name = `${activity.name}`.toLowerCase();
+  if (/callisth|calisthen|poids.?du.?corps|bodyweight/.test(name)) return 'other';
   if (/trail|ultra|raid|mountain/.test(name)) return 'trail';
   if (/natation|swim|aqua|crawl|brasse|longueur/.test(name)) return 'swim';
   if (/v[eé]lo|bike|cycl|watt|ftp|home.?trainer|zwift/.test(name)) return 'bike';
@@ -113,7 +124,9 @@ export function detectSportFromActivity(
     if (planned.discipline === 'run') return 'run';
     if (planned.discipline === 'bike') return 'bike';
     if (planned.discipline === 'swim') return 'swim';
-    if (planned.discipline === 'strength') return 'strength';
+    if (planned.discipline === 'strength') {
+      return isCalisthenicsWorkout(planned) ? 'other' : 'strength';
+    }
     if (planned.discipline === 'brick') return 'brick';
     if (planned.discipline === 'ppg') return 'ppg';
     if (planned.discipline === 'mobility') return 'mobility';
@@ -141,8 +154,9 @@ export function toDiscipline(sport: DetectedSport): SportDiscipline {
   switch (sport) {
     case 'trail':
     case 'run':
-    case 'other':
       return 'run';
+    case 'other':
+      return 'strength';
     case 'bike':
       return 'bike';
     case 'swim':
@@ -211,7 +225,7 @@ function eccentricFactor(sport: DetectedSport, intensity01: number, durationH: n
     brick: 1.4,
     ppg: 0.9,
     mobility: 0.35,
-    other: 1,
+    other: 1.15,
   };
   const longBoost = sport === 'run' || sport === 'trail' ? 1 + Math.min(0.6, durationH / 8) : 1;
   const intBoost = 1 + intensity01 * 0.35;
@@ -282,6 +296,10 @@ export function analyzeSessionMuscles(
   const intensityBand = bandFromIntensity(intensity01);
   const ecc = eccentricFactor(sport, intensity01, durationH);
   const vol = volumeFactor(sport, distanceKm, durationH);
+  const calisRecoveryByMuscle =
+    sport === 'other' || (planned && isCalisthenicsWorkout(planned))
+      ? resolveCalisSessionRecovery(planned)
+      : undefined;
 
   // TRIMP-like : durée (min) × intensité × facteur sport
   const sportTrimpScale: Record<DetectedSport, number> = {
@@ -293,7 +311,7 @@ export function analyzeSessionMuscles(
     brick: 1.2,
     ppg: 0.9,
     mobility: 0.4,
-    other: 0.9,
+    other: 1.05,
   };
   const sessionTrimp = Math.min(
     280,
@@ -343,6 +361,7 @@ export function analyzeSessionMuscles(
     intensity01,
     sessionTrimp: Math.round(sessionTrimp),
     eccentricFactor: Math.round(ecc * 100) / 100,
+    calisRecoveryByMuscle,
     durationH,
     distanceKm,
     avgPaceSecPerKm: avgPace,
@@ -375,7 +394,7 @@ function buildSummary(o: {
     brick: 'Brick / enchaînement',
     ppg: 'PPG',
     mobility: 'Mobilité',
-    other: 'Séance',
+    other: 'Callisthénie',
   };
   const bandLabel: Record<SessionIntensityBand, string> = {
     recovery: 'récupération',

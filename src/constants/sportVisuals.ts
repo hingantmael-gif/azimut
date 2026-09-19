@@ -16,7 +16,7 @@ export const SPORT_HERO_IMAGES: Record<ProgramSportCategory, ImageSourcePropType
   triathlon: require('../../assets/sports/sport-triathlon.png'),
   strength: require('../../assets/sports/sport-strength.png'),
   ironman: require('../../assets/sports/sport-ironman.png'),
-  other: require('../../assets/sports/sport-duathlon.png'),
+  other: require('../../assets/sports/sport-calisthenics.png'),
 };
 
 /** Natation : choix d’environnement */
@@ -73,8 +73,9 @@ const PROGRAM_IMAGES: Record<string, ImageSourcePropType> = {
   'prog-ironman-performance': require('../../assets/sports/prog-ironman-performance.png'),
   'prog-strength-base': require('../../assets/sports/prog-strength-base.png'),
   'prog-strength-tri': require('../../assets/sports/prog-strength-tri.png'),
-  'prog-biathlon': require('../../assets/sports/prog-biathlon.png'),
-  'prog-duathlon-sprint': require('../../assets/sports/sport-duathlon.png'),
+  'prog-calisthenics-base': require('../../assets/sports/prog-calisthenics-base.png'),
+  'prog-calisthenics-strength': require('../../assets/sports/prog-calisthenics-strength.png'),
+  'prog-calisthenics-endurance': require('../../assets/sports/prog-calisthenics-endurance.png'),
 };
 
 /**
@@ -118,7 +119,7 @@ export const CUSTOM_DISTANCE_IMAGES: Partial<
   triathlon: require('../../assets/sports/sport-triathlon.png'),
   ironman: require('../../assets/sports/sport-ironman.png'),
   strength: require('../../assets/sports/prog-strength-base.png'),
-  other: require('../../assets/sports/sport-duathlon.png'),
+  other: require('../../assets/sports/sport-calisthenics.png'),
 };
 
 export function imageForProgram(
@@ -133,6 +134,49 @@ export function imageForProgram(
 
 export function atmosphereImage(kind: AtmosphereKind): ImageSourcePropType {
   return ATMOSPHERE_IMAGES[kind];
+}
+
+/** Démos callisthénie (comment faire l’exercice). */
+export const CALISTHENICS_DEMO_IMAGES: Record<string, ImageSourcePropType> = {
+  pushup: require('../../assets/sports/calis-pushup.png'),
+  pike_pushup: require('../../assets/sports/calis-pushup.png'),
+  pullup: require('../../assets/sports/calis-pullup.png'),
+  scapular: require('../../assets/sports/calis-pullup.png'),
+  squat: require('../../assets/sports/calis-squat.png'),
+  dip: require('../../assets/sports/calis-dip.png'),
+  plank: require('../../assets/sports/calis-plank.png'),
+  hollow: require('../../assets/sports/exercises/ex-hollow.png'),
+  lunge: require('../../assets/sports/calis-lunge.png'),
+  row: require('../../assets/sports/calis-row.png'),
+};
+
+/** Visuels player guidé (muscu + callis) — clés GuidedVisualKey */
+export const GUIDED_EXERCISE_IMAGES: Record<string, ImageSourcePropType> = {
+  warmup: require('../../assets/sports/exercises/ex-warmup.png'),
+  pushup: require('../../assets/sports/calis-pushup.png'),
+  pullup: require('../../assets/sports/calis-pullup.png'),
+  squat: require('../../assets/sports/calis-squat.png'),
+  lunge: require('../../assets/sports/calis-lunge.png'),
+  dip: require('../../assets/sports/calis-dip.png'),
+  plank: require('../../assets/sports/calis-plank.png'),
+  row: require('../../assets/sports/calis-row.png'),
+  hollow: require('../../assets/sports/exercises/ex-hollow.png'),
+  wallsit: require('../../assets/sports/exercises/ex-wallsit.png'),
+  press: require('../../assets/sports/exercises/ex-db-press.png'),
+  shoulder: require('../../assets/sports/exercises/ex-shoulder-press.png'),
+  curl: require('../../assets/sports/exercises/ex-curl.png'),
+  hinge: require('../../assets/sports/exercises/ex-hinge.png'),
+  generic: require('../../assets/sports/sport-strength.png'),
+};
+
+export function guidedExerciseImage(key?: string | null): ImageSourcePropType {
+  if (!key) return GUIDED_EXERCISE_IMAGES.generic;
+  return GUIDED_EXERCISE_IMAGES[key] ?? GUIDED_EXERCISE_IMAGES.generic;
+}
+
+export function calisthenicsDemoImage(exerciseId?: string | null): ImageSourcePropType | undefined {
+  if (!exerciseId) return undefined;
+  return CALISTHENICS_DEMO_IMAGES[exerciseId];
 }
 
 /** Focus carte — toujours centré pour un crop symétrique. */

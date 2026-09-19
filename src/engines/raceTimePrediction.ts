@@ -1,6 +1,8 @@
 /**
  * Prédiction de chronos équivalents (5k → 10k / 20k / semi / marathon).
  *
+ * Shared core (CP / VMA) : `./performancePredictionCore`
+ *
  * Synthèse multi-sources (non propriétaire — formules publiques / peer-reviewed) :
  *
  * 1. Peter Riegel (American Scientist, 1977) — T2 = T1 × (D2/D1)^1.06

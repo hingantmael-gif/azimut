@@ -117,16 +117,9 @@ export default function ProfileSettingsScreen() {
         </SettingsSection>
         <SettingsSection title="Athlète">
           <SettingsRow
-            label="Objectifs & niveau"
-            onPress={() => router.push('/settings/goals')}
-          />
-          <SettingsRow
-            label="Données sportives (VMA, FTP…)"
-            onPress={() => router.push('/settings/sports-data')}
-          />
-          <SettingsRow
-            label="Ma forme"
-            onPress={() => router.push('/settings/performance')}
+            label="Profil sportif"
+            value="Objectifs · données · forme"
+            onPress={() => router.push('/settings/athlete-hub')}
           />
         </SettingsSection>
         <SettingsSection title="Physique">

@@ -1,5 +1,5 @@
 /* Service worker Azimut — mises à jour auto à chaque réouverture. */
-const CACHE = 'azimut-static-v25';
+const CACHE = 'azimut-static-v91';
 const PRECACHE = [
   '/manifest.webmanifest',
   '/icon.png',

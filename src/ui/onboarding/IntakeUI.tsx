@@ -20,6 +20,7 @@ import { resolvePaceZones } from '../../engines/paceZones';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
+import { PressableScale } from '../motion/softMotion';
 
 /** Barre de progression Azimut (segments jade). */
 export function IntakeProgress({
@@ -55,13 +56,14 @@ export function IntakeProgress({
 export function IntakeBackButton({ onPress }: { onPress: () => void }) {
   const { colors } = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={[styles.backBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
+      variant="pop"
       accessibilityLabel="Retour"
+      style={[styles.backBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
     >
       <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>‹</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -117,18 +119,17 @@ export function IntakeChoiceCard({
 }) {
   const { colors } = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      style={[
+      variant="pop"
+      accessibilityLabel={title}
+      contentStyle={[
         styles.choiceCard,
         {
           backgroundColor: colors.bgElevated,
           borderColor: selected ? BRAND.accent : colors.border,
           borderWidth: selected ? 2 : 1,
         },
-        Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null,
       ]}
     >
       {image ? (
@@ -170,7 +171,7 @@ export function IntakeChoiceCard({
           {selected ? <View style={styles.radioDot} /> : null}
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -478,15 +479,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
   },
   choiceThumbWrap: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     borderRadius: radii.md,
     overflow: 'hidden',
     flexShrink: 0,
   },
   choiceThumb: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     borderRadius: radii.md,
   },
   choiceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },

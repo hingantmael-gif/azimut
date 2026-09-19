@@ -40,6 +40,7 @@ import {
 } from '../src/engines/worldRankings';
 import { podiumRewardCard } from '../src/engines/rankingRewards';
 import { formatUsernameDisplay } from '../src/utils/username';
+import { isOwnerHiddenFromPublicRankings } from '../src/engines/ownerAccess';
 import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
 import type { ColorPalette } from '../src/theme/palettes';
@@ -67,8 +68,9 @@ export default function RankedScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { ranked, achievements, firstName, lastName, username, city, id, country, avatarUri } =
+  const { ranked, achievements, firstName, lastName, username, city, id, country, avatarUri, email } =
     state.profile;
+  const hideFromBoards = isOwnerHiddenFromPublicRankings(email);
 
   const [section, setSection] = useState<RankedSection>('league');
   const [liveTick, setLiveTick] = useState(0);
@@ -123,8 +125,20 @@ export default function RankedScreen() {
         },
         sport: odysseySport,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, country, city, kmOdyssey.totalKm, odysseySport, liveTick],
+    [
+      id,
+      username,
+      firstName,
+      lastName,
+      country,
+      city,
+      kmOdyssey.totalKm,
+      odysseySport,
+      liveTick,
+      hideFromBoards,
+    ],
   );
   const odysseyBoardFull =
     odysseyScope === 'national' ? odysseyBoards.national : odysseyBoards.world;
@@ -188,8 +202,9 @@ export default function RankedScreen() {
         you: { id, username, firstName, lastName, city, avatarUri },
         ranked,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, city, avatarUri, ranked, liveTick],
+    [id, username, firstName, lastName, city, avatarUri, ranked, liveTick, hideFromBoards],
   );
 
   const board = useMemo(
@@ -201,6 +216,7 @@ export default function RankedScreen() {
         viewDivision: selectedStep.division,
         expanded: ladderExpanded,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
     [
       id,
@@ -214,6 +230,7 @@ export default function RankedScreen() {
       selectedStep.division,
       ladderExpanded,
       liveTick,
+      hideFromBoards,
     ],
   );
 
@@ -230,8 +247,20 @@ export default function RankedScreen() {
         ranked,
         totalKm: state.lifetime.totalKm,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, country, city, ranked, state.lifetime.totalKm, liveTick],
+    [
+      id,
+      username,
+      firstName,
+      lastName,
+      country,
+      city,
+      ranked,
+      state.lifetime.totalKm,
+      liveTick,
+      hideFromBoards,
+    ],
   );
 
   const activeWorld = worldRankings[worldBoardId];
@@ -286,8 +315,9 @@ export default function RankedScreen() {
   );
 
   useEffect(() => {
+    if (hideFromBoards) return;
     dispatch({ type: 'SETTLE_LADDER_WEEK', place: yourBoard.yourRank });
-  }, [dispatch, yourBoard.yourRank, ranked.ladderWeekKey]);
+  }, [dispatch, yourBoard.yourRank, ranked.ladderWeekKey, hideFromBoards]);
 
   const badgeStats = useMemo(() => {
     const likedPrograms = (state.profile.likedProgramKeys ?? []).length;
@@ -460,6 +490,12 @@ export default function RankedScreen() {
         <>
         <View style={[styles.hero, { backgroundColor: displayMeta.color }]}>
           <View style={styles.heroGlow} />
+          <View style={styles.demoBadge}>
+            <Text style={styles.demoBadgeText}>Classement de démonstration</Text>
+          </View>
+          <Text style={styles.demoHint}>
+            Peloton seed / démo — le ladder cloud live arrive bientôt.
+          </Text>
           <Text style={styles.season}>Saison {ranked.seasonId}</Text>
           {Platform.OS === 'web' ? (
             <View style={{ marginTop: spacing.md }}>
@@ -692,12 +728,19 @@ export default function RankedScreen() {
 
         <View style={styles.boardHead}>
           <Text style={styles.section}>Ladder {board.label}</Text>
-          <Text style={board.isYourDivision ? styles.yourPlace : styles.yourPlaceMuted}>
-            {board.isYourDivision
-              ? `#${board.yourRank} / ${board.divisionSize}`
-              : `${board.divisionSize} athlètes`}
+          <Text style={board.isYourDivision && !hideFromBoards ? styles.yourPlace : styles.yourPlaceMuted}>
+            {hideFromBoards
+              ? 'Invisible · Champion privé'
+              : board.isYourDivision
+                ? `#${board.yourRank} / ${board.divisionSize}`
+                : `${board.divisionSize} athlètes`}
           </Text>
         </View>
+        {hideFromBoards ? (
+          <Text style={styles.ladderOutcomeInline}>
+            Compte ultra-sécurisé : rang Champion conservé, hors listes publiques.
+          </Text>
+        ) : null}
         {ranked.lastLadderOutcome && board.isYourDivision ? (
           <Text style={styles.ladderOutcomeInline}>
             {ladderOutcomeLabel(
@@ -894,9 +937,11 @@ export default function RankedScreen() {
             {worldBoardTitle(worldBoardId, country)}
           </Text>
           <Text style={styles.yourPlaceMuted}>
-            {activeWorld.yourPlace > 0
-              ? `#${activeWorld.yourPlace}`
-              : `${activeWorld.entries.length}`}
+            {hideFromBoards
+              ? 'Invisible'
+              : activeWorld.yourPlace > 0
+                ? `#${activeWorld.yourPlace}`
+                : `${activeWorld.entries.length}`}
           </Text>
         </View>
         <View style={styles.board}>
@@ -1060,7 +1105,9 @@ export default function RankedScreen() {
             />
           </View>
           <Text style={styles.odysseyRanks}>
-            Rang {odysseyScope === 'national' ? 'national' : 'mondial'} #{odysseyYourRank}
+            {hideFromBoards
+              ? 'Invisible aux classements odyssée'
+              : `Rang ${odysseyScope === 'national' ? 'national' : 'mondial'} #${odysseyYourRank}`}
             {' · '}
             {ODYSSEY_SPORT_META[odysseySport].unitHint}
             {' · '}+{odysseyXp} XP / niveau
@@ -1280,6 +1327,31 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: 'rgba(255,255,255,0.18)',
       top: -60,
       right: -40,
+    },
+    demoBadge: {
+      alignSelf: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radii.md,
+      backgroundColor: 'rgba(0,0,0,0.22)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.28)',
+      marginBottom: 6,
+    },
+    demoBadgeText: {
+      color: 'rgba(255,255,255,0.78)',
+      fontWeight: '700',
+      fontSize: 11,
+      letterSpacing: 0.3,
+    },
+    demoHint: {
+      color: 'rgba(255,255,255,0.65)',
+      fontSize: 11,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      lineHeight: 15,
+      paddingHorizontal: spacing.sm,
     },
     season: {
       color: 'rgba(255,255,255,0.85)',

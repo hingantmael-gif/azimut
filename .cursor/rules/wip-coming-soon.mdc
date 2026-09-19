@@ -1,0 +1,29 @@
+---
+description: Features WIP — casque de chantier, visible mais non accessible
+alwaysApply: true
+---
+
+# Zones en travaux (casque de chantier)
+
+Dès qu’une **partie de l’app est incomplète / en cours de construction**, elle doit rester **visible** mais **non utilisable**, avec le pattern casque de chantier — pour que l’utilisateur navigue ailleurs sans bug ni impasse.
+
+## Obligatoire
+
+1. **Ne pas cacher** la feature (l’utilisateur doit voir qu’elle arrive).
+2. **Ne pas laisser cliquer / naviguer** dedans (pas de route, pas de wizard, pas d’action).
+3. Afficher le **casque 👷 + « En construction »** (ou « Bientôt ») via les composants partagés :
+   - `ComingSoonLock` / `ComingSoonOverlay` → `src/ui/ComingSoon.tsx`
+   - Carte sport exemple → `SportComingSoonCard` (`src/ui/program/SportComingSoon.tsx`)
+4. Bloquer aussi les **entrées secondaires** (filtres, classements, deep links, `selectSport`, etc.).
+
+## Interdit
+
+- Laisser un bouton / carte WIP qui ouvre un flux cassé ou à moitié câblé.
+- Remplacer seulement par un `Alert` sans calque visible.
+- Retirer entièrement la carte sans signal « bientôt ».
+
+## Quand appliquer
+
+- Nouvelle discipline / écran / onglet pas prêt.
+- Algo ou UI partielle (ex. callisthénie avant stabilisation).
+- Toute évolution « on verra plus tard » exposée dans la navigation.
