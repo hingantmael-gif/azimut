@@ -15,11 +15,13 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { ActivityRouteMap } from '../../src/ui/ActivityRouteMap';
 import { useLiveGpsTrack } from '../../src/hooks/useLiveGpsTrack';
+import { FlowBadge, FlowField } from '../../src/ui/live/FlowField';
 import {
   buildLiveActivity,
   canStartLiveWorkout,
   computeLiveKmSplits,
   advanceLiveStepCursor,
+  flowPercent,
   INITIAL_LIVE_CURSOR,
   type LiveStepCursor,
   computeLiveStepProgress,
@@ -74,6 +76,15 @@ import {
 import { BRAND } from '../../src/constants/brand';
 type Phase = 'ready' | 'running' | 'paused' | 'saving';
 
+/** Séance vide utilisée tant qu'aucune séance n'est chargée (voir la garde plus bas). */
+const NO_WORKOUT: PlannedWorkout = {
+  id: 'none',
+  date: '',
+  title: '',
+  discipline: 'rest',
+  steps: [],
+} as unknown as PlannedWorkout;
+
 /** Tracker GPS live — guidage Garmin (allure / étapes) pour séances planifiées. */
 export default function LiveSessionScreen() {
   const { id, mode, sport, resume, go } = useLocalSearchParams<{
@@ -100,7 +111,10 @@ export default function LiveSessionScreen() {
 
   const planned = id ? state.plan.find((w) => w.id === id) : undefined;
   const [draftWorkout, setDraftWorkout] = useState<PlannedWorkout | null>(null);
-  const workout: PlannedWorkout | null = planned ?? draftWorkout ?? freeShell;
+  const workoutOrNull: PlannedWorkout | null = planned ?? draftWorkout ?? freeShell;
+  // Les hooks doivent s'exécuter à chaque rendu, même sans séance (brouillon chargé de façon
+  // asynchrone) : on travaille sur une séance vide et les gardes sont placées sous les hooks.
+  const workout: PlannedWorkout = workoutOrNull ?? NO_WORKOUT;
 
   const sessionKey = liveDraftKey({
     plannedId: id,
@@ -343,32 +357,6 @@ export default function LiveSessionScreen() {
     [gps.points],
   );
 
-  if (!workout) {
-    return (
-      <View style={styles.errorRoot}>
-        <Text style={styles.errorTitle}>Séance introuvable</Text>
-        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
-          <Text style={styles.secondaryBtnText}>Retour</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  if (!canStartLiveWorkout(workout.discipline)) {
-    return (
-      <View style={styles.errorRoot}>
-        <Text style={styles.errorTitle}>GPS non disponible pour ce sport</Text>
-        <Text style={styles.errorBody}>
-          Le tracker live guide course, vélo et natation. Pour la musculation,
-          utilise l’export montre ou valide en RPE.
-        </Text>
-        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
-          <Text style={styles.secondaryBtnText}>Retour</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   const latlng: [number, number][] =
     gps.points.length > 0
       ? gps.points.map((p) => [p.lat, p.lng] as [number, number])
@@ -550,6 +538,21 @@ export default function LiveSessionScreen() {
   const currentStep = stepProgress.step;
   const paceSt = paceStatus(gps.currentPaceSecPerKm, currentStep);
   const paceBand = formatPaceBand(currentStep);
+
+  // « Flow » : part du temps passé dans la zone d'allure cible (étapes avec cible d'allure).
+  const flowRef = useRef({ zoneSec: 0, measuredSec: 0, lastMoving: 0 });
+  const [flowPct, setFlowPct] = useState<number | null>(null);
+  useEffect(() => {
+    const f = flowRef.current;
+    const dt = movingSec - f.lastMoving;
+    f.lastMoving = movingSec;
+    // Un saut > 5 s (reprise après pause, hydratation) n'est pas du temps mesuré.
+    if (phase !== 'running' || dt <= 0 || dt > 5 || paceSt === 'none') return;
+    f.measuredSec += dt;
+    if (paceSt === 'in_zone') f.zoneSec += dt;
+    setFlowPct(flowPercent(f.zoneSec, f.measuredSec));
+  }, [movingSec, phase, paceSt]);
+  const [flowSize, setFlowSize] = useState({ w: 0, h: 0 });
   const anomaly = useMemo(
     () =>
       detectPaceAnomaly({
@@ -832,6 +835,32 @@ export default function LiveSessionScreen() {
     </>
   );
 
+  if (!workoutOrNull) {
+    return (
+      <View style={styles.errorRoot}>
+        <Text style={styles.errorTitle}>Séance introuvable</Text>
+        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
+          <Text style={styles.secondaryBtnText}>Retour</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!canStartLiveWorkout(workout.discipline)) {
+    return (
+      <View style={styles.errorRoot}>
+        <Text style={styles.errorTitle}>GPS non disponible pour ce sport</Text>
+        <Text style={styles.errorBody}>
+          Le tracker live guide course, vélo et natation. Pour la musculation,
+          utilise l’export montre ou valide en RPE.
+        </Text>
+        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
+          <Text style={styles.secondaryBtnText}>Retour</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   // showFocus with map peek when running+collapsed
   if (phase === 'paused' || phase === 'saving' || (phase === 'running' && focusOpen)) {
     return (
@@ -843,8 +872,12 @@ export default function LiveSessionScreen() {
             paddingTop: insets.top + 4,
           },
         ]}
+        onLayout={(e) =>
+          setFlowSize({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })
+        }
       >
-        <View style={{ flexDirection: 'row', paddingHorizontal: 12, marginBottom: 4 }}>
+        <FlowField status={phase === 'running' ? paceSt : 'none'} size={flowSize} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 4 }}>
           <PressableScale
             variant="pop"
             onPress={leave}
@@ -862,6 +895,10 @@ export default function LiveSessionScreen() {
               ⌄
             </Text>
           </PressableScale>
+          <View style={{ flex: 1, alignItems: 'center' }} pointerEvents="none">
+            <FlowBadge percent={flowPct} status={paceSt} />
+          </View>
+          <View style={{ width: 40 }} />
         </View>
         <LiveFocusBoard
           phase={
@@ -923,6 +960,14 @@ export default function LiveSessionScreen() {
         />
       </View>
       <View style={styles.topScrim} pointerEvents="none" />
+      {phase === 'running' && flowPct != null ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, alignItems: 'center', zIndex: 5 }}
+        >
+          <FlowBadge percent={flowPct} status={paceSt} />
+        </View>
+      ) : null}
 
       {topBar}
 

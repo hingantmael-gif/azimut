@@ -35,13 +35,13 @@ export type CampusIntakeStepId =
   | 'program_weeks';
 
 export const ONBOARDING_IMAGES = {
-  heroRelay: require('../../../assets/onboarding/onboarding-hero-relay.png') as ImageSourcePropType,
-  goalRoad: require('../../../assets/onboarding/onboarding-goal-road.png') as ImageSourcePropType,
-  goalTrail: require('../../../assets/onboarding/onboarding-goal-trail.png') as ImageSourcePropType,
-  goalStart: require('../../../assets/onboarding/onboarding-goal-start.png') as ImageSourcePropType,
-  goalProgress: require('../../../assets/onboarding/onboarding-goal-progress.png') as ImageSourcePropType,
-  goalReturn: require('../../../assets/onboarding/onboarding-goal-return.png') as ImageSourcePropType,
-  planTeaser: require('../../../assets/onboarding/onboarding-plan-teaser.png') as ImageSourcePropType,
+  heroRelay: require('../../../assets/onboarding/onboarding-hero-relay.jpg') as ImageSourcePropType,
+  goalRoad: require('../../../assets/onboarding/onboarding-goal-road.jpg') as ImageSourcePropType,
+  goalTrail: require('../../../assets/onboarding/onboarding-goal-trail.jpg') as ImageSourcePropType,
+  goalStart: require('../../../assets/onboarding/onboarding-goal-start.jpg') as ImageSourcePropType,
+  goalProgress: require('../../../assets/onboarding/onboarding-goal-progress.jpg') as ImageSourcePropType,
+  goalReturn: require('../../../assets/onboarding/onboarding-goal-return.jpg') as ImageSourcePropType,
+  planTeaser: require('../../../assets/onboarding/onboarding-plan-teaser.jpg') as ImageSourcePropType,
 };
 
 export const RELAY_COPY = {

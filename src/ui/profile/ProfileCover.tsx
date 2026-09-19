@@ -3,6 +3,8 @@ import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-n
 import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
 import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
+import { seedFromString } from '../../engines/topoLines';
+import { TopoLines } from './TopoLines';
 import {
   formatPersonalBestCoverLabel,
   getProfileCover,
@@ -122,6 +124,10 @@ export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
         <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
       </Animated.View>
+      {/* Courbes de niveau : jamais sur les fonds de rang (le logo de rang reste net). */}
+      {cover.unlock.type !== 'rank' ? (
+        <TopoLines color={cover.colors[2]} height={height} seed={seedFromString(cover.id)} />
+      ) : null}
       <CoverFinish />
       {cover.watermark ? (
         <View style={styles.markWrap} pointerEvents="none">
@@ -153,6 +159,9 @@ export function ProfileCoverPreview({
       ]}
     >
       <Scene cover={cover} height={84} compact personalBestKm={personalBestKm} />
+      {cover.unlock.type !== 'rank' ? (
+        <TopoLines color={cover.colors[2]} height={84} seed={seedFromString(cover.id)} lines={8} opacity={0.34} />
+      ) : null}
       <CoverFinish radius={14} />
       {cover.watermark ? (
         <View style={styles.previewMarkPill}>

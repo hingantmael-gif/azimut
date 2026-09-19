@@ -10,19 +10,19 @@ export const COVER_CROP_CENTER = '50% 50%';
  * (course, vélo, natation, triathlon, muscu…), pas un sport « réservé » à un genre.
  */
 export const SPORT_HERO_IMAGES: Record<ProgramSportCategory, ImageSourcePropType> = {
-  run: require('../../assets/sports/sport-run.png'),
-  bike: require('../../assets/sports/sport-bike.png'),
-  swim: require('../../assets/sports/sport-swim.png'),
-  triathlon: require('../../assets/sports/sport-triathlon.png'),
-  strength: require('../../assets/sports/sport-strength.png'),
-  ironman: require('../../assets/sports/sport-ironman.png'),
-  other: require('../../assets/sports/sport-calisthenics.png'),
+  run: require('../../assets/sports/sport-run.jpg'),
+  bike: require('../../assets/sports/sport-bike.jpg'),
+  swim: require('../../assets/sports/sport-swim.jpg'),
+  triathlon: require('../../assets/sports/sport-triathlon.jpg'),
+  strength: require('../../assets/sports/sport-strength.jpg'),
+  ironman: require('../../assets/sports/sport-ironman.jpg'),
+  other: require('../../assets/sports/sport-calisthenics.jpg'),
 };
 
 /** Natation : choix d’environnement */
 export const SWIM_VENUE_IMAGES = {
-  pool: require('../../assets/sports/sport-swim-pool.png'),
-  open_water: require('../../assets/sports/sport-swim-open.png'),
+  pool: require('../../assets/sports/sport-swim-pool.jpg'),
+  open_water: require('../../assets/sports/sport-swim-open.jpg'),
 } as const;
 
 /**
@@ -30,52 +30,52 @@ export const SWIM_VENUE_IMAGES = {
  * Mix femmes / hommes selon la discipline.
  */
 export const ATMOSPHERE_IMAGES = {
-  run: require('../../assets/sports/atmosphere-run.png'),
-  bike: require('../../assets/sports/atmosphere-bike.png'),
-  swim: require('../../assets/sports/atmosphere-swim.png'),
-  triathlon: require('../../assets/sports/sport-triathlon.png'),
+  run: require('../../assets/sports/atmosphere-run.jpg'),
+  bike: require('../../assets/sports/atmosphere-bike.jpg'),
+  swim: require('../../assets/sports/atmosphere-swim.jpg'),
+  triathlon: require('../../assets/sports/sport-triathlon.jpg'),
 } as const;
 
 export type AtmosphereKind = keyof typeof ATMOSPHERE_IMAGES;
 
 /** Miniatures / fonds programmes — une image distincte par programme. */
 const PROGRAM_IMAGES: Record<string, ImageSourcePropType> = {
-  'prog-5k': require('../../assets/sports/prog-run-5k.png'),
-  'prog-10k': require('../../assets/sports/prog-run-10k.png'),
-  'prog-semi': require('../../assets/sports/prog-run-semi.png'),
-  'prog-marathon': require('../../assets/sports/prog-run-marathon.png'),
-  'prog-trail-50': require('../../assets/sports/prog-run-trail.png'),
-  'prog-vma': require('../../assets/sports/prog-run-vma.png'),
-  'prog-bike-40': require('../../assets/sports/prog-bike-40.png'),
-  'prog-bike-80': require('../../assets/sports/prog-bike-80.png'),
-  'prog-bike-120': require('../../assets/sports/prog-bike-120.png'),
-  'prog-bike-fondo': require('../../assets/sports/prog-bike-fondo.png'),
-  'prog-bike-200': require('../../assets/sports/prog-bike-200.png'),
-  'prog-bike-crit': require('../../assets/sports/prog-bike-crit.png'),
-  'prog-swim-50': require('../../assets/sports/prog-swim-50.png'),
-  'prog-swim-100': require('../../assets/sports/sport-swim-pool.png'),
-  'prog-swim-200': require('../../assets/sports/prog-swim-200.png'),
-  'prog-swim-400': require('../../assets/sports/prog-swim-400.png'),
-  'prog-swim-800': require('../../assets/sports/prog-swim-800.png'),
-  'prog-swim-1500': require('../../assets/sports/prog-swim-1500.png'),
-  'prog-swim-eau-libre-1k': require('../../assets/sports/prog-swim-eau-libre-1k.png'),
-  'prog-swim-eau-libre': require('../../assets/sports/prog-swim-eau-libre-2k.png'),
-  'prog-swim-eau-libre-5k': require('../../assets/sports/prog-swim-eau-libre-5k.png'),
-  'prog-tri-super-sprint': require('../../assets/sports/prog-tri-super-sprint.png'),
-  'prog-tri-sprint': require('../../assets/sports/prog-tri-sprint.png'),
-  'prog-tri-olympique': require('../../assets/sports/prog-tri-olympique.png'),
-  'prog-ironman-5150': require('../../assets/sports/prog-ironman-5150.png'),
-  'prog-ironman-70-3': require('../../assets/sports/prog-ironman-70-3.png'),
-  'prog-ironman-70-3-debut': require('../../assets/sports/prog-ironman-70-3-debut.png'),
-  'prog-ironman': require('../../assets/sports/prog-ironman.png'),
-  'prog-ironman-140-6-debut': require('../../assets/sports/prog-ironman-140-6-debut.png'),
-  'prog-ironman-bridge': require('../../assets/sports/prog-ironman-bridge.png'),
-  'prog-ironman-performance': require('../../assets/sports/prog-ironman-performance.png'),
-  'prog-strength-base': require('../../assets/sports/prog-strength-base.png'),
-  'prog-strength-tri': require('../../assets/sports/prog-strength-tri.png'),
-  'prog-calisthenics-base': require('../../assets/sports/prog-calisthenics-base.png'),
-  'prog-calisthenics-strength': require('../../assets/sports/prog-calisthenics-strength.png'),
-  'prog-calisthenics-endurance': require('../../assets/sports/prog-calisthenics-endurance.png'),
+  'prog-5k': require('../../assets/sports/prog-run-5k.jpg'),
+  'prog-10k': require('../../assets/sports/prog-run-10k.jpg'),
+  'prog-semi': require('../../assets/sports/prog-run-semi.jpg'),
+  'prog-marathon': require('../../assets/sports/prog-run-marathon.jpg'),
+  'prog-trail-50': require('../../assets/sports/prog-run-trail.jpg'),
+  'prog-vma': require('../../assets/sports/prog-run-vma.jpg'),
+  'prog-bike-40': require('../../assets/sports/prog-bike-40.jpg'),
+  'prog-bike-80': require('../../assets/sports/prog-bike-80.jpg'),
+  'prog-bike-120': require('../../assets/sports/prog-bike-120.jpg'),
+  'prog-bike-fondo': require('../../assets/sports/prog-bike-fondo.jpg'),
+  'prog-bike-200': require('../../assets/sports/prog-bike-200.jpg'),
+  'prog-bike-crit': require('../../assets/sports/prog-bike-crit.jpg'),
+  'prog-swim-50': require('../../assets/sports/prog-swim-50.jpg'),
+  'prog-swim-100': require('../../assets/sports/sport-swim-pool.jpg'),
+  'prog-swim-200': require('../../assets/sports/prog-swim-200.jpg'),
+  'prog-swim-400': require('../../assets/sports/prog-swim-400.jpg'),
+  'prog-swim-800': require('../../assets/sports/prog-swim-800.jpg'),
+  'prog-swim-1500': require('../../assets/sports/prog-swim-1500.jpg'),
+  'prog-swim-eau-libre-1k': require('../../assets/sports/prog-swim-eau-libre-1k.jpg'),
+  'prog-swim-eau-libre': require('../../assets/sports/prog-swim-eau-libre-2k.jpg'),
+  'prog-swim-eau-libre-5k': require('../../assets/sports/prog-swim-eau-libre-5k.jpg'),
+  'prog-tri-super-sprint': require('../../assets/sports/prog-tri-super-sprint.jpg'),
+  'prog-tri-sprint': require('../../assets/sports/prog-tri-sprint.jpg'),
+  'prog-tri-olympique': require('../../assets/sports/prog-tri-olympique.jpg'),
+  'prog-ironman-5150': require('../../assets/sports/prog-ironman-5150.jpg'),
+  'prog-ironman-70-3': require('../../assets/sports/prog-ironman-70-3.jpg'),
+  'prog-ironman-70-3-debut': require('../../assets/sports/prog-ironman-70-3-debut.jpg'),
+  'prog-ironman': require('../../assets/sports/prog-ironman.jpg'),
+  'prog-ironman-140-6-debut': require('../../assets/sports/prog-ironman-140-6-debut.jpg'),
+  'prog-ironman-bridge': require('../../assets/sports/prog-ironman-bridge.jpg'),
+  'prog-ironman-performance': require('../../assets/sports/prog-ironman-performance.jpg'),
+  'prog-strength-base': require('../../assets/sports/prog-strength-base.jpg'),
+  'prog-strength-tri': require('../../assets/sports/prog-strength-tri.jpg'),
+  'prog-calisthenics-base': require('../../assets/sports/prog-calisthenics-base.jpg'),
+  'prog-calisthenics-strength': require('../../assets/sports/prog-calisthenics-strength.jpg'),
+  'prog-calisthenics-endurance': require('../../assets/sports/prog-calisthenics-endurance.jpg'),
 };
 
 /**
@@ -113,13 +113,13 @@ export function coverCropImageStyle(objectPosition: string = COVER_CROP_CENTER):
 export const CUSTOM_DISTANCE_IMAGES: Partial<
   Record<ProgramSportCategory, ImageSourcePropType>
 > = {
-  swim: require('../../assets/sports/prog-swim-custom.png'),
-  run: require('../../assets/sports/prog-run-trail.png'),
-  bike: require('../../assets/sports/prog-bike-fondo.png'),
-  triathlon: require('../../assets/sports/sport-triathlon.png'),
-  ironman: require('../../assets/sports/sport-ironman.png'),
-  strength: require('../../assets/sports/prog-strength-base.png'),
-  other: require('../../assets/sports/sport-calisthenics.png'),
+  swim: require('../../assets/sports/prog-swim-custom.jpg'),
+  run: require('../../assets/sports/prog-run-trail.jpg'),
+  bike: require('../../assets/sports/prog-bike-fondo.jpg'),
+  triathlon: require('../../assets/sports/sport-triathlon.jpg'),
+  ironman: require('../../assets/sports/sport-ironman.jpg'),
+  strength: require('../../assets/sports/prog-strength-base.jpg'),
+  other: require('../../assets/sports/sport-calisthenics.jpg'),
 };
 
 export function imageForProgram(
@@ -138,35 +138,35 @@ export function atmosphereImage(kind: AtmosphereKind): ImageSourcePropType {
 
 /** Démos callisthénie (comment faire l’exercice). */
 export const CALISTHENICS_DEMO_IMAGES: Record<string, ImageSourcePropType> = {
-  pushup: require('../../assets/sports/calis-pushup.png'),
-  pike_pushup: require('../../assets/sports/calis-pushup.png'),
-  pullup: require('../../assets/sports/calis-pullup.png'),
-  scapular: require('../../assets/sports/calis-pullup.png'),
-  squat: require('../../assets/sports/calis-squat.png'),
-  dip: require('../../assets/sports/calis-dip.png'),
-  plank: require('../../assets/sports/calis-plank.png'),
-  hollow: require('../../assets/sports/exercises/ex-hollow.png'),
-  lunge: require('../../assets/sports/calis-lunge.png'),
-  row: require('../../assets/sports/calis-row.png'),
+  pushup: require('../../assets/sports/calis-pushup.jpg'),
+  pike_pushup: require('../../assets/sports/calis-pushup.jpg'),
+  pullup: require('../../assets/sports/calis-pullup.jpg'),
+  scapular: require('../../assets/sports/calis-pullup.jpg'),
+  squat: require('../../assets/sports/calis-squat.jpg'),
+  dip: require('../../assets/sports/calis-dip.jpg'),
+  plank: require('../../assets/sports/calis-plank.jpg'),
+  hollow: require('../../assets/sports/exercises/ex-hollow.jpg'),
+  lunge: require('../../assets/sports/calis-lunge.jpg'),
+  row: require('../../assets/sports/calis-row.jpg'),
 };
 
 /** Visuels player guidé (muscu + callis) — clés GuidedVisualKey */
 export const GUIDED_EXERCISE_IMAGES: Record<string, ImageSourcePropType> = {
-  warmup: require('../../assets/sports/exercises/ex-warmup.png'),
-  pushup: require('../../assets/sports/calis-pushup.png'),
-  pullup: require('../../assets/sports/calis-pullup.png'),
-  squat: require('../../assets/sports/calis-squat.png'),
-  lunge: require('../../assets/sports/calis-lunge.png'),
-  dip: require('../../assets/sports/calis-dip.png'),
-  plank: require('../../assets/sports/calis-plank.png'),
-  row: require('../../assets/sports/calis-row.png'),
-  hollow: require('../../assets/sports/exercises/ex-hollow.png'),
-  wallsit: require('../../assets/sports/exercises/ex-wallsit.png'),
-  press: require('../../assets/sports/exercises/ex-db-press.png'),
-  shoulder: require('../../assets/sports/exercises/ex-shoulder-press.png'),
-  curl: require('../../assets/sports/exercises/ex-curl.png'),
-  hinge: require('../../assets/sports/exercises/ex-hinge.png'),
-  generic: require('../../assets/sports/sport-strength.png'),
+  warmup: require('../../assets/sports/exercises/ex-warmup.jpg'),
+  pushup: require('../../assets/sports/calis-pushup.jpg'),
+  pullup: require('../../assets/sports/calis-pullup.jpg'),
+  squat: require('../../assets/sports/calis-squat.jpg'),
+  lunge: require('../../assets/sports/calis-lunge.jpg'),
+  dip: require('../../assets/sports/calis-dip.jpg'),
+  plank: require('../../assets/sports/calis-plank.jpg'),
+  row: require('../../assets/sports/calis-row.jpg'),
+  hollow: require('../../assets/sports/exercises/ex-hollow.jpg'),
+  wallsit: require('../../assets/sports/exercises/ex-wallsit.jpg'),
+  press: require('../../assets/sports/exercises/ex-db-press.jpg'),
+  shoulder: require('../../assets/sports/exercises/ex-shoulder-press.jpg'),
+  curl: require('../../assets/sports/exercises/ex-curl.jpg'),
+  hinge: require('../../assets/sports/exercises/ex-hinge.jpg'),
+  generic: require('../../assets/sports/sport-strength.jpg'),
 };
 
 export function guidedExerciseImage(key?: string | null): ImageSourcePropType {

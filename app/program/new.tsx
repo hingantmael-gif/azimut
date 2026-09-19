@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
+import { LoadCurvePreview } from '../../src/ui/program/LoadCurvePreview';
 import {
   ImageBackground,
   StyleSheet,
@@ -963,6 +964,26 @@ export default function NewProgramScreen() {
     Boolean(selectedTemplate) &&
     (isBodyProgram || durationMode === 'weeks' || Boolean(parsedRaceDate));
 
+  /**
+   * Aperçu réel du plan (même moteur que la génération) affiché à la dernière étape :
+   * l'utilisateur voit sa charge semaine par semaine avant de valider. Recalculé
+   * uniquement quand les choix changent ; un échec n'empêche jamais de générer.
+   */
+  const previewInput = showGenerate && canGenerate ? buildProgramInput() : null;
+  const previewKey = previewInput ? JSON.stringify(previewInput) : '';
+  const previewPlan = useMemo(() => {
+    if (!previewInput) return null;
+    try {
+      return buildProgramPlan({
+        ...previewInput,
+        weeklyKmAvg: profileWeeklyKm > 0 ? profileWeeklyKm : Number(weeklyKmInput.replace(',', '.')) || 20,
+      }).plan;
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewKey]);
+
   /** Fond programme dès l’étape séances — image du programme choisi, nette. */
   const wizardBg = useMemo(() => {
     if (step < S.sessions || !sport) return null;
@@ -1696,6 +1717,7 @@ export default function NewProgramScreen() {
                   </WizardHint>
                 );
               })()}
+              <LoadCurvePreview plan={previewPlan} />
               <PrimaryButton
                 label={generating ? 'Préparation…' : 'Voir mon programme'}
                 disabled={!canGenerate || generating}

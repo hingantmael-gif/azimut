@@ -572,3 +572,12 @@ export function liveCueLabel(
   if (anomaly) return anomaly.label;
   return paceStatusLabel(status);
 }
+
+/**
+ * « Flow » : pourcentage du temps passé dans la zone d'allure cible.
+ * `null` tant qu'il y a moins de 20 s mesurées (valeur sans signification).
+ */
+export function flowPercent(zoneSec: number, measuredSec: number): number | null {
+  if (!Number.isFinite(zoneSec) || !Number.isFinite(measuredSec) || measuredSec < 20) return null;
+  return Math.max(0, Math.min(100, Math.round((zoneSec / measuredSec) * 100)));
+}
