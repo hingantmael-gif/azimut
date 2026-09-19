@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
 import {
   formatPersonalBestCoverLabel,

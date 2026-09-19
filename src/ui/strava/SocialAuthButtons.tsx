@@ -1,4 +1,5 @@
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 import { PressableScale } from '../motion/softMotion';
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../src/store/AppContext';
 import { badgeViewModels } from '../src/engines/achievements';

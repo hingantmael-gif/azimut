@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useApp } from '../src/store/AppContext';
 import { WatchBrandPicker } from '../src/ui/sleep/WatchBrandPicker';
 import { SleepCalendar } from '../src/ui/sleep/SleepCalendar';

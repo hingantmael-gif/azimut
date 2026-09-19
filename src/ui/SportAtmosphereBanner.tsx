@@ -3,10 +3,10 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
 } from 'react-native';
+import { Text } from './Text';
 import { useThemeColors } from '../theme/ThemeContext';
 import { radii, spacing } from '../theme/tokens';
 import type { ColorPalette } from '../theme/palettes';

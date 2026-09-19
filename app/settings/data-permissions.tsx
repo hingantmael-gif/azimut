@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Text } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   SettingsRow,

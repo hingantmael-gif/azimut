@@ -5,9 +5,9 @@ import {
   Pressable,
   RefreshControl,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { Body, Chip, Muted, Screen, Title } from '../../src/ui/primitives';
 import { useThemeColors } from '../../src/theme/ThemeContext';

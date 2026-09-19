@@ -1,4 +1,5 @@
-import { Linking, StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
+import { Linking, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { normalizeUsername } from '../../utils/username';

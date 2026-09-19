@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import {
   AuthDivider,

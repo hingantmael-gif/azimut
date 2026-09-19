@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import {
   SettingsRow,
   SettingsScreen,

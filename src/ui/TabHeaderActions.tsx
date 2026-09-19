@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../store/AppContext';
 import { useThemeColors } from '../theme/ThemeContext';

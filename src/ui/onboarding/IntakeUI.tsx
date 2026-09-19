@@ -4,11 +4,11 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
   type TextInputProps,
 } from 'react-native';
+import { Text } from '../Text';
 import { AppTextInput } from '../AppTextInput';
 import { formatRaceClockInput } from '../../utils/dateInput';
 import { Ionicons } from '@expo/vector-icons';

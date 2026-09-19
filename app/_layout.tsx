@@ -1,9 +1,18 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+  useFonts,
+} from '@expo-google-fonts/manrope';
 import { AppProvider, useApp } from '../src/store/AppContext';
 import { ThemeProvider, useThemeColors } from '../src/theme/ThemeContext';
+import { fonts } from '../src/theme/tokens';
 import { I18nProvider } from '../src/i18n/I18nContext';
 import { PhoneShell } from '../src/ui/PhoneShell';
 import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
@@ -87,6 +96,7 @@ function AppShell() {
             screenOptions={{
               headerStyle: { backgroundColor: colors.bg },
               headerTintColor: colors.text,
+              headerTitleStyle: { fontFamily: fonts.extrabold, fontSize: 19 },
               contentStyle: { backgroundColor: colors.bgSecondary },
               headerShadowVisible: false,
               headerBackTitle: 'Retour',
@@ -165,7 +175,28 @@ function AppShell() {
   );
 }
 
+/** Au-delà de ce délai on affiche l'app quand même (police système en repli). */
+const FONT_LOAD_TIMEOUT_MS = 3000;
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  });
+  const [fontTimeout, setFontTimeout] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setFontTimeout(true), FONT_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Évite un flash de police système : on attend Manrope (max 3 s, jamais bloquant).
+  if (!fontsLoaded && !fontError && !fontTimeout) {
+    return <View style={styles.fontBoot} />;
+  }
+
   return (
     <AppProvider>
       <ThemeProvider>
@@ -178,6 +209,10 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  fontBoot: {
+    flex: 1,
+    backgroundColor: '#F5F8F7',
+  },
   boot: {
     flex: 1,
     alignItems: 'center',

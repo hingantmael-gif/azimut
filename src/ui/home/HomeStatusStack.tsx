@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import type { SentinelReport } from '../../engines/sentinel';
 import { loadLiveDraft } from '../../storage/liveSessionDraft';

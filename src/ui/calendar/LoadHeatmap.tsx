@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import type { PlannedWorkout } from '../../types/domain';
 import { getMonthGrid } from '../../constants/disciplines';
 import { computeSessionDurationSec } from '../../engines/coachingEngine';

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { PhoneModal } from '../PhoneModal';
 import { WatchBrandPicker } from '../sleep/WatchBrandPicker';
 import type { WatchBrandId } from '../../types/domain';

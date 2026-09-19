@@ -5,7 +5,7 @@ import type { UnitsSystem } from '../../src/types/domain';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { useI18n } from '../../src/i18n/I18nContext';
 import { APP_LOCALES, type AppLocale } from '../../src/i18n/locales';
-import { Text } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { spacing } from '../../src/theme/tokens';
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { Alert, Linking, Platform, Text, View } from 'react-native';
+import { Alert, Linking, Platform, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import {
   SettingsRow,

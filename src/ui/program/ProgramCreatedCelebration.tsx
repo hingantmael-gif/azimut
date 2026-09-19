@@ -3,9 +3,9 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { spacing } from '../../theme/tokens';
 import { PhoneModal } from '../PhoneModal';

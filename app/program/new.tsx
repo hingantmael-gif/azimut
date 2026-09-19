@@ -2,9 +2,9 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ImageBackground,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { AppTextInput } from '../../src/ui/AppTextInput';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';

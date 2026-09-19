@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import {
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Text } from './Text';
 import { radii } from '../theme/tokens';
 
 type OverlayProps = {

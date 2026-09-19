@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Platform, StyleSheet, Text, View, ActivityIndicator, Linking, Pressable } from 'react-native';
+import { Platform, StyleSheet, View, ActivityIndicator, Linking, Pressable } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { BRAND } from '../src/constants/brand';
 

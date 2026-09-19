@@ -4,11 +4,11 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import { PressableScale } from '../motion/softMotion';

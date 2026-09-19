@@ -1,4 +1,5 @@
-import { Text, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { SettingsScreen } from '../../src/ui/settings/SettingsList';
 import { AboutBrandMark } from '../../src/ui/brand/AppBrandBlocks';
 import { useThemeColors } from '../../src/theme/ThemeContext';

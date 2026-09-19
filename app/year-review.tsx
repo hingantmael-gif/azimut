@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useApp } from '../src/store/AppContext';
 import { buildYearSummary } from '../src/engines/muscleRecovery';
 import { DEMO_DIRECTORY as DEMO_MEMBERS } from '../src/data/demoDirectory';

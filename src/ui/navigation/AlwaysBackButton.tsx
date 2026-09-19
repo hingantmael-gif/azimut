@@ -1,4 +1,5 @@
-import { Platform, Text } from 'react-native';
+import { Platform } from 'react-native';
+import { Text } from '../Text';
 import { useRouter, type Href } from 'expo-router';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { PressableScale } from '../motion/softMotion';

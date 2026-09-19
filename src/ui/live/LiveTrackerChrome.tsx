@@ -4,9 +4,9 @@ import {
   Easing,
   Platform,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';

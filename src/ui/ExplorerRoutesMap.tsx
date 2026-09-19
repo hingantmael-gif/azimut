@@ -1,5 +1,6 @@
 import { createElement, useEffect, useId, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import Svg, { Polyline } from 'react-native-svg';
 import { BRAND } from '../constants/brand';
 

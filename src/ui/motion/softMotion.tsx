@@ -5,12 +5,12 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type AccessibilityRole,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Text } from '../Text';
 import { usePathname } from 'expo-router';
 
 /** Respiration lente (échelle) — hypnotique, discret */

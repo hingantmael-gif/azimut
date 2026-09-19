@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Text } from '../Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { radii } from '../../theme/tokens';
 import {

@@ -3,10 +3,10 @@ import {
   Image,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
 } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
 import {

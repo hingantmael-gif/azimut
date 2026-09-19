@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { PrimaryButton, Screen } from '../src/ui/primitives';
 import { ComingSoonLock } from '../src/ui/ComingSoon';

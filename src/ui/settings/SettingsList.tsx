@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { usePathname } from 'expo-router';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { spacing } from '../../theme/tokens';

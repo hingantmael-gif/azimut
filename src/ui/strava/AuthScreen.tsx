@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type TextInputProps, type ViewProps } from 'react-native';
+import { Platform, Pressable, StyleSheet, View, type TextInputProps, type ViewProps } from 'react-native';
+import { Text } from '../Text';
 import { colors, radii, spacing, typography } from '../../theme/tokens';
 import { AppScrollView } from '../scrolling';
 import { AppTextInput } from '../AppTextInput';

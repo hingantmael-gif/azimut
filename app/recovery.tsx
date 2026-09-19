@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { Body, Muted, PrimaryButton, Screen, Title } from '../src/ui/primitives';
 import { colors, radii, spacing } from '../src/theme/tokens';
 import { SportAtmosphereBanner } from '../src/ui/SportAtmosphereBanner';

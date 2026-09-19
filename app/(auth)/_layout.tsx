@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { Stack } from 'expo-router';
 import { colors } from '../../src/theme/tokens';
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';

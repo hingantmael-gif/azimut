@@ -1,11 +1,14 @@
 /** Accueil · Plan · Enregistrer · Progrès · Vous — FAB + remplace Nouveau */
 import { Tabs, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { TabHeaderActions } from '../../src/ui/TabHeaderActions';
 import { HeaderBrand } from '../../src/ui/brand/AppBrandBlocks';
 import { TabIcon } from '../../src/ui/icons/TabBarIcons';
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
 import { useThemeColors } from '../../src/theme/ThemeContext';
+import { fonts, rgba } from '../../src/theme/tokens';
 import { useI18n } from '../../src/i18n/I18nContext';
 
 function TabLabel({
@@ -36,7 +39,7 @@ function TabLabel({
 }
 
 export default function TabsLayout() {
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const { t } = useI18n();
 
@@ -45,15 +48,19 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '700', fontSize: 22, writingDirection: 'ltr' },
+        headerTitleStyle: { fontFamily: fonts.extrabold, fontSize: 22, letterSpacing: -0.3, writingDirection: 'ltr' },
         headerShadowVisible: false,
         headerRight: () => <TabHeaderActions />,
         tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.border,
-          height: 58,
-          paddingTop: 2,
-          paddingBottom: 4,
+          backgroundColor: colors.bgElevated,
+          borderTopWidth: 0,
+          height: 66,
+          paddingTop: 6,
+          paddingBottom: 6,
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          // Ombre vers le haut : la barre « flotte » au-dessus du contenu.
+          boxShadow: `0px -6px 24px ${rgba(colors.shadow, isDark ? 0.5 : 0.09)}`,
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.tabInactive,
@@ -113,19 +120,17 @@ export default function TabsLayout() {
             <View
               style={[
                 styles.recordBtn,
-                {
-                  backgroundColor: focused ? colors.accent : colors.bgElevated,
-                  borderWidth: focused ? 0 : 1,
-                  borderColor: colors.border,
-                },
+                { boxShadow: `0px 6px 16px ${rgba(colors.accent, isDark ? 0.4 : 0.42)}` },
               ]}
             >
-              <TabIcon
-                name="record"
-                focused={focused}
-                color={focused ? '#FFFFFF' : color}
-                size={22}
-              />
+              <LinearGradient
+                colors={colors.gradientHero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.recordGrad}
+              >
+                <TabIcon name="record" focused={focused} color={colors.onAccent} size={22} />
+              </LinearGradient>
             </View>
           ),
           tabBarLabel: ({ focused }) => (
@@ -216,11 +221,15 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   label: { fontSize: 10, fontWeight: '600', marginTop: 1 },
   recordBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  recordGrad: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
   },
 });

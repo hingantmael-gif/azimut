@@ -5,9 +5,9 @@ import {
   Dimensions,
   Platform,
   Pressable,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../src/store/AppContext';

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import { useThemeColors } from '../../theme/ThemeContext';
