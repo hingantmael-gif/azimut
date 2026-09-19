@@ -170,11 +170,31 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
 
   const requestPermission = useCallback(async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      const granted = status === Location.PermissionStatus.GRANTED;
+      let granted: boolean;
+      let blocked = false;
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+        // Web : la fenêtre d'autorisation du navigateur s'ouvre en appelant directement la
+        // géolocalisation (à partir d'un geste, ex. le bouton « Activer »).
+        // Code 1 = refusée ; 2 (position indisponible) et 3 (délai) = autorisée mais sans fix.
+        const outcome = await new Promise<'granted' | 'denied'>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            () => resolve('granted'),
+            (err) => resolve(err.code === 1 ? 'denied' : 'granted'),
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+          );
+        });
+        granted = outcome === 'granted';
+        blocked = !granted;
+      } else {
+        // Mobile : boîte de dialogue système. « canAskAgain = false » = bloquée durablement
+        // (il faut passer par les réglages de l'appareil).
+        const res = await Location.requestForegroundPermissionsAsync();
+        granted = res.status === Location.PermissionStatus.GRANTED;
+        blocked = !granted && res.canAskAgain === false;
+      }
       setState((s) => ({
         ...s,
-        permission: granted ? 'granted' : 'denied',
+        permission: granted ? 'granted' : blocked ? 'denied' : 'unknown',
         error: granted
           ? null
           : 'Autorise la localisation pour suivre ta séance (GPS).',

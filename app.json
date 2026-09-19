@@ -112,7 +112,7 @@
       "backgroundColor": "#07111F"
     },
     "plugins": [
-      "expo-router",
+      ["expo-router", { "asyncRoutes": { "web": true } }],
       "expo-secure-store",
       "expo-document-picker",
       [

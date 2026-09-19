@@ -33,7 +33,7 @@ if (fs.existsSync(envPath)) {
   fs.writeFileSync(envPath, next);
 }
 try {
-  sh('npx expo export --platform web', root, {
+  sh('npx expo export --platform web --clear', root, {
     EXPO_PUBLIC_API_URL: PROD_API,
   });
 } finally {

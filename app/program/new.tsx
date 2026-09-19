@@ -32,7 +32,7 @@ import {
 } from '../../src/constants/sportVisuals';
 import { NewProgramLabel } from '../../src/ui/brand/NewProgramLabel';
 import { ProgramCreatedCelebration } from '../../src/ui/program/ProgramCreatedCelebration';
-import { SportCover } from '../../src/ui/program/SportCover';
+import { SportArt, artKindFor, distanceLabelFromTitle } from '../../src/ui/program/SportArt';
 import { WeekSilhouettePreview } from '../../src/ui/program/WeekSilhouettePreview';
 import {
   WizardDayGrid,
@@ -1139,8 +1139,9 @@ export default function NewProgramScreen() {
                   accessibilityLabel={cat.label}
                   style={styles.sportCardPress}
                 >
-                  <SportCover
-                    source={SPORT_HERO_IMAGES[cat.id]}
+                  <SportArt
+                    kind={artKindFor(cat.id)}
+                    seed={idx}
                     height={176}
                     minHeight={176}
                     borderRadius={radii.xl}
@@ -1158,7 +1159,7 @@ export default function NewProgramScreen() {
                       </Text>
                     </View>
                     <Text style={styles.sportHeroChevron}>›</Text>
-                  </SportCover>
+                  </SportArt>
                 </PressableScale>
               </StaggerIn>
             ))}
@@ -1178,8 +1179,9 @@ export default function NewProgramScreen() {
                 accessibilityLabel="Piscine"
                 style={styles.sportCardPress}
               >
-                <SportCover
-                  source={SWIM_VENUE_IMAGES.pool}
+                <SportArt
+                  kind="swim"
+                  seed={1}
                   height={168}
                   minHeight={168}
                   borderRadius={radii.lg}
@@ -1200,7 +1202,7 @@ export default function NewProgramScreen() {
                     </Text>
                   </View>
                   <Text style={styles.sportHeroChevron}>›</Text>
-                </SportCover>
+                </SportArt>
               </PressableScale>
             </StaggerIn>
             <StaggerIn index={1} step={70} duration={560}>
@@ -1211,8 +1213,9 @@ export default function NewProgramScreen() {
                 accessibilityLabel="Eau libre"
                 style={styles.sportCardPress}
               >
-                <SportCover
-                  source={SWIM_VENUE_IMAGES.open_water}
+                <SportArt
+                  kind="swim"
+                  seed={4}
                   height={168}
                   minHeight={168}
                   borderRadius={radii.lg}
@@ -1236,7 +1239,7 @@ export default function NewProgramScreen() {
                     </Text>
                   </View>
                   <Text style={styles.sportHeroChevron}>›</Text>
-                </SportCover>
+                </SportArt>
               </PressableScale>
             </StaggerIn>
           </WizardStepShell>
@@ -1756,8 +1759,6 @@ export default function NewProgramScreen() {
       />
       <WizardBackdrop
         sport={sport}
-        photo={wizardBg}
-        photoStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
       />
       <View style={styles.heroContent}>{wizardBody}</View>
     </View>
@@ -1788,8 +1789,10 @@ function ProgramCard({
         accessibilityLabel={prog.title}
         style={styles.sportCardPress}
       >
-        <SportCover
-          source={image}
+        <SportArt
+          kind={artKindFor(prog.sportCategory)}
+          label={distanceLabelFromTitle(prog.title)}
+          seed={prog.id.length * 7 + prog.id.charCodeAt(prog.id.length - 1)}
           height={128}
           minHeight={128}
           borderRadius={radii.lg}
@@ -1814,13 +1817,13 @@ function ProgramCard({
               {prog.subtitle}
             </Text>
             {usageCount != null ? (
-              <Text style={[styles.progUsage, { color: sportTag }]} numberOfLines={1}>
+              <Text style={[styles.progUsage, { color: '#A7F3D0' }]} numberOfLines={1}>
                 {usageCountLabel(usageCount)} {usageCountCaption()}
               </Text>
             ) : null}
           </View>
           <Text style={styles.sportHeroChevron}>›</Text>
-        </SportCover>
+        </SportArt>
       </PressableScale>
     </StaggerIn>
   );

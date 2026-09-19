@@ -178,7 +178,7 @@ function AppShell() {
 }
 
 /** Au-delà de ce délai on affiche l'app quand même (police système en repli). */
-const FONT_LOAD_TIMEOUT_MS = 3000;
+const FONT_LOAD_TIMEOUT_MS = 1200;
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 import { tierStageParams } from './tierStageParams';
+import { TierPremiumFx } from './TierPremiumFx';
 
 /**
  * « Scène » commune à tous les fonds de rang : rayons qui tournent, ondes qui partent du
@@ -119,6 +120,8 @@ export function TierStage({
           ))}
         </Svg>
       </Animated.View>
+
+      <TierPremiumFx level={level} color={color} height={height} compact={compact} />
 
       {Array.from({ length: p.rings }).map((_, i) => (
         <Ring key={i} delay={(p.ringMs / p.rings) * i} base={crest} ms={p.ringMs} color={color} />

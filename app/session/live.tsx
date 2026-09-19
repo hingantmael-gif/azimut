@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BackHandler,
   Dimensions,
+  Linking,
   Platform,
   Pressable,
   View,
 } from 'react-native';
-import { Alert } from '../../src/utils/appAlert';
+import { Alert, appConfirm } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -541,6 +542,22 @@ export default function LiveSessionScreen() {
   const paceBand = formatPaceBand(currentStep);
 
   // « Flow » : part du temps passé dans la zone d'allure cible (étapes avec cible d'allure).
+  /** Bouton « Activer » : ouvre la demande d'autorisation du navigateur / du téléphone. */
+  const onEnableLocation = useCallback(async () => {
+    const ok = await gps.prepare();
+    if (ok) return;
+    const native = Platform.OS !== 'web';
+    const openSettings = await appConfirm(
+      'Localisation bloquée',
+      native
+        ? 'Autorise la localisation pour Mova dans les réglages de ton téléphone, puis reviens ici.'
+        : 'Ton navigateur bloque la localisation pour ce site. Clique sur le cadenas à gauche de l’adresse, choisis « Autoriser » pour la localisation, puis touche à nouveau « Activer ».',
+      native ? 'Ouvrir les réglages' : 'Compris',
+      'Fermer',
+    );
+    if (openSettings && native) void Linking.openSettings();
+  }, [gps]);
+
   const flowRef = useRef({ zoneSec: 0, measuredSec: 0, lastMoving: 0 });
   const [flowPct, setFlowPct] = useState<number | null>(null);
   useEffect(() => {
@@ -820,7 +837,7 @@ export default function LiveSessionScreen() {
                       : 'ok'
               }
               accuracyM={gps.lastAccuracy}
-              onPress={() => void gps.prepare()}
+              onPress={() => void onEnableLocation()}
             />
           ) : undefined
         }
