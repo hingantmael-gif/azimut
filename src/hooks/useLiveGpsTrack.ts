@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { haversineM } from '../engines/liveWorkout';
+import {
+  PACE_BAD_ACCURACY_M,
+  computeAdaptiveWindowPace,
+  shouldCountGpsSegment,
+  weightedRecentPace,
+} from '../engines/gpsPace';
 
 export type GpsPoint = {
   lat: number;
@@ -41,11 +47,6 @@ export type UseLiveGpsTrackOptions = {
 const MAX_ACCURACY_M = 50;
 /** Au-delà : fix Wi‑Fi/IP trop grossier pour la carte (souvent mauvaise ville) */
 const WARN_ACCURACY_M = 150;
-/** Points trop flous exclus du calcul d’allure (GpsSignalBars niveau ≤ 2). */
-const PACE_BAD_ACCURACY_M = 25;
-const MIN_MOVE_M = 2.5;
-/** Vitesse m/s sous laquelle on considère un quasi-arrêt. */
-const STILL_SPEED_MPS = 0.45;
 const DEFAULT_AUTO_PAUSE_SEC = 50;
 
 function toGpsPoint(raw: Location.LocationObject): GpsPoint {
@@ -125,67 +126,6 @@ function webWatchPosition(
       navigator.geolocation.clearWatch(id);
     },
   };
-}
-
-/** Allure lissée : poids croissant vers les échantillons récents. */
-function weightedRecentPace(paces: number[]): number | null {
-  if (paces.length === 0) return null;
-  let num = 0;
-  let den = 0;
-  for (let i = 0; i < paces.length; i++) {
-    const w = (i + 1) * (i + 1);
-    num += paces[i]! * w;
-    den += w;
-  }
-  return den > 0 ? num / den : null;
-}
-
-/**
- * Fenêtre d’allure adaptive : ignore accuracy > 25 m, privilégie les
- * segments récents quand le signal est bon (GpsSignalBars ≥ 3).
- */
-function computeAdaptiveWindowPace(pts: GpsPoint[]): number | null {
-  let weightedDist = 0;
-  let weightedT = 0;
-  let rawDist = 0;
-  let rawT = 0;
-  let segIndex = 0;
-
-  for (let i = pts.length - 1; i > 0; i--) {
-    const a = pts[i - 1]!;
-    const b = pts[i]!;
-    const accA = a.accuracy ?? 999;
-    const accB = b.accuracy ?? 999;
-    // Skip agressif des fixes flous pour l’allure
-    if (accA > PACE_BAD_ACCURACY_M || accB > PACE_BAD_ACCURACY_M) {
-      continue;
-    }
-    const d = haversineM(
-      { lat: a.lat, lng: a.lng },
-      { lat: b.lat, lng: b.lng },
-    );
-    const dt = Math.max(0, (b.timestamp - a.timestamp) / 1000);
-    if (dt <= 0 || d <= 0) continue;
-
-    const goodSignal = accA < 12 && accB < 12;
-    const okSignal = accA < 25 && accB < 25;
-    // Plus récent = plus de poids ; signal net = bonus
-    const recency = 1 + segIndex * 0.35;
-    const quality = goodSignal ? 1.45 : okSignal ? 1 : 0.55;
-    const w = recency * quality;
-
-    weightedDist += d * w;
-    weightedT += dt * w;
-    rawDist += d;
-    rawT += dt;
-    segIndex += 1;
-    if (rawT >= 25 || rawDist >= 80) break;
-  }
-
-  if (weightedDist > 12 && weightedT > 4) {
-    return weightedT / (weightedDist / 1000);
-  }
-  return null;
 }
 
 export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
@@ -278,17 +218,16 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
         { lat: prev.lat, lng: prev.lng },
         { lat: next.lat, lng: next.lng },
       );
-      const dt = Math.max(0.4, (next.timestamp - prev.timestamp) / 1000);
-      const mps = add / dt;
-      // Quasi-arrêt : pas de point trace, lastMoveAt inchangé (alimente stillSec)
-      if (add < MIN_MOVE_M) return;
-      if (mps > 28) return;
-      // Vitesse native très basse + petit déplacement → ignore (jitter)
+      // Quasi-arrêt, jitter ou saut GPS : pas de point trace, lastMoveAt inchangé
+      // (alimente stillSec). Seuil élargi quand le signal est flou.
       if (
-        speed != null &&
-        speed >= 0 &&
-        speed < STILL_SPEED_MPS &&
-        add < MIN_MOVE_M * 2.2
+        !shouldCountGpsSegment({
+          distanceM: add,
+          dtSec: (next.timestamp - prev.timestamp) / 1000,
+          accuracyPrevM: prev.accuracy,
+          accuracyNextM: acc,
+          nativeSpeedMps: speed,
+        })
       ) {
         return;
       }

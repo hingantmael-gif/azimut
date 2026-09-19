@@ -555,10 +555,10 @@ export function applyAdaptiveToWorkout(
 
 export function formatPace(secPerKm: number): string {
   const safe = Math.min(720, Math.max(150, Number.isFinite(secPerKm) ? secPerKm : 330));
-  const m = Math.floor(safe / 60);
-  const s = Math.round(safe % 60)
-    .toString()
-    .padStart(2, '0');
+  // Arrondir le total (pas seulement les secondes) : sinon 359,6 s s'affichait « 5'60" ».
+  const total = Math.round(safe);
+  const m = Math.floor(total / 60);
+  const s = String(total % 60).padStart(2, '0');
   return `${m}'${s}"`;
 }
 

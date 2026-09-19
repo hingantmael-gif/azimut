@@ -229,10 +229,10 @@ export function formatLivePace(secPerKm: number | null): string {
   if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm < 90 || secPerKm > 1200) {
     return '—';
   }
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60)
-    .toString()
-    .padStart(2, '0');
+  // Arrondir d'abord le total : arrondir seulement les secondes donnait « 5'60" ».
+  const total = Math.round(secPerKm);
+  const m = Math.floor(total / 60);
+  const s = String(total % 60).padStart(2, '0');
   return `${m}'${s}"`;
 }
 
@@ -241,7 +241,12 @@ export function formatLiveDistance(meters: number): string {
   return `${(meters / 1000).toFixed(2).replace('.', ',')} km`;
 }
 
-/** Splits km en temps réel (style Record Strava). */
+/**
+ * Splits km en temps réel (style Record Strava).
+ * L'instant de passage de chaque km est interpolé entre les deux points GPS qui
+ * l'encadrent (et non pris sur le point suivant). Tous les splits sont renvoyés :
+ * l'UI n'affiche que les derniers (avant, plafonné à 8 ⇒ figé après le km 8).
+ */
 export function computeLiveKmSplits(
   points: Array<{ lat: number; lng: number; timestamp: number }>,
 ): Array<{ km: number; paceLabel: string }> {
@@ -253,32 +258,88 @@ export function computeLiveKmSplits(
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1]!;
     const b = points[i]!;
-    dist += haversineM(
-      { lat: a.lat, lng: a.lng },
-      { lat: b.lat, lng: b.lng },
-    );
+    const seg = haversineM({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
+    const before = dist;
+    dist += seg;
     while (dist >= nextKm * 1000) {
-      const dt = Math.max(1, (b.timestamp - markTs) / 1000);
+      // Fraction du segment [a, b] parcourue quand on franchit le km.
+      const frac = seg > 0 ? (nextKm * 1000 - before) / seg : 1;
+      const crossTs = a.timestamp + frac * (b.timestamp - a.timestamp);
+      const dt = Math.max(1, (crossTs - markTs) / 1000);
       out.push({
         km: nextKm,
         paceLabel: formatLivePace(dt),
       });
-      markTs = b.timestamp;
+      markTs = crossTs;
       nextKm += 1;
-      if (out.length >= 8) return out;
     }
   }
   return out;
 }
 
+/** Durée par défaut d'une étape « ouverte » (bouton tour) qui n'est pas la dernière. */
+const OPEN_STEP_SEC = 180;
+
 /**
- * Calcule la progression dans les étapes à partir du temps / distance
- * écoulés depuis le début (moving).
+ * Position courante dans la séance : index de l'étape et, surtout, le temps ET la
+ * distance au moment où elle a démarré. Sans ces deux repères, une étape à durée
+ * (échauffement 10 min ≈ 2 km) fausse toutes les étapes à distance qui suivent
+ * (le 400 m serait « déjà fini »), et inversement.
+ */
+export type LiveStepCursor = { index: number; startSec: number; startM: number };
+
+export const INITIAL_LIVE_CURSOR: LiveStepCursor = { index: 0, startSec: 0, startM: 0 };
+
+/**
+ * Fait avancer le curseur tant que l'étape courante est terminée. Fonction pure et
+ * idempotente : l'appeler à chaque tick avec le curseur précédent donne la position
+ * exacte ; la dernière étape ne se termine jamais seule (fin manuelle).
+ */
+export function advanceLiveStepCursor(
+  cursor: LiveStepCursor,
+  flat: FlatLiveStep[],
+  movingSec: number,
+  distanceM: number,
+): LiveStepCursor {
+  if (flat.length === 0) return INITIAL_LIVE_CURSOR;
+  let c = cursor;
+  // Séance rechargée / compteurs remis à zéro : repartir du début.
+  if (c.index < 0 || c.index >= flat.length || movingSec < c.startSec || distanceM < c.startM) {
+    c = INITIAL_LIVE_CURSOR;
+  }
+  while (c.index < flat.length - 1) {
+    const step = flat[c.index]!;
+    const goalM = stepGoalMeters(step);
+    const goalSec = stepGoalSec(step);
+    let finished: boolean;
+    let nextStartSec: number;
+    let nextStartM: number;
+    if (goalM != null) {
+      finished = distanceM - c.startM >= goalM;
+      nextStartM = c.startM + goalM;
+      nextStartSec = movingSec;
+    } else {
+      const len = goalSec ?? OPEN_STEP_SEC;
+      finished = movingSec - c.startSec >= len;
+      nextStartSec = c.startSec + len;
+      nextStartM = distanceM;
+    }
+    if (!finished) break;
+    c = { index: c.index + 1, startSec: nextStartSec, startM: nextStartM };
+  }
+  return c;
+}
+
+/**
+ * Calcule la progression dans les étapes à partir du temps / distance écoulés
+ * (moving). Passer le curseur conservé entre deux appels (voir
+ * {@link advanceLiveStepCursor}) pour un suivi exact des séances mixtes durée/distance.
  */
 export function computeLiveStepProgress(
   flat: FlatLiveStep[],
   movingSec: number,
   distanceM: number,
+  cursor: LiveStepCursor = INITIAL_LIVE_CURSOR,
 ): LiveStepProgress {
   if (flat.length === 0) {
     return {
@@ -296,70 +357,27 @@ export function computeLiveStepProgress(
     };
   }
 
-  let elapsedSec = 0;
-  let elapsedM = 0;
+  const c = advanceLiveStepCursor(cursor, flat, movingSec, distanceM);
+  const step = flat[c.index]!;
+  const goalM = stepGoalMeters(step);
+  const goalSec = stepGoalSec(step);
+  const base = { step, stepIndex: c.index, totalSteps: flat.length, done: false };
 
-  for (let i = 0; i < flat.length; i++) {
-    const step = flat[i]!;
-    const goalSec = stepGoalSec(step);
-    const goalM = stepGoalMeters(step);
-
-    if (goalM != null) {
-      const inStepM = Math.max(0, distanceM - elapsedM);
-      if (inStepM < goalM || i === flat.length - 1) {
-        return {
-          step,
-          stepIndex: i,
-          totalSteps: flat.length,
-          ratio: Math.min(1, inStepM / goalM),
-          remainingM: Math.max(0, goalM - inStepM),
-          done: false,
-        };
-      }
-      elapsedM += goalM;
-      // estime le temps consommé proportionnellement si besoin
-      continue;
-    }
-
-    if (goalSec != null) {
-      const inStepSec = Math.max(0, movingSec - elapsedSec);
-      if (inStepSec < goalSec || i === flat.length - 1) {
-        return {
-          step,
-          stepIndex: i,
-          totalSteps: flat.length,
-          ratio: Math.min(1, inStepSec / goalSec),
-          remainingSec: Math.max(0, goalSec - inStepSec),
-          done: false,
-        };
-      }
-      elapsedSec += goalSec;
-      continue;
-    }
-
-    // Étape ouverte : reste jusqu’à la fin manuelle si dernière, sinon 3 min par défaut
-    const openSec = 180;
-    const inStepSec = Math.max(0, movingSec - elapsedSec);
-    if (inStepSec < openSec || i === flat.length - 1) {
-      return {
-        step,
-        stepIndex: i,
-        totalSteps: flat.length,
-        ratio: Math.min(1, inStepSec / openSec),
-        remainingSec: Math.max(0, openSec - inStepSec),
-        done: false,
-      };
-    }
-    elapsedSec += openSec;
+  if (goalM != null) {
+    const inStepM = Math.max(0, distanceM - c.startM);
+    return {
+      ...base,
+      ratio: Math.min(1, inStepM / goalM),
+      remainingM: Math.max(0, goalM - inStepM),
+    };
   }
 
-  const last = flat[flat.length - 1]!;
+  const len = goalSec ?? OPEN_STEP_SEC;
+  const inStepSec = Math.max(0, movingSec - c.startSec);
   return {
-    step: last,
-    stepIndex: flat.length - 1,
-    totalSteps: flat.length,
-    ratio: 1,
-    done: true,
+    ...base,
+    ratio: Math.min(1, inStepSec / len),
+    remainingSec: Math.max(0, len - inStepSec),
   };
 }
 

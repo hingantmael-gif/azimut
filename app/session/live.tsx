@@ -19,6 +19,9 @@ import {
   buildLiveActivity,
   canStartLiveWorkout,
   computeLiveKmSplits,
+  advanceLiveStepCursor,
+  INITIAL_LIVE_CURSOR,
+  type LiveStepCursor,
   computeLiveStepProgress,
   detectPaceAnomaly,
   flattenWorkoutSteps,
@@ -537,10 +540,22 @@ export default function LiveSessionScreen() {
     () => flattenWorkoutSteps(workout.steps),
     [workout.steps],
   );
-  const stepProgress = useMemo(
-    () => computeLiveStepProgress(flatSteps, movingSec, gps.distanceM),
-    [flatSteps, movingSec, gps.distanceM],
-  );
+  // Curseur d'étape : mémorise temps ET distance au départ de chaque étape (séances mixtes).
+  const stepCursorRef = useRef<LiveStepCursor>(INITIAL_LIVE_CURSOR);
+  const stepCursorStepsRef = useRef(flatSteps);
+  const stepProgress = useMemo(() => {
+    if (stepCursorStepsRef.current !== flatSteps) {
+      stepCursorStepsRef.current = flatSteps;
+      stepCursorRef.current = INITIAL_LIVE_CURSOR;
+    }
+    stepCursorRef.current = advanceLiveStepCursor(
+      stepCursorRef.current,
+      flatSteps,
+      movingSec,
+      gps.distanceM,
+    );
+    return computeLiveStepProgress(flatSteps, movingSec, gps.distanceM, stepCursorRef.current);
+  }, [flatSteps, movingSec, gps.distanceM]);
   const currentStep = stepProgress.step;
   const paceSt = paceStatus(gps.currentPaceSecPerKm, currentStep);
   const paceBand = formatPaceBand(currentStep);
