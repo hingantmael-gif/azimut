@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Polyline, Rect } from 'react-native-svg';
 import { BRAND } from '../constants/brand';
 
-/** Tracé Azimut (jade) — style Strava mais aux couleurs de l’app */
+/** Tracé Mova (jade) — style Strava mais aux couleurs de l’app */
 const ROUTE_COLOR = BRAND.accent;
 const ROUTE_GLOW = BRAND.signalMint;
 const START_GREEN = '#00D26A';
@@ -365,7 +365,7 @@ function SvgRouteMap({ latlng, height }: Props) {
 }
 
 /**
- * Carte tracé Azimut : pan / zoom (molette, pinch, drag), sans boutons ±.
+ * Carte tracé Mova : pan / zoom (molette, pinch, drag), sans boutons ±.
  */
 export function ActivityRouteMap({
   latlng,

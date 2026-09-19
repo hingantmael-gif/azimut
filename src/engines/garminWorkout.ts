@@ -253,7 +253,7 @@ export function buildGarminWorkoutExport(workout: PlannedWorkout): GarminWorkout
 
       workoutName: workout.title,
 
-      description: `Azimut · ${workout.date}`,
+      description: `Mova · ${workout.date}`,
 
       sport,
 
@@ -279,7 +279,7 @@ export function toGarminWorkoutPayload(workout: PlannedWorkout) {
 
 export const GARMIN_FLOW_HINT =
 
-  'Ta montre se synchronise via l’app Garmin Connect (Bluetooth). Azimut envoie la séance sur ton calendrier Garmin — un sync Garmin Connect suffit pour la retrouver sur ta montre.';
+  'Ta montre se synchronise via l’app Garmin Connect (Bluetooth). Mova envoie la séance sur ton calendrier Garmin — un sync Garmin Connect suffit pour la retrouver sur ta montre.';
 
 
 

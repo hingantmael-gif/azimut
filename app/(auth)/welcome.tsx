@@ -8,7 +8,7 @@ import { useApp } from '../../src/store/AppContext';
 import { spacing } from '../../src/theme/tokens';
 import { useI18n } from '../../src/i18n/I18nContext';
 
-/** Accueil Azimut — entrée simple ; CGU à l’inscription. */
+/** Accueil Mova — entrée simple ; CGU à l’inscription. */
 export default function WelcomeScreen() {
   const router = useRouter();
   const { state } = useApp();

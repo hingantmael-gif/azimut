@@ -1,6 +1,6 @@
 # Program engine — hiérarchie en 4 couches
 
-Azimut sépare la construction et l’adaptation des programmes en **quatre couches**.
+Mova sépare la construction et l’adaptation des programmes en **quatre couches**.
 Chaque couche a une responsabilité claire ; les couches du dessus ne recalculent
 pas ce que celles du dessous ont déjà décidé.
 

@@ -1,5 +1,5 @@
 /**
- * Module Community Azimut — persistance JSON (users.json style).
+ * Module Community Mova — persistance JSON (users.json style).
  * Multi-utilisateur dès que l’API est déployée ; le client garde un fallback local.
  */
 import crypto from 'crypto';

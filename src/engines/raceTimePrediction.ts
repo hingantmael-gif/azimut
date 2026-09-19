@@ -22,7 +22,7 @@
  * Strava Performance Predictions = ML propriétaire (historique + pairs) → non reproductible
  * hors-ligne ; on ne l’imite pas, on reste sur des modèles audités.
  *
- * Stratégie Azimut : moyenne pondérée Riegel + Cameron + Daniels, puis facteur volume
+ * Stratégie Mova : moyenne pondérée Riegel + Cameron + Daniels, puis facteur volume
  * sur semi long / marathon.
  */
 

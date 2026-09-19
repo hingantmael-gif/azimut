@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 
 /**
- * Catalogue unique des fonctionnalités Azimut — pas de distinction premium / basique.
+ * Catalogue unique des fonctionnalités Mova — pas de distinction premium / basique.
  * Chaque entrée mène à l’écran (et éventuellement au bouton) concerné.
  */
 export type AppFeatureSectionId =

@@ -58,7 +58,7 @@ export function PaywallSheet({
         >
           <View style={styles.crownRow}>
             <ProCrown size={22} force color={colors.premium} />
-            <Text style={styles.kicker}>Azimut Premium</Text>
+            <Text style={styles.kicker}>Mova Premium</Text>
           </View>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.body}>{copy.body}</Text>

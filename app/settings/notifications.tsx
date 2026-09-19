@@ -83,8 +83,8 @@ export default function NotificationsSettingsScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <Text style={styles.hint}>
           {inAppOnly
-            ? 'Sur le web, les alertes s’affichent dans Azimut (bannières in-app) — pas comme des notifications système du téléphone.'
-            : 'Les rappels d’entraînement peuvent utiliser les notifications du téléphone. L’activité sociale apparaît aussi dans Azimut.'}
+            ? 'Sur le web, les alertes s’affichent dans Mova (bannières in-app) — pas comme des notifications système du téléphone.'
+            : 'Les rappels d’entraînement peuvent utiliser les notifications du téléphone. L’activité sociale apparaît aussi dans Mova.'}
         </Text>
         {!inAppOnly ? (
           <SettingsSection title="Autorisation téléphone">
@@ -97,7 +97,7 @@ export default function NotificationsSettingsScreen() {
             />
           </SettingsSection>
         ) : (
-          <SettingsSection title="Alertes dans Azimut">
+          <SettingsSection title="Alertes dans Mova">
             <SettingsToggleRow
               label="Bannières in-app"
               subtitle="Likes, abonnés et rappels affichés dans l’app"
@@ -157,7 +157,7 @@ export default function NotificationsSettingsScreen() {
         <SettingsSection title="Annonces">
           <SettingsToggleRow
             label="Annonces produit"
-            subtitle="Nouveautés et infos Azimut (optionnel)"
+            subtitle="Nouveautés et infos Mova (optionnel)"
             value={n.announcements}
             onToggle={() => {
               void toggle('announcements');

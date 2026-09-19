@@ -80,7 +80,7 @@ const FAQ: FaqItem[] = [
     id: 'subscription',
     title: 'Fonctionnalités',
     body:
-      'L’écran Fonctionnalités liste tout ce que propose Azimut (coaching, Strava, Garmin, classement…). Touche une ligne pour ouvrir directement l’écran — et le bouton d’action quand c’est possible.',
+      'L’écran Fonctionnalités liste tout ce que propose Mova (coaching, Strava, Garmin, classement…). Touche une ligne pour ouvrir directement l’écran — et le bouton d’action quand c’est possible.',
     actionLabel: 'Voir les fonctionnalités',
     href: '/settings/subscription',
   },

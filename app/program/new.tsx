@@ -1489,7 +1489,7 @@ export default function NewProgramScreen() {
                 Format : chiffres (ex. 1530 → 15:30)
               </WizardHint>
             ) : (
-              <WizardHint surface="hero">{`Sans chrono, Azimut estime via ton volume${
+              <WizardHint surface="hero">{`Sans chrono, Mova estime via ton volume${
                 weeklyKm > 0 ? ` (${weeklyKm} km/sem)` : ''
               } — VMA ~ ${Number(inferredZones.vmaKmh).toFixed(1)} km/h`}</WizardHint>
             )}

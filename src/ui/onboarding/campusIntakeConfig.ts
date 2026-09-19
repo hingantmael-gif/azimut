@@ -3,7 +3,7 @@ import type { GoalType, AthleticLevel } from '../../types/domain';
 import type { ProgramSportCategory } from '../../constants/programs';
 import { buildOnboardingSteps } from './sportOnboardingConfig';
 
-/** Intention course (parcours Azimut — textes originaux). */
+/** Intention course (parcours Mova — textes originaux). */
 export type RunIntent =
   | 'race_road'
   | 'race_trail'
@@ -223,7 +223,7 @@ export const REFERENCE_COPY = {
 } as const;
 
 export const PLAN_PREVIEW_COPY = {
-  title: 'Tes allures Azimut',
+  title: 'Tes allures Mova',
   body: 'Calculées à partir de ton chrono — pas des valeurs génériques.',
   easy: 'Endurance (EF)',
   fast: 'Qualité',

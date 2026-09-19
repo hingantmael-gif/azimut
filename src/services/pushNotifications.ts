@@ -29,7 +29,7 @@ export async function getPushPermissionStatus(): Promise<
   'granted' | 'denied' | 'undetermined'
 > {
   if (usesInAppNotificationsOnly()) {
-    // Sur le web : pas de permission OS — les alertes vivent dans Azimut.
+    // Sur le web : pas de permission OS — les alertes vivent dans Mova.
     return 'granted';
   }
   try {
@@ -145,7 +145,7 @@ export function socialPushCopy(n: SocialNotification): { title: string; body: st
       };
     case 'product':
       return {
-        title: 'Mise à jour Azimut',
+        title: 'Mise à jour Mova',
         body: n.programTitle ?? 'Nouvelle fonctionnalité disponible.',
       };
     default:

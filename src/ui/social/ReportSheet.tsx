@@ -39,7 +39,7 @@ export function ReportSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.sheet}>
           <Text style={styles.title}>Signaler {targetLabel}</Text>
-          <Text style={styles.sub}>Aide-nous à garder Azimut sûr.</Text>
+          <Text style={styles.sub}>Aide-nous à garder Mova sûr.</Text>
           {REASONS.map((r) => (
             <PressableScale
               key={r.id}

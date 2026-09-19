@@ -83,7 +83,7 @@ export default function HomeDashboard() {
     );
 
   const learnInsight = state.coachAdaptations?.[0]?.startsWith(
-    'Azimut vient d’apprendre',
+    'Mova vient d’apprendre',
   );
   useEffect(() => {
     if (!learnInsight) return;

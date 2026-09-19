@@ -60,7 +60,7 @@ export default function WatchSettingsScreen() {
       } else {
         Alert.alert(
           entry?.label ?? 'Montre',
-          'App compagnon ouverte. Appaire ta montre en Bluetooth dans cette app si ce n’est pas déjà fait — ensuite Azimut n’a plus qu’à envoyer la séance (1 tap).',
+          'App compagnon ouverte. Appaire ta montre en Bluetooth dans cette app si ce n’est pas déjà fait — ensuite Mova n’a plus qu’à envoyer la séance (1 tap).',
         );
       }
     } finally {

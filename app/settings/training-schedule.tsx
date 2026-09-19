@@ -60,7 +60,7 @@ export default function TrainingScheduleScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <Title>Disponibilités</Title>
         <Muted style={{ marginTop: 8, lineHeight: 20 }}>
-          Changez vos disponibilités en cours de programme. Azimut décale les séances futures
+          Changez vos disponibilités en cours de programme. Mova décale les séances futures
           sans tout écraser.
         </Muted>
 

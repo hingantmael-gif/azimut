@@ -1,5 +1,5 @@
 /**
- * Point d’entrée unifié — moteur sommeil Azimut.
+ * Point d’entrée unifié — moteur sommeil Mova.
  *
  * Réexporte les APIs publiques de :
  * - `sleepAdaptation` — score, bande, décision coach, application sur séance

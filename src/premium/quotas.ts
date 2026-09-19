@@ -72,7 +72,7 @@ export const PAYWALL_COPY: Record<
     body: 'Courbes Critical Power, Banister détaillé et prédictions multi-distances : Premium.',
   },
   generic: {
-    title: 'Azimut Premium',
+    title: 'Mova Premium',
     body: 'Débloque multi-programmes, imports/exports illimités, analyses avancées et covers Premium.',
   },
 };

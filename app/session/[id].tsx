@@ -292,14 +292,14 @@ export default function SessionDetailScreen() {
           <>
             <View style={{ marginTop: spacing.md }}>
               <PrimaryButton
-                label="Démarrer la séance dans Azimut"
+                label="Démarrer la séance dans Mova"
                 onPress={() =>
                   router.push({ pathname: '/session/live', params: { id: workout.id } })
                 }
               />
             </View>
             <Muted style={{ marginTop: 6 }}>
-              Tracker GPS : carte interactive, chrono, distance et allure — comme Strava, dans Azimut.
+              Tracker GPS : carte interactive, chrono, distance et allure — comme Strava, dans Mova.
             </Muted>
           </>
         ) : null}

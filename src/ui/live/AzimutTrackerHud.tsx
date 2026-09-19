@@ -19,7 +19,7 @@ import {
   StartPulseRing,
 } from './LiveTrackerChrome';
 
-/** Fond tracker Azimut — ink profond (≠ noir Strava / ≠ feuille blanche). */
+/** Fond tracker Mova — ink profond (≠ noir Strava / ≠ feuille blanche). */
 export const LIVE_INK = BRAND.ink;
 export const LIVE_INK_SOFT = BRAND.inkSoft;
 export const LIVE_PAUSE_BAND = BRAND.signal;
@@ -263,7 +263,7 @@ export function LiveKmRail({
 }
 
 /**
- * Contrôles Azimut : Start rond (pulse) · Pause pastille pleine · Pause → Reprendre + Terminer.
+ * Contrôles Mova : Start rond (pulse) · Pause pastille pleine · Pause → Reprendre + Terminer.
  */
 export function LiveAzimutControls({
   phase,
@@ -533,7 +533,7 @@ export function LivePreStartDock({
   return <View style={[preDock.sheet, style]}>{children}</View>;
 }
 
-/** Feuille de confirmation Azimut (remplace window.confirm / Alert système). */
+/** Feuille de confirmation Mova (remplace window.confirm / Alert système). */
 export function LiveConfirmSheet({
   visible,
   title,

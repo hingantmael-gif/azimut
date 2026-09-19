@@ -740,7 +740,7 @@ export default function LiveSessionScreen() {
         <LiveConfirmSheet
           visible={finishConfirmOpen}
           title="Terminer la séance ?"
-          body="Enregistrer l’activité GPS dans Azimut."
+          body="Enregistrer l’activité GPS dans Mova."
           confirmLabel="Enregistrer"
           cancelLabel="Continuer"
           onConfirm={runFinishSave}
@@ -750,7 +750,7 @@ export default function LiveSessionScreen() {
     );
   }
 
-  // ——— Séance libre : carte + HUD Azimut (≠ Strava orange / timer-héros) ———
+  // ——— Séance libre : carte + HUD Mova (≠ Strava orange / timer-héros) ———
   const gpsOk =
     gps.permission !== 'denied' &&
     (gps.lastAccuracy == null || gps.lastAccuracy < 80);
@@ -894,7 +894,7 @@ export default function LiveSessionScreen() {
         <LiveConfirmSheet
           visible={finishConfirmOpen}
           title="Terminer la séance ?"
-          body="Enregistrer l’activité GPS dans Azimut."
+          body="Enregistrer l’activité GPS dans Mova."
           confirmLabel="Enregistrer"
           cancelLabel="Continuer"
           onConfirm={runFinishSave}
@@ -946,7 +946,7 @@ export default function LiveSessionScreen() {
       <LiveConfirmSheet
         visible={finishConfirmOpen}
         title="Terminer la séance ?"
-        body="Enregistrer l’activité GPS dans Azimut."
+        body="Enregistrer l’activité GPS dans Mova."
         confirmLabel="Enregistrer"
         cancelLabel="Continuer"
         onConfirm={runFinishSave}

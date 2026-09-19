@@ -119,7 +119,7 @@ export function buildStructuredTcx(workout: PlannedWorkout): string {
       const rep = s.repeat && s.repeat > 1 ? ` ×${s.repeat}` : '';
       return `${s.type}${rep}: ${s.label ?? s.type} (${dur})`;
     }),
-    'Export Azimut → montre',
+    'Export Mova → montre',
   ].join(' | ');
 
   const trackPoints = workout.steps
@@ -343,7 +343,7 @@ export function buildGarminTrainingJson(workout: PlannedWorkout): string {
       summary,
       workout: payload,
       importHint:
-        'Garmin Connect → Entraînement → Importer (JSON Training API) ou laisse Azimut pousser via le compte lié.',
+        'Garmin Connect → Entraînement → Importer (JSON Training API) ou laisse Mova pousser via le compte lié.',
     },
     null,
     2,
@@ -370,7 +370,7 @@ export function buildWatchExportFiles(
           content: buildGarminTrainingJson(workout),
           formatLabel: 'JSON Garmin Training',
           nextStep:
-            'Si le compte Garmin est lié, Azimut pousse aussi sur Connect. Sinon : Garmin Connect → Entraînements → Importer.',
+            'Si le compte Garmin est lié, Mova pousse aussi sur Connect. Sinon : Garmin Connect → Entraînements → Importer.',
         },
         extras: [
           {

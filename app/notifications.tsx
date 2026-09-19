@@ -26,7 +26,7 @@ function timeAgo(iso: string): string {
 
 function notifTitle(n: SocialNotification): string {
   if (n.kind === 'product') {
-    return n.programTitle ?? 'Mise à jour Azimut';
+    return n.programTitle ?? 'Mise à jour Mova';
   }
   if (n.kind === 'program_like') {
     return `${n.fromDisplayName} a aimé votre programme`;

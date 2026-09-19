@@ -32,12 +32,12 @@ export function NotificationPermissionModal({
           </Text>
           <Text style={[styles.title, { color: colors.text }]}>
             {inAppOnly
-              ? 'Activer les alertes dans Azimut ?'
+              ? 'Activer les alertes dans Mova ?'
               : 'Souhaitez-vous autoriser les notifications ?'}
           </Text>
           <Text style={[styles.body, { color: colors.textSecondary }]}>
             {inAppOnly
-              ? 'Les rappels séance, likes et abonnés apparaissent dans l’app Azimut — pas comme des notifications de votre téléphone.'
+              ? 'Les rappels séance, likes et abonnés apparaissent dans l’app Mova — pas comme des notifications de votre téléphone.'
               : 'On pourra vous rappeler votre séance du jour, vous prévenir d’un nouvel abonné, ou quand quelqu’un like votre programme.'}
           </Text>
           <View style={styles.bullets}>
@@ -56,7 +56,7 @@ export function NotificationPermissionModal({
             onPress={onAllow}
           >
             <Text style={styles.primaryText}>
-              {inAppOnly ? 'Activer les alertes Azimut' : 'Autoriser les notifications'}
+              {inAppOnly ? 'Activer les alertes Mova' : 'Autoriser les notifications'}
             </Text>
           </Pressable>
           <Pressable style={styles.secondary} onPress={onDeny}>

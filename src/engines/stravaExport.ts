@@ -283,10 +283,10 @@ export function toActivityGpx(activity: StravaActivity): string {
   const samples = buildTimedSamples(activity);
   const withPos = samples.filter((s) => s.lat != null && s.lng != null);
   const points = withPos.length >= 2 ? withPos : samples;
-  const name = escapeXml(activity.name || 'Séance Azimut');
+  const name = escapeXml(activity.name || 'Séance Mova');
   const desc = escapeXml(
     [
-      `Export Azimut`,
+      `Export Mova`,
       activity.sport ? `Sport : ${activity.sport}` : null,
       `Durée : ${formatDuration(activity.movingSec || activity.elapsedSec)}`,
       activity.distanceM > 0
@@ -321,7 +321,7 @@ export function toActivityGpx(activity: StravaActivity): string {
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Azimut"
+<gpx version="1.1" creator="Mova"
   xmlns="http://www.topografix.com/GPX/1/1"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
@@ -349,7 +349,7 @@ export function toActivityTcx(activity: StravaActivity): string {
   const durationSec = clampDurationSec(activity.elapsedSec || activity.movingSec);
   const distanceM = Math.max(0, Math.round(activity.distanceM || 0));
   const sport = activitySportToTcx(activity.sport);
-  const notes = escapeXml(`${activity.name || 'Séance'} — export Azimut`);
+  const notes = escapeXml(`${activity.name || 'Séance'} — export Mova`);
 
   const trackPoints = samples
     .map((p) => {
@@ -412,7 +412,7 @@ ${trackPoints}
       </Lap>
       <Notes>${notes}</Notes>
       <Creator xsi:type="Device_t">
-        <Name>Azimut</Name>
+        <Name>Mova</Name>
         <UnitId>0</UnitId>
         <ProductID>0</ProductID>
       </Creator>
@@ -607,7 +607,7 @@ export function toStravaCreateActivityPayload(workout: PlannedWorkout) {
       'Déroulé :',
       stepsDesc,
       '',
-      'Export depuis Azimut',
+      'Export depuis Mova',
     ]
       .filter(Boolean)
       .join('\n'),
@@ -630,7 +630,7 @@ export function buildWorkoutShareMessage(workout: PlannedWorkout): string {
     '',
     payload.description,
     '',
-    '→ Sur Strava : Importer un fichier (GPX/TCX) depuis Azimut.',
+    '→ Sur Strava : Importer un fichier (GPX/TCX) depuis Mova.',
     `→ Site : ${STRAVA_WEB_UPLOAD_FILE}`,
   ]
     .filter(Boolean)
@@ -696,7 +696,7 @@ export function buildActivityShareMessage(activity: StravaActivity): string {
     km ? `Distance : ${km}` : null,
     `Durée : ${duration}`,
     '',
-    'Séance terminée avec Azimut 🧭',
+    'Séance terminée avec Mova 🧭',
   ]
     .filter(Boolean)
     .join('\n');

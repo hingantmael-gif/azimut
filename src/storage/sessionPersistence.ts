@@ -1,5 +1,5 @@
 /**
- * Persistance session Azimut — domaines séparés + debounce.
+ * Persistance session Mova — domaines séparés + debounce.
  * Legacy `@training/session` migré une fois vers `@azimut/*`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';

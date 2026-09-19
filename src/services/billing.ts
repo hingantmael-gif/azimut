@@ -1,5 +1,5 @@
 /**
- * Billing Azimut — prêt Google Play via RevenueCat.
+ * Billing Mova — prêt Google Play via RevenueCat.
  *
  * Web / Expo Go : pas d’achats natifs (Play Billing). L’UI et les entitlements
  * locaux (owner / gift / paid sync) restent opérationnels.

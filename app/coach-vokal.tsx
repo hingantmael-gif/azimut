@@ -32,7 +32,7 @@ export default function CoachVokalScreen() {
         <View style={[styles.card, { backgroundColor: colors.bg }]}>
           <Text style={[styles.title, { color: colors.text }]}>Coach vocal</Text>
           <Text style={[styles.body, { color: colors.textMuted }]}>
-            Cette fonctionnalité n’est plus proposée dans Azimut. Le cockpit du
+            Cette fonctionnalité n’est plus proposée dans Mova. Le cockpit du
             jour et la Sentinelle restent disponibles.
           </Text>
         </View>

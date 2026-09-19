@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Azimut",
+    "name": "Mova",
     "slug": "azimut",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -83,8 +83,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.azimut.training",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Azimut utilise ta position pour suivre ta séance même en arrière-plan si tu l’autorises.",
+        "NSLocationWhenInUseUsageDescription": "Mova utilise ta position pour guider ta séance (distance, allure, carte).",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Mova utilise ta position pour suivre ta séance même en arrière-plan si tu l’autorises.",
         "LSApplicationQueriesSchemes": [
           "strava",
           "connect"
@@ -105,9 +105,9 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static",
-      "name": "Azimut",
-      "shortName": "Azimut",
-      "description": "Coaching multi-sport — installe Azimut sur téléphone, tablette ou PC.",
+      "name": "Mova",
+      "shortName": "Mova",
+      "description": "Coaching multi-sport — installe Mova sur téléphone, tablette ou PC.",
       "themeColor": "#07111F",
       "backgroundColor": "#07111F"
     },
@@ -118,7 +118,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
+          "locationWhenInUsePermission": "Mova utilise ta position pour guider ta séance (distance, allure, carte).",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }

@@ -22,7 +22,7 @@ import { radii, spacing } from '../../theme/tokens';
 import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
 import { PressableScale } from '../motion/softMotion';
 
-/** Barre de progression Azimut (segments jade). */
+/** Barre de progression Mova (segments jade). */
 export function IntakeProgress({
   index,
   total,
@@ -225,7 +225,7 @@ export function IntakeGenderRow({
   );
 }
 
-/** Écran photo plein cadre — look Azimut. */
+/** Écran photo plein cadre — look Mova. */
 export function RelayHero({
   onStart,
   onBack,
@@ -276,7 +276,7 @@ export function RelayHero({
   );
 }
 
-/** Aperçu des allures — design Azimut (pas de clone Campus). */
+/** Aperçu des allures — design Mova (pas de clone Campus). */
 export function PlanPreviewCard({
   onContinue,
   recentTimeSec,

@@ -762,7 +762,7 @@ function reduceAppState(state: AppState, action: Action): AppState {
               id: `product-calis-${Date.now()}`,
               kind: 'product',
               fromUsername: 'azimut',
-              fromDisplayName: 'Azimut',
+              fromDisplayName: 'Mova',
               createdAt: new Date().toISOString(),
               read: false,
               programTitle:
@@ -2025,7 +2025,7 @@ function reduceAppState(state: AppState, action: Action): AppState {
               : 0,
       });
       const learnNote = learned.insight
-        ? `Azimut vient d’apprendre : ${learned.insight}`
+        ? `Mova vient d’apprendre : ${learned.insight}`
         : null;
 
       const unlocked = applyBadgeUnlocks(
@@ -2466,7 +2466,7 @@ function reduceAppState(state: AppState, action: Action): AppState {
       const club: Club = {
         id,
         name,
-        description: action.description.trim() || 'Groupe créé sur Azimut.',
+        description: action.description.trim() || 'Groupe créé sur Mova.',
         city: action.city?.trim() || undefined,
         sportLabel: action.sportLabel?.trim() || undefined,
         visibility: action.visibility ?? 'public',

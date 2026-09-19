@@ -39,7 +39,7 @@ export async function exportWorkoutToGarmin(opts: GarminExportOptions): Promise<
   if (!isRemoteAuthToken(token)) {
     Alert.alert(
       'Compte requis',
-      'Connecte-toi avec un compte Azimut pour envoyer tes séances vers Garmin Connect.',
+      'Connecte-toi avec un compte Mova pour envoyer tes séances vers Garmin Connect.',
     );
     return false;
   }
@@ -51,7 +51,7 @@ export async function exportWorkoutToGarmin(opts: GarminExportOptions): Promise<
     const connectNow = await new Promise<boolean>((resolve) => {
       Alert.alert(
         'Lier Garmin Connect',
-        'Une seule fois : autorise Azimut à publier tes séances sur ton compte Garmin Connect. Ta montre (déjà appairée dans Garmin Connect) recevra la séance au prochain sync.',
+        'Une seule fois : autorise Mova à publier tes séances sur ton compte Garmin Connect. Ta montre (déjà appairée dans Garmin Connect) recevra la séance au prochain sync.',
         [
           { text: 'Plus tard', style: 'cancel', onPress: () => resolve(false) },
           { text: 'Lier maintenant', onPress: () => resolve(true) },

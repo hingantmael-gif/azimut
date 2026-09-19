@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Azimut",
-  "short_name": "Azimut",
-  "description": "Coaching multi-sport — application Azimut.",
+  "name": "Mova",
+  "short_name": "Mova",
+  "description": "Coaching multi-sport — application Mova.",
   "start_url": "/welcome",
   "scope": "/",
   "display": "standalone",

@@ -213,7 +213,7 @@ export default function SearchScreen() {
                 </Text>
                 <Text style={[styles.meta, { color: colors.textSecondary }]}>
                   {[item.city, item.sport].filter(Boolean).join(' · ') ||
-                    (item.fromCloud ? 'Compte Azimut' : '')}
+                    (item.fromCloud ? 'Compte Mova' : '')}
                 </Text>
                 {sameCity || sameSport ? (
                   <Text style={[styles.badge, { color: colors.accentDark }]}>

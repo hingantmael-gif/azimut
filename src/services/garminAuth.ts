@@ -39,7 +39,7 @@ export async function connectGarminAccount(authToken: string): Promise<{
     return {
       ok: false,
       error:
-        'La liaison OAuth Garmin se fait depuis l’app mobile Azimut (iOS ou Android), pas depuis le navigateur.',
+        'La liaison OAuth Garmin se fait depuis l’app mobile Mova (iOS ou Android), pas depuis le navigateur.',
     };
   }
 

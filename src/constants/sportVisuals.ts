@@ -5,7 +5,7 @@ import type { ProgramSportCategory } from './programs';
 export const COVER_CROP_CENTER = '50% 50%';
 
 /**
- * Visuels sportifs Azimut — athlètes au premier plan.
+ * Visuels sportifs Mova — athlètes au premier plan.
  * Parité femmes / hommes (~50/50) et mix dans chaque discipline
  * (course, vélo, natation, triathlon, muscu…), pas un sport « réservé » à un genre.
  */

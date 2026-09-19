@@ -1,4 +1,4 @@
-/** Palettes Azimut — jade + ink (hors orange Strava / teal générique) */
+/** Palettes Mova — jade + ink (hors orange Strava / teal générique) */
 
 export type ColorPalette = {
   bg: string;

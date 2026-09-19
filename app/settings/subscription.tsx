@@ -144,7 +144,7 @@ export default function SubscriptionScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <Text style={styles.heroTitle}>Azimut Premium</Text>
+            <Text style={styles.heroTitle}>Mova Premium</Text>
             {premium ? <PremiumBadge force /> : null}
           </View>
           <Text style={styles.heroSub}>

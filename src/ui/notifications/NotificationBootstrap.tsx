@@ -25,7 +25,7 @@ import { SoftPulse } from '../motion/softMotion';
 import { BRAND } from '../../constants/brand';
 
 /**
- * - Web / PWA : alertes uniquement dans Azimut (pas de notif téléphone / domaine GitHub)
+ * - Web / PWA : alertes uniquement dans Mova (pas de notif téléphone / domaine GitHub)
  * - Natif : permission OS pour rappels en arrière-plan ; social = toast in-app
  * - Bandeau pré-séance in-app
  */

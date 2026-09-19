@@ -54,15 +54,15 @@ export function watchResendLabel(brandId?: WatchBrandId | null): string {
 
 /**
  * Hint sous le bouton — explique le flux Bluetooth / app compagnon
- * (1–2 gestes après l’envoi Azimut).
+ * (1–2 gestes après l’envoi Mova).
  */
 export function watchExportHint(brandId?: WatchBrandId | null): string {
   if (!brandId) {
-    return 'Au premier envoi, Azimut te demande quelle montre tu as — puis exporte le bon fichier.';
+    return 'Au premier envoi, Mova te demande quelle montre tu as — puis exporte le bon fichier.';
   }
   switch (brandId) {
     case 'garmin':
-      return 'Export JSON Garmin Training (+ TCX). Si ton compte est lié, Azimut pousse aussi sur Garmin Connect → sync Bluetooth.';
+      return 'Export JSON Garmin Training (+ TCX). Si ton compte est lié, Mova pousse aussi sur Garmin Connect → sync Bluetooth.';
     case 'apple':
       return 'Export JSON WorkoutKit (+ TCX). Ouvre Fitness / Santé sur iPhone — l’Apple Watch récupère le plan.';
     case 'samsung':
@@ -104,7 +104,7 @@ export function buildWatchWorkoutBrief(workout: PlannedWorkout): string {
     'Déroulé :',
     steps,
     '',
-    '— Export Azimut → montre',
+    '— Export Mova → montre',
   ]
     .filter(Boolean)
     .join('\n');

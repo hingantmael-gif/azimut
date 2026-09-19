@@ -2,7 +2,7 @@ import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
 /**
- * Document HTML web — PWA Azimut + pas de scrollbar visible.
+ * Document HTML web — PWA Mova + pas de scrollbar visible.
  */
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -15,13 +15,13 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
         <meta name="theme-color" content="#07111F" />
-        <meta name="application-name" content="Azimut" />
+        <meta name="application-name" content="Mova" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Azimut" />
+        <meta name="apple-mobile-web-app-title" content="Mova" />
         <meta
           name="description"
-          content="Azimut — coaching multi-sport. Installe l’application sur téléphone, tablette ou PC."
+          content="Mova — coaching multi-sport. Installe l’application sur téléphone, tablette ou PC."
         />
         <meta
           name="google-site-verification"
@@ -30,7 +30,7 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
-        <title>Azimut</title>
+        <title>Mova</title>
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{

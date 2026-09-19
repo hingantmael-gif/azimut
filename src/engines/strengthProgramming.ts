@@ -6,7 +6,7 @@ import {
 } from './sportsScience';
 
 /**
- * Programmation musculation — Schoenfeld + référentiel haltères Azimut.
+ * Programmation musculation — Schoenfeld + référentiel haltères Mova.
  */
 
 export type StrengthEquipment =

@@ -102,7 +102,7 @@ function parseDurationToSec(raw: string): number | undefined {
   return undefined;
 }
 
-/** Onboarding premier compte — textes Campus + branchements route/trail, look Azimut. */
+/** Onboarding premier compte — textes Campus + branchements route/trail, look Mova. */
 export default function OnboardingScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();

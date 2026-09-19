@@ -99,7 +99,7 @@ function AppShell() {
             <Stack.Screen name="program" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="install" options={{ headerShown: false, title: 'Installer Azimut' }} />
+            <Stack.Screen name="install" options={{ headerShown: false, title: 'Installer Mova' }} />
             <Stack.Screen name="import-activity" options={{ title: 'Importer Strava' }} />
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />

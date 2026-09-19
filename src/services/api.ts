@@ -1,5 +1,5 @@
 /**
- * Client auth Azimut → API (inscription e-mail + Google).
+ * Client auth Mova → API (inscription e-mail + Google).
  * En cas d’API injoignable, les écrans basculent sur le stockage local.
  */
 import { resolveApiUrl } from './apiBase';

@@ -17,12 +17,12 @@ export function HeaderBrand() {
       onPress={() => router.push('/(tabs)')}
       variant="subtle"
       accessibilityRole="header"
-      accessibilityLabel="Azimut, accueil"
+      accessibilityLabel="Mova, accueil"
       style={styles.headerRow}
     >
       <View style={styles.headerInner}>
         <AzimutMark size={30} surfaceColor={colors.bg} />
-        <Text style={[styles.headerWord, { color: colors.text }]}>Azimut</Text>
+        <Text style={[styles.headerWord, { color: colors.text }]}>Mova</Text>
       </View>
     </PressableScale>
   );

@@ -26,7 +26,7 @@ export function WatchBrandPickModal({ visible, onSelect, onCancel }: Props) {
           <AppScrollView contentContainerStyle={{ paddingBottom: spacing.md }}>
             <WatchBrandPicker
               title="Quelle montre possédez-vous ?"
-              subtitle="Un choix unique — ensuite Azimut exporte le bon format de fichier et envoie la séance en quelques clics."
+              subtitle="Un choix unique — ensuite Mova exporte le bon format de fichier et envoie la séance en quelques clics."
               onSelect={onSelect}
             />
             <Pressable onPress={onCancel} style={styles.cancel}>

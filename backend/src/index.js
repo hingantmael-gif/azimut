@@ -34,7 +34,7 @@ function loadEnvFile() {
 loadEnvFile();
 
 /**
- * API Azimut — auth Google + OTP e-mail (6 chiffres)
+ * API Mova — auth Google + OTP e-mail (6 chiffres)
  * Env :
  *   RESEND_API_KEY (+ EMAIL_FROM)  → envoi réel du code
  *   BREVO_API_KEY (+ EMAIL_FROM)   → alternative
@@ -112,9 +112,9 @@ function issueToken(email) {
 }
 
 async function sendOtpEmail(to, code) {
-  const from = process.env.EMAIL_FROM || 'Azimut <onboarding@resend.dev>';
-  const subject = 'Votre code Azimut';
-  const html = `<p>Votre code de vérification Azimut :</p>
+  const from = process.env.EMAIL_FROM || 'Mova <onboarding@resend.dev>';
+  const subject = 'Votre code Mova';
+  const html = `<p>Votre code de vérification Mova :</p>
     <p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p>
     <p>Valable 10 minutes. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.</p>`;
 
@@ -142,7 +142,7 @@ async function sendOtpEmail(to, code) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { email: from.includes('<') ? from.replace(/.*<([^>]+)>.*/, '$1') : from, name: 'Azimut' },
+        sender: { email: from.includes('<') ? from.replace(/.*<([^>]+)>.*/, '$1') : from, name: 'Mova' },
         to: [{ email: to }],
         subject,
         htmlContent: html,
@@ -645,7 +645,7 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
-// ─── Auth token (Azimut) ───────────────────────────────────────────────────
+// ─── Auth token (Mova) ───────────────────────────────────────────────────
 
 function verifyAuthToken(token) {
   if (!token?.startsWith('az_')) return null;

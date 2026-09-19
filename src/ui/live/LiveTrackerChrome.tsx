@@ -13,7 +13,7 @@ import type { ColorPalette } from '../../theme/palettes';
 import { PressableScale, SoftPulse } from '../motion/softMotion';
 import { paceGaugeLayout } from '../../engines/liveWorkout';
 
-/** Barres signal GPS (style Record Strava, couleurs Azimut). */
+/** Barres signal GPS (style Record Strava, couleurs Mova). */
 export function GpsSignalBars({
   accuracyM,
   denied,

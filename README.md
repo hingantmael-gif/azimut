@@ -1,4 +1,4 @@
-# Azimut
+# Mova
 
 Application de coaching multi-sport — **indépendante de BTP Pro**.
 
@@ -9,7 +9,7 @@ Application de coaching multi-sport — **indépendante de BTP Pro**.
 | **Installer** (PC / téléphone) | https://hingantmael-gif.github.io/azimut/telecharger.html |
 | **Application** | https://hingantmael-gif.github.io/azimut/ |
 
-Sur **Chrome / Edge** : ouvrir **Installer** → **Installer l’application** → icône logo Azimut (menu Démarrer / écran d’accueil).  
+Sur **Chrome / Edge** : ouvrir **Installer** → **Installer l’application** → icône logo Mova (menu Démarrer / écran d’accueil).  
 Sur **iPhone** : Safari → Partager → Sur l’écran d’accueil.
 
 ## Publier
