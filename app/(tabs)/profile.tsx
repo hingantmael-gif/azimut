@@ -158,15 +158,15 @@ export default function ProfileScreen() {
 
       <View style={styles.actionRow}>
         <Pressable
-          style={[styles.actionBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+          style={[styles.actionBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
           onPress={() => router.push('/settings/profile')}
           accessibilityRole="button"
           accessibilityLabel="Modifier le profil"
         >
-          <Text style={[styles.actionBtnText, { color: colors.text }]}>Modifier le profil</Text>
+          <Text style={[styles.actionBtnText, { color: colors.onAccent }]}>Modifier le profil</Text>
         </Pressable>
         <Pressable
-          style={[styles.actionBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+          style={[styles.actionBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
           onPress={() => router.push('/search')}
           accessibilityRole="button"
           accessibilityLabel="Trouver des athlètes"
@@ -242,7 +242,7 @@ export default function ProfileScreen() {
       </Pressable>
 
       <Pressable
-        style={[styles.linkRow, { backgroundColor: colors.bg, borderColor: colors.border }]}
+        style={[styles.linkRow, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
         onPress={() => router.push('/badges')}
       >
         <Text style={[styles.linkRowLabel, { color: colors.text }]}>Badges</Text>
@@ -258,7 +258,7 @@ export default function ProfileScreen() {
         />
       </View>
       <FadeInUp delay={50}>
-        <View style={[styles.linkGroup, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+        <View style={[styles.linkGroup, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <PressableScale
             variant="subtle"
             onPress={() => router.push('/(tabs)/social')}
@@ -317,7 +317,7 @@ export default function ProfileScreen() {
           delay={40}
         />
       </View>
-      <View style={[styles.linkGroup, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+      <View style={[styles.linkGroup, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <Pressable
           style={styles.linkRowInner}
           onPress={() => router.push('/settings/goals')}
@@ -501,8 +501,9 @@ function makeStyles(colors: ColorPalette) {
       elevation: 21,
     },
     avatar: {
-      borderWidth: 3,
+      borderWidth: 4,
       borderColor: colors.bg,
+      boxShadow: `0px 8px 24px ${colors.shadow}33`,
     },
     avatarBadge: {
       position: 'absolute',
@@ -521,12 +522,13 @@ function makeStyles(colors: ColorPalette) {
     avatarBadgeText: { color: colors.white, fontSize: 12, fontWeight: '800' },
     name: {
       textAlign: 'center',
-      marginTop: spacing.sm,
-      fontSize: 20,
+      marginTop: spacing.md,
+      fontSize: 26,
       fontWeight: '800',
+      letterSpacing: -0.6,
       color: colors.text,
     },
-    handle: { textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+    handle: { textAlign: 'center', color: colors.textMuted, fontSize: 14, fontWeight: '600', marginTop: 2 },
     bio: {
       textAlign: 'center',
       color: colors.textSecondary,
@@ -543,21 +545,22 @@ function makeStyles(colors: ColorPalette) {
     },
     actionBtn: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: radii.md,
+      paddingVertical: 13,
+      borderRadius: radii.lg,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    actionBtnText: { fontWeight: '700', fontSize: 13, textAlign: 'center', width: '100%' },
+    actionBtnText: { fontWeight: '800', fontSize: 14, textAlign: 'center', width: '100%' },
     statsGrid: {
-      marginHorizontal: spacing.lg,
+      marginHorizontal: spacing.md,
       marginTop: spacing.md,
       paddingVertical: spacing.sm,
-      borderRadius: radii.lg,
-      backgroundColor: colors.bg,
+      borderRadius: radii.xl,
+      backgroundColor: colors.bgCard,
       borderWidth: 1,
       borderColor: colors.border,
+      boxShadow: `0px 6px 20px ${colors.shadow}14`,
     },
     statsRow: {
       flexDirection: 'row',
@@ -579,27 +582,28 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: colors.border,
       marginVertical: 6,
     },
-    socialN: { fontWeight: '800', fontSize: 16, color: colors.text },
-    socialL: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    socialN: { fontWeight: '800', fontSize: 22, letterSpacing: -0.4, color: colors.text },
+    socialL: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 2 },
     rankCard: {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,
       padding: spacing.md,
-      borderRadius: radii.lg,
-      borderWidth: 1.5,
+      borderRadius: radii.xl,
+      borderWidth: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: spacing.md,
+      boxShadow: `0px 10px 28px ${colors.shadow}1F`,
     },
-    rankTitle: { fontWeight: '800', fontSize: 16 },
-    rankSub: { marginTop: 2, color: colors.textMuted, fontSize: 13 },
+    rankTitle: { fontWeight: '800', fontSize: 19, letterSpacing: -0.3 },
+    rankSub: { marginTop: 3, color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
     chevron: { fontSize: 22, color: colors.textMuted },
     linkRow: {
       marginHorizontal: spacing.md,
       marginTop: spacing.sm,
       paddingHorizontal: spacing.md,
-      paddingVertical: 14,
-      borderRadius: radii.lg,
+      paddingVertical: 16,
+      borderRadius: radii.xl,
       borderWidth: 1,
       flexDirection: 'row',
       alignItems: 'center',
@@ -608,9 +612,10 @@ function makeStyles(colors: ColorPalette) {
     linkGroup: {
       marginHorizontal: spacing.md,
       marginBottom: spacing.sm,
-      borderRadius: radii.lg,
+      borderRadius: radii.xl,
       borderWidth: 1,
       overflow: 'hidden',
+      boxShadow: `0px 6px 20px ${colors.shadow}12`,
     },
     linkRowInner: {
       paddingHorizontal: spacing.md,
@@ -621,7 +626,7 @@ function makeStyles(colors: ColorPalette) {
       gap: spacing.sm,
     },
     linkRule: { height: StyleSheet.hairlineWidth, marginLeft: spacing.md },
-    linkRowLabel: { fontWeight: '600', fontSize: 15 },
+    linkRowLabel: { fontWeight: '700', fontSize: 15 },
     hubPreview: { fontSize: 12, fontWeight: '600', marginTop: 2 },
     linkRowValue: { fontSize: 13, flexShrink: 1, maxWidth: '48%', textAlign: 'right' },
     sectionTitle: {
