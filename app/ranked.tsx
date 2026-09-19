@@ -48,6 +48,10 @@ import type { ColorPalette } from '../src/theme/palettes';
 import { AppScrollView } from '../src/ui/scrolling';
 import { useHorizontalDragScroll } from '../src/ui/scrolling/useHorizontalDragScroll';
 import { RankBadge } from '../src/ui/ranked/RankBadge';
+import { LinearGradient } from 'expo-linear-gradient';
+import { TierAmbience } from '../src/ui/profile/TierAmbience';
+import { seedFromString } from '../src/engines/topoLines';
+import { mixHex, rgba } from '../src/theme/tokens';
 import { ProfileAvatar } from '../src/ui/profile/ProfileAvatar';
 import { ScreenAtmosphere } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { FadeInUp } from '../src/ui/motion/softMotion';
@@ -489,8 +493,26 @@ export default function RankedScreen() {
 
         {section === 'league' ? (
         <>
-        <View style={[styles.hero, { backgroundColor: displayMeta.color }]}>
-          <View style={styles.heroGlow} />
+        <LinearGradient
+          colors={[
+            mixHex(displayMeta.color, '#050B16', 0.78),
+            mixHex(displayMeta.color, '#050B16', 0.42),
+            mixHex(displayMeta.color, '#050B16', 0.12),
+          ]}
+          locations={[0, 0.55, 1]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.hero}
+        >
+          <TierAmbience color={mixHex(displayMeta.color, '#FFFFFF', 0.35)} height={380} seed={seedFromString(String(displayMeta.color))} count={14} />
+          {/* Halo lumineux derrière le logo de rang (le logo n'est pas modifié). */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.heroHalo,
+              { boxShadow: `0px 0px 90px 42px ${rgba(mixHex(displayMeta.color, '#FFFFFF', 0.15), 0.42)}` },
+            ]}
+          />
           <View style={styles.demoBadge}>
             <Text style={styles.demoBadgeText}>Classement de démonstration</Text>
           </View>
@@ -532,21 +554,25 @@ export default function RankedScreen() {
           </Text>
           {isViewingOwnRank ? (
             <>
-              <Text style={styles.streak}>
-                🔥 Série {ranked.streakWeeks} semaine
-                {ranked.streakWeeks > 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.shieldHero}>
-                Boucliers anti-descente : {ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS}/
-                {PREMIUM_RELEGATION_SHIELDS}
-              </Text>
+              <View style={styles.heroChips}>
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>
+                    🔥 Série {ranked.streakWeeks} sem.
+                  </Text>
+                </View>
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>
+                    🛡 {ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS}/{PREMIUM_RELEGATION_SHIELDS} boucliers
+                  </Text>
+                </View>
+              </View>
             </>
           ) : (
             <Text style={styles.rankPreviewHint}>
               Consultation libre — liste et XP des athlètes ci-dessous.
             </Text>
           )}
-        </View>
+        </LinearGradient>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
@@ -1268,11 +1294,11 @@ function makeStyles(colors: ColorPalette) {
     },
     sectionTab: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: radii.md,
+      paddingVertical: 11,
+      borderRadius: radii.pill,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.bg,
+      backgroundColor: colors.glass,
       alignItems: 'center',
     },
     sectionTabText: {
@@ -1315,11 +1341,30 @@ function makeStyles(colors: ColorPalette) {
     rewardBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
     hero: {
       margin: spacing.md,
-      borderRadius: radii.lg,
+      borderRadius: radii.xxl,
       padding: spacing.lg,
       alignItems: 'center',
       overflow: 'hidden',
+      minHeight: 380,
     },
+    heroHalo: {
+      position: 'absolute',
+      top: 128,
+      alignSelf: 'center',
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+    },
+    heroChips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: spacing.md },
+    heroChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.28)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.22)',
+    },
+    heroChipText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12.5 },
     heroGlow: {
       position: 'absolute',
       width: 220,
@@ -1395,10 +1440,11 @@ function makeStyles(colors: ColorPalette) {
     card: {
       marginHorizontal: spacing.md,
       padding: spacing.md,
-      backgroundColor: colors.bg,
-      borderRadius: radii.lg,
+      backgroundColor: colors.bgCard,
+      borderRadius: radii.xl,
       borderWidth: 1,
       borderColor: colors.border,
+      boxShadow: `0px 6px 20px ${colors.shadow}12`,
     },
     cardTitle: { fontWeight: '800', fontSize: 16, color: colors.text },
     xpRow: {
@@ -1415,7 +1461,7 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: colors.bgSecondary,
       overflow: 'hidden',
     },
-    fill: { height: '100%', borderRadius: 7 },
+    fill: { height: '100%', borderRadius: 7, boxShadow: '0px 0px 12px rgba(255,255,255,0.35)' },
     xpHint: {
       marginTop: spacing.sm,
       fontSize: 12,
@@ -1426,8 +1472,8 @@ function makeStyles(colors: ColorPalette) {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,
       padding: spacing.md,
-      backgroundColor: colors.bg,
-      borderRadius: radii.lg,
+      backgroundColor: colors.bgCard,
+      borderRadius: radii.xl,
       borderWidth: 1,
       borderColor: colors.border,
     },

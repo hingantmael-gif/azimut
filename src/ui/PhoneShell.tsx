@@ -1,5 +1,5 @@
 import { Platform, StyleSheet, View, type ViewProps, useWindowDimensions } from 'react-native';
-import { colors } from '../theme/tokens';
+import { useThemeColors } from '../theme/ThemeContext';
 
 const PHONE_WIDTH = 390;
 const PHONE_MAX_HEIGHT = 844;
@@ -11,6 +11,7 @@ const FRAME_BREAKPOINT = 520;
  */
 export function PhoneShell({ children, style, ...props }: ViewProps) {
   const { width, height } = useWindowDimensions();
+  const { colors } = useThemeColors();
 
   if (Platform.OS !== 'web') {
     return (
@@ -24,7 +25,7 @@ export function PhoneShell({ children, style, ...props }: ViewProps) {
 
   if (!framed) {
     return (
-      <View style={[styles.mobileWeb, style]} {...props}>
+      <View style={[styles.mobileWeb, { backgroundColor: colors.bg }, style]} {...props}>
         {children}
       </View>
     );
@@ -38,6 +39,7 @@ export function PhoneShell({ children, style, ...props }: ViewProps) {
         style={[
           styles.phone,
           {
+            backgroundColor: colors.bg,
             width: Math.min(PHONE_WIDTH, width - 32),
             height: phoneH,
             maxHeight: phoneH,
@@ -64,7 +66,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   phone: {
-    backgroundColor: colors.bg,
     borderRadius: 28,
     overflow: 'hidden',
     borderWidth: 1,
@@ -76,7 +77,6 @@ const styles = StyleSheet.create({
     width: '100%' as unknown as number,
     minHeight: '100dvh' as unknown as number,
     height: '100%' as unknown as number,
-    backgroundColor: colors.bg,
     overflow: 'hidden',
   },
 });
