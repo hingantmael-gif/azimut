@@ -10,7 +10,9 @@ import {
   useApp,
 } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
-import { radii, spacing } from '../../src/theme/tokens';
+import { mixHex, radii, readableOn, rgba, spacing } from '../../src/theme/tokens';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Card, StatTile } from '../../src/ui/primitives';
 import { DISCIPLINE_META, supportsActivityImport } from '../../src/constants/disciplines';
 import { summarizeWorkout } from '../../src/engines/workoutPresentation';
 import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
@@ -42,8 +44,9 @@ function daysUntilLabel(n: number): string {
 /** Accueil — cockpit du jour (audit UX : une action prioritaire). */
 export default function HomeDashboard() {
   const { state, dispatch } = useApp();
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const heroColors = isDark ? (['#0F2238', '#0B4A44'] as const) : (['#0B1B2B', '#0E3B3A'] as const);
   const router = useRouter();
   const [showMore, setShowMore] = useState(false);
   const [timeModeOpen, setTimeModeOpen] = useState(false);
@@ -242,6 +245,8 @@ export default function HomeDashboard() {
   })();
 
   const sentinel = adjustment.sentinel;
+  /** Libellé du hero : la couleur du sport éclaircie pour rester lisible sur fond sombre. */
+  const heroLabel = discColor.startsWith('#') ? mixHex(discColor, '#FFFFFF', 0.45) : '#FFFFFF';
 
   return (
     <View style={styles.root}>
@@ -252,6 +257,13 @@ export default function HomeDashboard() {
       >
         <FadeInUp>
           <View style={styles.helloBlock}>
+            <Text style={styles.helloDate}>
+              {new Date().toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+            </Text>
             <Text style={styles.hello}>
               {hello}, {firstName}
             </Text>
@@ -300,14 +312,23 @@ export default function HomeDashboard() {
         />
 
         <FadeInUp delay={100}>
-          <View style={[styles.todayCard, { borderLeftColor: discColor }]}>
+          <LinearGradient
+            colors={heroColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.todayCard}
+          >
+            <View
+              pointerEvents="none"
+              style={[styles.heroGlow, { backgroundColor: rgba(discColor.startsWith('#') ? discColor : colors.accent, 0.35) }]}
+            />
             {isTodayTraining && focus ? (
               <>
                 <PressableScale
                   variant="subtle"
                   onPress={() => router.push(`/session/${focus.id}`)}
                 >
-                  <Text style={[styles.todayLabel, { color: discColor }]}>
+                  <Text style={[styles.todayLabel, { color: heroLabel }]}>
                     SÉANCE DU JOUR
                   </Text>
                   <Text style={styles.todayTitle}>{focus.title}</Text>
@@ -329,7 +350,7 @@ export default function HomeDashboard() {
                     style={[styles.primaryBtn, { backgroundColor: primary.color }]}
                     onPress={primary.onPress}
                   >
-                    <Text style={styles.primaryBtnText}>{primary.label}</Text>
+                    <Text style={[styles.primaryBtnText, { color: readableOn(primary.color) }]}>{primary.label}</Text>
                   </PressableScale>
                 </SoftPulse>
 
@@ -448,7 +469,7 @@ export default function HomeDashboard() {
               </>
             ) : focus ? (
               <>
-                <Text style={[styles.todayLabel, { color: discColor }]}>
+                <Text style={[styles.todayLabel, { color: heroLabel }]}>
                   PROCHAINE · {daysUntilLabel(daysUntil ?? 0).toUpperCase()}
                 </Text>
                 <Text style={styles.todayTitle}>{focus.title}</Text>
@@ -465,13 +486,13 @@ export default function HomeDashboard() {
                     style={[styles.primaryBtn, { backgroundColor: primary.color }]}
                     onPress={primary.onPress}
                   >
-                    <Text style={styles.primaryBtnText}>{primary.label}</Text>
+                    <Text style={[styles.primaryBtnText, { color: readableOn(primary.color) }]}>{primary.label}</Text>
                   </PressableScale>
                 </SoftPulse>
               </>
             ) : (
               <>
-                <Text style={styles.todayLabel}>AUCUNE SÉANCE</Text>
+                <Text style={[styles.todayLabel, { color: heroLabel }]}>AUCUNE SÉANCE</Text>
                 <Text style={styles.todayTitle}>Choisis ton cap</Text>
                 <SoftPulse intensity={0.03} style={{ marginTop: spacing.md }}>
                   <PressableScale
@@ -479,7 +500,7 @@ export default function HomeDashboard() {
                     style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
                     onPress={() => router.push('/program/new')}
                   >
-                    <Text style={styles.primaryBtnText}>Créer mon programme</Text>
+                    <Text style={[styles.primaryBtnText, { color: readableOn(colors.accent) }]}>Créer mon programme</Text>
                   </PressableScale>
                 </SoftPulse>
                 <PressableScale
@@ -491,51 +512,49 @@ export default function HomeDashboard() {
                 </PressableScale>
               </>
             )}
-          </View>
+          </LinearGradient>
         </FadeInUp>
 
         <View style={styles.metricsRow}>
           <PressableScale
             variant="nav"
-            style={[styles.metric, { backgroundColor: '#EFF6FF' }]}
+            style={styles.metricPress}
             onPress={() => router.push('/sleep')}
           >
-            <Text style={[styles.metricV, { color: '#2563EB' }]}>
-              {state.health.sleep?.score ?? '—'}
-            </Text>
-            <Text style={styles.metricL}>Sommeil</Text>
+            <StatTile tone="sleep" value={String(state.health.sleep?.score ?? '—')} label="Sommeil" />
           </PressableScale>
           <PressableScale
             variant="nav"
-            style={[styles.metric, { backgroundColor: colors.accentLight }]}
+            style={styles.metricPress}
             onPress={() =>
               router.push({ pathname: '/(tabs)/body', params: { tab: 'classement' } })
             }
           >
-            <Text style={styles.metricV}>{state.profile.ranked.xp}</Text>
-            <Text style={styles.metricL}>XP</Text>
+            <StatTile tone="xp" value={String(state.profile.ranked.xp)} label="XP" />
           </PressableScale>
           <PressableScale
             variant="nav"
-            style={[styles.metric, { backgroundColor: '#FEF3C7' }]}
+            style={styles.metricPress}
             onPress={() =>
               router.push({ pathname: '/(tabs)/body', params: { tab: 'performance' } })
             }
           >
-            <Text style={[styles.metricV, { color: '#D97706' }]}>
-              {state.banister.formTsb.toFixed(0)}
-            </Text>
-            <Text style={styles.metricL}>Forme</Text>
+            <StatTile tone="accent" value={state.banister.formTsb.toFixed(0)} label="Forme" />
           </PressableScale>
         </View>
 
         <PressableScale
           variant="nav"
-          style={styles.weekCard}
+          style={styles.weekPress}
           onPress={() => router.push('/week-review')}
         >
-          <Text style={styles.weekTitle}>Bilan de la semaine</Text>
-          <Text style={styles.weekSub}>Charge, forme, tendance ›</Text>
+          <Card variant="glass" level={1} style={styles.weekCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.weekTitle}>Bilan de la semaine</Text>
+              <Text style={styles.weekSub}>Charge, forme, tendance</Text>
+            </View>
+            <Text style={styles.weekChevron}>›</Text>
+          </Card>
         </PressableScale>
 
         <Text style={styles.feedSection}>Activités récentes</Text>
@@ -575,7 +594,7 @@ export default function HomeDashboard() {
               <PressableScale
                 variant="nav"
                 key={a.id}
-                style={styles.feedCard}
+                style={styles.feedPress}
                 onPress={() =>
                   router.push({
                     pathname: '/activity/[id]',
@@ -583,6 +602,7 @@ export default function HomeDashboard() {
                   })
                 }
               >
+               <Card level={1} style={styles.feedCard}>
                 <Text style={styles.feedTitle}>{a.name}</Text>
                 <Text style={styles.feedMeta}>
                   {dateStr}
@@ -594,6 +614,7 @@ export default function HomeDashboard() {
                     : ''}
                   {analysis ? ` · ${analysis.compliance.total}%` : ''}
                 </Text>
+               </Card>
               </PressableScale>
             );
           })
@@ -627,11 +648,19 @@ function makeStyles(colors: ColorPalette) {
       fontWeight: '700',
       letterSpacing: 0.2,
     },
+    helloDate: {
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+      marginBottom: 2,
+    },
     hello: {
-      fontSize: 26,
-      fontWeight: '900',
+      fontSize: 30,
+      fontWeight: '800',
       color: colors.text,
-      letterSpacing: -0.5,
+      letterSpacing: -0.7,
     },
     sentinelBanner: {
       backgroundColor: 'rgba(217, 119, 6, 0.12)',
@@ -682,51 +711,58 @@ function makeStyles(colors: ColorPalette) {
       fontSize: 13,
     },
     todayCard: {
-      backgroundColor: colors.bgElevated,
-      borderRadius: radii.xl,
+      borderRadius: radii.xxl,
       padding: spacing.lg,
-      borderLeftWidth: 4,
       marginBottom: spacing.md,
+      overflow: 'hidden',
+      boxShadow: `0px 14px 36px ${rgba(colors.shadow, 0.28)}`,
+    },
+    heroGlow: {
+      position: 'absolute',
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      top: -90,
+      right: -70,
     },
     todayLabel: {
       fontSize: 11,
-      fontWeight: '900',
-      letterSpacing: 1,
+      fontWeight: '800',
+      letterSpacing: 1.2,
       textTransform: 'uppercase',
     },
     todayTitle: {
-      marginTop: 6,
-      fontSize: 22,
-      fontWeight: '900',
-      color: colors.text,
-      letterSpacing: -0.4,
+      marginTop: 8,
+      fontSize: 26,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: -0.6,
+      lineHeight: 31,
     },
     todayMeta: {
-      marginTop: 6,
-      color: colors.textMuted,
-      fontSize: 13,
+      marginTop: 8,
+      color: 'rgba(255,255,255,0.74)',
+      fontSize: 14,
       fontWeight: '600',
     },
     sessionCue: {
-      marginTop: 8,
-      color: colors.textMuted,
+      marginTop: 10,
+      color: 'rgba(255,255,255,0.66)',
       fontSize: 13,
       fontWeight: '500',
-      fontStyle: 'italic',
-      lineHeight: 18,
+      lineHeight: 19,
     },
     primaryBtn: {
-      borderRadius: radii.pill,
+      borderRadius: radii.lg,
       paddingVertical: 16,
       alignItems: 'center',
-      minHeight: 52,
+      minHeight: 54,
       justifyContent: 'center',
     },
     primaryBtnText: {
-      color: '#fff',
-      fontWeight: '900',
+      fontWeight: '800',
       fontSize: 16,
-      letterSpacing: 0.2,
+      letterSpacing: 0.1,
       textAlign: 'center',
       width: '100%',
     },
@@ -735,7 +771,7 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 10,
     },
     secondaryLinkText: {
-      color: colors.accent,
+      color: 'rgba(255,255,255,0.9)',
       fontWeight: '700',
       fontSize: 14,
     },
@@ -746,34 +782,34 @@ function makeStyles(colors: ColorPalette) {
       marginTop: spacing.md,
     },
     chip: {
-      paddingHorizontal: 12,
+      paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: radii.pill,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: 'rgba(255,255,255,0.12)',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.22)',
       minHeight: 36,
       justifyContent: 'center',
     },
     chipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#FFFFFF',
     },
     timeBox: {
       marginTop: spacing.md,
       gap: 8,
       padding: spacing.md,
       borderRadius: radii.lg,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: 'rgba(255,255,255,0.08)',
     },
     timeTitle: {
       fontWeight: '800',
-      color: colors.text,
+      color: '#FFFFFF',
       marginBottom: 4,
     },
     timeBtn: {
-      backgroundColor: colors.accent,
+      backgroundColor: '#FFFFFF',
       borderRadius: radii.md,
       paddingVertical: 12,
       alignItems: 'center',
@@ -781,49 +817,32 @@ function makeStyles(colors: ColorPalette) {
       justifyContent: 'center',
     },
     timeBtnMuted: {
-      backgroundColor: colors.bgElevated,
+      backgroundColor: 'rgba(255,255,255,0.1)',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.3)',
     },
-    timeBtnText: { color: colors.text, fontWeight: '800' },
-    moreBox: { marginTop: spacing.sm, gap: 8 },
-    moreLink: { color: colors.accent, fontWeight: '700', fontSize: 13 },
+    timeBtnText: { color: '#0B1B2B', fontWeight: '800' },
+    moreBox: { marginTop: spacing.sm, gap: 10 },
+    moreLink: { color: '#8FF0CB', fontWeight: '700', fontSize: 14 },
     metricsRow: {
       flexDirection: 'row',
       gap: 10,
       marginBottom: spacing.md,
     },
-    metric: {
-      flex: 1,
-      borderRadius: radii.lg,
-      paddingVertical: 14,
-      alignItems: 'center',
-      minHeight: 72,
-      justifyContent: 'center',
-    },
-    metricV: { fontSize: 20, fontWeight: '900', color: colors.accentDark },
-    metricL: {
-      marginTop: 2,
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
+    metricPress: { flex: 1 },
+    weekPress: { marginBottom: spacing.lg },
     weekCard: {
-      backgroundColor: colors.bgElevated,
-      borderRadius: radii.lg,
-      padding: spacing.md,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
-    weekTitle: { fontWeight: '800', color: colors.text, fontSize: 15 },
+    weekTitle: { fontWeight: '800', color: colors.text, fontSize: 16 },
     weekSub: { marginTop: 2, color: colors.textMuted, fontSize: 13 },
+    weekChevron: { fontSize: 26, color: colors.textMuted, marginTop: -2 },
     feedSection: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '800',
-      letterSpacing: 0.6,
+      letterSpacing: 1.1,
       textTransform: 'uppercase',
       color: colors.textMuted,
       marginBottom: spacing.sm,
@@ -841,12 +860,8 @@ function makeStyles(colors: ColorPalette) {
       fontSize: 13,
       lineHeight: 18,
     },
-    feedCard: {
-      backgroundColor: colors.bgElevated,
-      borderRadius: radii.lg,
-      padding: spacing.md,
-      marginBottom: spacing.sm,
-    },
+    feedPress: { marginBottom: spacing.sm },
+    feedCard: {},
     feedTitle: { fontWeight: '800', color: colors.text, fontSize: 15 },
     feedMeta: { marginTop: 4, color: colors.textMuted, fontSize: 12 },
   });

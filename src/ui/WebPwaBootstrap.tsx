@@ -14,6 +14,11 @@ export function WebPwaBootstrap() {
     // Ferme la popup OAuth Google même si la page de retour n’importe pas googleAuth
     WebBrowser.maybeCompleteAuthSession();
     if (!('serviceWorker' in navigator)) return;
+    // Dev local : pas de service worker (il servirait un bundle périmé) — on nettoie l'existant.
+    if (/^(localhost|127.0.0.1)$/.test(window.location.hostname)) {
+      void navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => void r.unregister()));
+      return;
+    }
 
     const link = document.createElement('link');
     link.rel = 'manifest';

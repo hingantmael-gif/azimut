@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
+import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
 import {
   formatPersonalBestCoverLabel,
   getProfileCover,
@@ -61,6 +62,36 @@ function nextGradId(prefix: string) {
   return `${prefix}-${gradSeq}`;
 }
 
+/**
+ * Finition commune à tous les fonds : vignettage bas (lisibilité du texte posé dessus),
+ * reflet de lumière en biais et liseré intérieur. Ne masque ni les effets ni les logos de rang.
+ */
+function CoverFinish({ radius = 0 }: { radius?: number }) {
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: radius, overflow: 'hidden' }]}>
+      <FinishGradient
+        colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.7, y: 0.6 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <FinishGradient
+        colors={['rgba(0,0,0,0)', 'rgba(3,8,18,0.5)']}
+        locations={[0.45, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { borderRadius: radius, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+        ]}
+      />
+    </View>
+  );
+}
+
 type Props = {
   coverId?: string;
   height?: number;
@@ -91,9 +122,12 @@ export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
         <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
       </Animated.View>
+      <CoverFinish />
       {cover.watermark ? (
         <View style={styles.markWrap} pointerEvents="none">
-          <Text style={styles.watermark}>{cover.watermark}</Text>
+          <View style={styles.markPill}>
+            <Text style={styles.watermark}>{cover.watermark}</Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -119,8 +153,11 @@ export function ProfileCoverPreview({
       ]}
     >
       <Scene cover={cover} height={84} compact personalBestKm={personalBestKm} />
+      <CoverFinish radius={14} />
       {cover.watermark ? (
-        <Text style={styles.previewMark}>{cover.watermark}</Text>
+        <View style={styles.previewMarkPill}>
+          <Text style={styles.previewMark}>{cover.watermark}</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -2817,32 +2854,40 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1.5,
   },
+  markPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,13,24,0.46)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
   watermark: {
-    color: 'rgba(255,255,255,0.88)',
+    color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 15,
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0,0,0,0.65)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
+    fontSize: 13,
+    letterSpacing: 0.4,
   },
   preview: {
     height: 84,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 2,
   },
   previewSelected: { borderWidth: 3 },
-  previewMark: {
+  previewMarkPill: {
     position: 'absolute',
     right: 6,
-    bottom: 4,
-    color: 'rgba(255,255,255,0.95)',
+    bottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,13,24,0.5)',
+  },
+  previewMark: {
+    color: '#FFFFFF',
     fontWeight: '800',
     fontSize: 11,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   orb: { position: 'absolute', borderRadius: 999 },
   heatFloor: {

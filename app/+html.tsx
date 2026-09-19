@@ -73,7 +73,12 @@ export default function Root({ children }: PropsWithChildren) {
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+              var isLocalDev = /^(localhost|127.0.0.1)$/.test(location.hostname);
+              if (isLocalDev && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+                // Dev local : jamais de service worker (il figerait l'ancien bundle en cache).
+                navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); });
+              }
+              if (!isLocalDev && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
                 window.addEventListener('load', function () {
                   navigator.serviceWorker.register('/sw.js?v=48', { scope: '/' }).then(function (reg) {
                     try { reg.update(); } catch (e) {}

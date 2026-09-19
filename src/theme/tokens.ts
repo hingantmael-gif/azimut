@@ -79,3 +79,33 @@ export const motion = {
   slow: 420,
   screen: 360,
 };
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return null;
+  const n = parseInt(m[1]!, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** Mélange `a` vers `b` (t = 0 → a, t = 1 → b). Repli sur `a` si un hex est invalide. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ra = hexToRgb(a);
+  const rb = hexToRgb(b);
+  if (!ra || !rb) return a;
+  const k = Math.max(0, Math.min(1, t));
+  const c = ra.map((v, i) => Math.round(v + (rb[i]! - v) * k));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Encre ou blanc, selon le meilleur contraste (WCAG) sur le fond `bg`. */
+export function readableOn(bg: string, ink = '#0B1B2B'): string {
+  const rgb = hexToRgb(bg);
+  if (!rgb) return '#FFFFFF';
+  const lin = rgb.map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  const L = 0.2126 * lin[0]! + 0.7152 * lin[1]! + 0.0722 * lin[2]!;
+  // Blanc si le contraste avec le blanc dépasse celui avec l'encre (seuil ≈ 0,18 de luminance).
+  return L > 0.18 ? ink : '#FFFFFF';
+}
