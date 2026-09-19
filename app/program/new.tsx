@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { LoadCurvePreview } from '../../src/ui/program/LoadCurvePreview';
-import { WizardBackdrop, WizardPhotoScrim } from '../../src/ui/program/WizardBackdrop';
+import { WizardBackdrop } from '../../src/ui/program/WizardBackdrop';
 import { WizardGlassCard, WizardSessionGrid } from '../../src/ui/program/WizardPickers';
 import {
   ImageBackground,
@@ -1754,18 +1754,11 @@ export default function NewProgramScreen() {
           router.replace('/(tabs)/calendar');
         }}
       />
-      {wizardBg ? (
-        <ImageBackground
-          source={wizardBg}
-          style={StyleSheet.absoluteFill}
-          imageStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
-          resizeMode="cover"
-        >
-          <WizardPhotoScrim />
-        </ImageBackground>
-      ) : (
-        <WizardBackdrop />
-      )}
+      <WizardBackdrop
+        sport={sport}
+        photo={wizardBg}
+        photoStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
+      />
       <View style={styles.heroContent}>{wizardBody}</View>
     </View>
   );

@@ -1,18 +1,114 @@
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  Animated,
+  Easing,
+  ImageBackground,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ImageSourcePropType,
+  type ImageStyle,
+  type StyleProp,
+} from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
 import { TopoLines } from '../profile/TopoLines';
 
+/** Teinte de l'ambiance par sport / discipline (couleur principale, couleur secondaire). */
+export const SPORT_TINTS: Record<string, readonly [string, string]> = {
+  run: ['#3DFF9A', '#22D3EE'],
+  bike: ['#FBBF24', '#F97316'],
+  swim: ['#38BDF8', '#6366F1'],
+  triathlon: ['#A78BFA', '#22D3EE'],
+  ironman: ['#FB923C', '#F43F5E'],
+  strength: ['#C084FC', '#F472B6'],
+  calisthenics: ['#F472B6', '#FBBF24'],
+  other: ['#94A3B8', '#3DFF9A'],
+};
+
+export function tintForSport(sport?: string | null): readonly [string, string] {
+  return (sport && SPORT_TINTS[sport]) || SPORT_TINTS.run!;
+}
+
+/** Halo qui dérive lentement dans un aller-retour (amplitude visible à l'œil). */
+function DriftBlob({
+  size,
+  color,
+  opacity,
+  style,
+  dx,
+  dy,
+  ms,
+  delay = 0,
+}: {
+  size: number;
+  color: string;
+  opacity: number;
+  style: object;
+  dx: number;
+  dy: number;
+  ms: number;
+  delay?: number;
+}) {
+  const v = useRef(new Animated.Value(0)).current;
+  const id = useMemo(() => `wb${Math.random().toString(36).slice(2, 8)}`, []);
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration: ms, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v, ms, delay]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: 'absolute', width: size, height: size },
+        style,
+        {
+          transform: [
+            { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-dx, dx] }) },
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dy, -dy] }) },
+            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.1] }) },
+          ],
+        },
+      ]}
+    >
+      <Svg width={size} height={size}>
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor={color} stopOpacity={opacity} />
+            <Stop offset="100%" stopColor={color} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${id})`} />
+      </Svg>
+    </Animated.View>
+  );
+}
+
 /**
- * Fond de l'assistant quand aucune photo n'est encore choisie (étapes 1–2) :
- * encre nuit + halos jade/cyan + courbes de niveau. Même ambiance sombre que les étapes
- * sur photo, pour que tout l'assistant soit cohérent (fini le fond blanc vide).
+ * Fond unique de l'assistant « Nouveau programme », à toutes les étapes :
+ * encre nuit + (photo du programme fondue, si choisie) + halos qui dérivent + courbes de
+ * niveau mobiles, teintés selon le sport. Le mouvement est volontairement lisible.
  */
-export function WizardBackdrop({ accent = '#3DFF9A', accent2 = '#22D3EE' }: { accent?: string; accent2?: string }) {
+export function WizardBackdrop({
+  sport,
+  photo,
+  photoStyle,
+}: {
+  sport?: string | null;
+  photo?: ImageSourcePropType | null;
+  photoStyle?: StyleProp<ImageStyle>;
+}) {
   const { width, height } = useWindowDimensions();
   const w = Math.max(320, width);
   const h = Math.max(560, height);
+  const [accent, accent2] = tintForSport(sport);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient
@@ -22,26 +118,38 @@ export function WizardBackdrop({ accent = '#3DFF9A', accent2 = '#22D3EE' }: { ac
         end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Svg width="100%" height="100%" viewBox={`0 0 ${w} ${h}`} style={StyleSheet.absoluteFill}>
-        <Defs>
-          <RadialGradient id="wbA" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={accent} stopOpacity={0.34} />
-            <Stop offset="100%" stopColor={accent} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient id="wbB" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={accent2} stopOpacity={0.3} />
-            <Stop offset="100%" stopColor={accent2} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={w * 0.05} cy={h * 0.12} r={w * 0.85} fill="url(#wbA)" />
-        <Circle cx={w * 1.0} cy={h * 0.62} r={w * 0.8} fill="url(#wbB)" />
-      </Svg>
-      <TopoLines color={accent} height={h} seed={seedFromString('mova-wizard')} lines={16} opacity={0.2} />
+      {photo ? (
+        <>
+          <ImageBackground
+            source={photo}
+            style={[StyleSheet.absoluteFill, { opacity: 0.34 }]}
+            imageStyle={photoStyle}
+            resizeMode="cover"
+          />
+          {/* Voile : la photo est nette en haut, se fond dans l'ambiance vers le bas. */}
+          <LinearGradient
+            colors={['rgba(5,11,22,0.05)', 'rgba(5,11,22,0.55)', 'rgba(5,11,22,0.9)']}
+            locations={[0, 0.45, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </>
+      ) : null}
+      <DriftBlob size={w * 1.5} color={accent} opacity={0.4} dx={46} dy={34} ms={7600} style={{ top: -h * 0.12, left: -w * 0.55 }} />
+      <DriftBlob size={w * 1.4} color={accent2} opacity={0.36} dx={40} dy={44} ms={9200} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
+      <DriftBlob size={w * 1.1} color={accent} opacity={0.22} dx={34} dy={30} ms={11000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
+      <TopoLines
+        color={accent}
+        height={h}
+        seed={seedFromString(`mova-wizard-${sport ?? 'x'}`)}
+        lines={16}
+        opacity={0.26}
+        drift={2.4}
+      />
     </View>
   );
 }
 
-/** Voile dégradé sur photo : haut léger (la photo respire), bas dense (le contenu se lit). */
+/** @deprecated Conservé pour compatibilité : la photo se fond désormais dans `WizardBackdrop`. */
 export function WizardPhotoScrim() {
   return (
     <LinearGradient

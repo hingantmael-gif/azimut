@@ -13,14 +13,17 @@ export function TopoLines({
   seed,
   lines = 12,
   opacity = 0.32,
+  drift: driftScale = 1,
 }: {
   color: string;
   height: number;
   seed: number;
   lines?: number;
   opacity?: number;
+  /** Amplitude de la dérive : 1 = discret (fonds de profil), 2+ = nettement visible. */
+  drift?: number;
 }) {
-  const OVERSCAN = 30;
+  const OVERSCAN = Math.round(30 * Math.max(1, driftScale));
   const paths = useMemo(() => buildTopoPaths({ seed, lines, h: height, overscan: OVERSCAN }), [seed, lines, height]);
   const drift = useRef(new Animated.Value(0)).current;
 
@@ -46,7 +49,7 @@ export function TopoLines({
           right: -OVERSCAN,
           transform: [
             { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-OVERSCAN * 0.7, OVERSCAN * 0.7] }) },
-            { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [2, -2] }) },
+            { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [2 * driftScale, -2 * driftScale] }) },
           ],
         }}
       >

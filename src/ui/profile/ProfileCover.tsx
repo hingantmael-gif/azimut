@@ -6,6 +6,7 @@ import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
 import { TopoLines } from './TopoLines';
 import { TierAmbience } from './TierAmbience';
+import { TierStage } from './TierStage';
 import {
   formatPersonalBestCoverLabel,
   getProfileCover,
@@ -341,6 +342,10 @@ function Scene({
   return (
     <View style={StyleSheet.absoluteFill}>
       {body}
+      {/* Scène commune des rangs (rayons, ondes, éclats) : DERRIÈRE le logo de rang. */}
+      {rank ? (
+        <TierStage color={c2} level={crestTierLevel(rank.tier)} height={height} compact={compact} />
+      ) : null}
       {rank ? (
         <RankCrestOverlay
           tier={rank.tier}
