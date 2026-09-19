@@ -1,4 +1,5 @@
-import { Linking, Platform, Share, Alert } from 'react-native';
+import { Linking, Platform, Share } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import * as WebBrowser from 'expo-web-browser';
 import type {
   ActivityStream,

@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { Alert } from './appAlert';
 import { buildGarminWorkoutExport, GARMIN_SUCCESS_MESSAGE } from '../engines/garminWorkout';
 import { canSendWorkoutToWatch } from '../engines/watchExport';
 import { connectGarminAccount, isGarminAuthConfigured } from '../services/garminAuth';

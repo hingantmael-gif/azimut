@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import {

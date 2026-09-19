@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { useRouter } from 'expo-router';
 import { Body, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';
 import { WizardDayGrid } from '../../src/ui/program/WizardPickers';

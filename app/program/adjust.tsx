@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { Body, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';

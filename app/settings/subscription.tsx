@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   Linking,
   Platform,
   StyleSheet,
   View,
 } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {

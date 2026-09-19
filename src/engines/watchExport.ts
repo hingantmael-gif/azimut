@@ -1,4 +1,5 @@
-import { Alert, Platform, Share } from 'react-native';
+import { Platform, Share } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import type { PlannedWorkout, SportDiscipline, WatchBrandId } from '../types/domain';
 import { getWatchEntry } from '../constants/watches';
 import { summarizeWorkout } from './workoutPresentation';

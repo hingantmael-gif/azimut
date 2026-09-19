@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   BackHandler,
   Dimensions,
   Platform,
   Pressable,
   View,
 } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -267,16 +267,7 @@ export default function LiveSessionScreen() {
         await abandon();
         onLeave();
       };
-      if (Platform.OS === 'web') {
-        if (window.confirm('Reprendre cette séance plus tard ?\n(OK = sauvegarder et quitter)')) {
-          void later();
-          return;
-        }
-        if (window.confirm('Abandonner la séance sans la sauvegarder ?')) {
-          void discard();
-        }
-        return;
-      }
+      // Dialogue intégré (identique web / mobile) : trois choix clairs, jamais bloqué par le navigateur.
       Alert.alert('Séance en cours', 'Que souhaites-tu faire ?', [
         { text: 'Rester', style: 'cancel' },
         { text: 'Reprendre plus tard', onPress: () => void later() },

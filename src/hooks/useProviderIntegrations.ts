@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import { useApp } from '../store/AppContext';
 import {
   apiDisconnectIntegration,

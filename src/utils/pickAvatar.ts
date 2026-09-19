@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { Alert } from './appAlert';
 import * as ImagePicker from 'expo-image-picker';
 
 async function ensureLibraryPermission(): Promise<boolean> {

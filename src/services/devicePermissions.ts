@@ -1,4 +1,5 @@
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import * as ImagePicker from 'expo-image-picker';
 
 export type PermissionSnapshot = {

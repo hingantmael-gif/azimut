@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, View, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, View, Pressable, ActivityIndicator } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';

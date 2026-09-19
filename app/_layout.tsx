@@ -15,6 +15,7 @@ import { ThemeProvider, useThemeColors } from '../src/theme/ThemeContext';
 import { fonts } from '../src/theme/tokens';
 import { I18nProvider } from '../src/i18n/I18nContext';
 import { PhoneShell } from '../src/ui/PhoneShell';
+import { DialogHost } from '../src/ui/dialog/DialogHost';
 import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
 import { SocialInboxBootstrap } from '../src/ui/notifications/SocialInboxBootstrap';
@@ -92,6 +93,7 @@ function AppShell() {
           <GlobalLevelUpHost />
           <XpGainToast />
           <SettingsSearchSession />
+          <DialogHost />
           <Stack
             screenOptions={{
               headerStyle: { backgroundColor: colors.bg },

@@ -1,4 +1,5 @@
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { Alert } from './appAlert';
 import type { AppState } from '../data/seed';
 import type { WatchBrandId } from '../types/domain';
 import {

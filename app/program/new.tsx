@@ -622,16 +622,8 @@ export default function NewProgramScreen() {
           ? profileWeeklyKm
           : Number(weeklyKmInput.replace(',', '.')) || 20;
 
-    if (!isBodyProgram && profileWeeklyKm <= 0) {
-      const ok = await appConfirm(
-        'Volume estimé',
-        `Aucun volume hebdo dans votre profil — le plan utilisera ${effectiveWeeklyKm} km/sem. Continuer ?`,
-        'Continuer',
-        'Annuler',
-      );
-      if (!ok) return;
-    }
-
+    // Volume inconnu : l'étape « Renforcement » l'indique déjà (« défaut 20 km ») —
+    // pas de seconde confirmation bloquante à la toute fin de l'assistant.
     await commitProgram(effectiveWeeklyKm);
   };
 
