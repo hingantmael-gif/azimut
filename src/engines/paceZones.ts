@@ -6,6 +6,7 @@ import {
   vmaFromRaceTime,
   vmaFromWeeklyKm,
 } from './athleteProfile';
+import { danielsPredictSec, paceAtVdotFraction, vdotFromRace } from './raceTimePrediction';
 
 export type PaceBand = { minSecPerKm: number; maxSecPerKm: number };
 
@@ -51,7 +52,8 @@ function band(center: number, spreadFast = 15, spreadSlow = 20): PaceBand {
 
 /** Allure moyenne (sec/km) pour un % de VMA — vitesse en km/h. */
 function paceSecAtVmaPct(vmaKmh: number, pct: number): number {
-  const safe = clamp(vmaKmh, 10, 23);
+  // Même domaine que zonesFromVmaKmh (8–28 km/h) : sinon les allures cessent de suivre la VMA.
+  const safe = clamp(vmaKmh, 8, 28);
   return 3600 / (safe * (pct / 100));
 }
 
@@ -163,6 +165,13 @@ function zonesFromRace(
     intervalFactor = 0.8;
   }
 
+  // Seuil / intervalles / marathon : dérivés du VDOT (Daniels), pas de l'allure de course.
+  // Les anciens facteurs (0,95 / 0,88 sur 5 km) plaçaient le seuil plus vite que l'allure 5 km.
+  const vdot = vdotFromRace(distanceKm, timeSec);
+  const vdotOk = Number.isFinite(vdot) && vdot >= 20 && vdot <= 90;
+  const vdotThresholdCenter = vdotOk ? paceAtVdotFraction(vdot, 0.88) : 0;
+  const vdotIntervalCenter = vdotOk ? paceAtVdotFraction(vdot, 0.98) : 0;
+
   const easyCenter = racePace * ((easyFastFactor + easySlowFactor) / 2);
   const easySpread = Math.round(racePace * ((easySlowFactor - easyFastFactor) / 2));
   const easy: PaceBand = {
@@ -171,9 +180,15 @@ function zonesFromRace(
   };
   const longCenter = racePace * (easySlowFactor + 0.06);
   const long = band(longCenter, 12, 20);
-  const marathonCenter = racePace * (distanceKm >= 21 ? 1.02 : distanceKm >= 10 ? 1.06 : 1.1);
-  const thresholdCenter = racePace * thresholdFactor;
-  const intervalCenter = racePace * intervalFactor;
+  // ≥ semi : la référence est déjà proche de l'allure marathon ; en dessous, projection Daniels.
+  const marathonCenter =
+    distanceKm >= 21
+      ? racePace * 1.02
+      : vdotOk
+        ? danielsPredictSec(vdot, 42.195) / 42.195
+        : racePace * (distanceKm >= 10 ? 1.06 : 1.1);
+  const thresholdCenter = vdotOk ? vdotThresholdCenter : racePace * thresholdFactor;
+  const intervalCenter = vdotOk ? vdotIntervalCenter : racePace * intervalFactor;
 
   return {
     easy,

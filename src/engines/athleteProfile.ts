@@ -10,6 +10,7 @@ import {
   RUN_DISTANCES,
   SWIM_DISTANCES,
 } from '../constants/sportDistances';
+import { vdotFromRace, velocityAtVo2 } from './raceTimePrediction';
 
 /**
  * Profil coureur — déduit hors ligne (pas de choix d'intensité).
@@ -78,6 +79,15 @@ export function levelFromAthleteProfile(opts: {
  */
 export function vmaFromRaceTime(distanceKm: number, timeSec: number): number {
   if (distanceKm <= 0 || timeSec <= 0) return 14;
+
+  // Modèle Daniels (continu) : VMA = vitesse à 100 % du VDOT mesuré sur la performance.
+  const vdot = vdotFromRace(distanceKm, timeSec);
+  if (Number.isFinite(vdot) && vdot >= 15 && vdot <= 95) {
+    const vmaFromVdot = (velocityAtVo2(vdot) * 60) / 1000;
+    return roundVmaKmh(Math.min(22, Math.max(10, vmaFromVdot)));
+  }
+
+  // Repli empirique (performances hors du domaine de validité du VDOT).
   const paceSecPerKm = timeSec / distanceKm;
   // VMA ≈ allure 5k / 0.90 à 0.95 selon distance
   let factor = 0.92;
@@ -236,7 +246,8 @@ export function resolveVma(opts: {
   if (opts.weeklyKmAvg != null && opts.weeklyKmAvg >= 5) {
     return vmaFromWeeklyKm(opts.weeklyKmAvg, opts.level);
   }
-  if (opts.vmaKmh && opts.vmaKmh > 0) return opts.vmaKmh;
+  // VMA saisie : uniquement si plausible (8–28 km/h), sinon défaut du niveau.
+  if (opts.vmaKmh && opts.vmaKmh >= 8 && opts.vmaKmh <= 28) return opts.vmaKmh;
   return defaultVmaForLevel(opts.level);
 }
 

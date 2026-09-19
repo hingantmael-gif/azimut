@@ -111,7 +111,9 @@ export function inferRiderProfile(curve: PowerDurationCurve): RiderProfileKind {
   if (ratioShortLong >= 1.55 && midLong != null && midLong >= 1.2) {
     return 'puncheur';
   }
-  if (ratioShortLong <= 1.35 && long >= (curve.p5m ?? long)) {
+  // Rouleur : courbe plate (peu d'écart entre 5 min et la durée longue). L'ancienne
+  // condition `long >= p5m` était impossible sur une vraie courbe (p20m ≤ p5m).
+  if (ratioShortLong <= 1.35 && (midLong == null || midLong < 1.12)) {
     return 'rouleur';
   }
   // Climber : bon 5–20 min relatif, sprint moins explosif
@@ -128,10 +130,10 @@ function maxMeanWatts(watts: number[], windowSec: number): number | null {
   if (watts.length < 3) return null;
   // Assume ~1 Hz sampling
   const n = Math.max(1, Math.round(windowSec));
-  if (watts.length < n) {
-    const avg = watts.reduce((s, w) => s + w, 0) / watts.length;
-    return avg > 40 ? Math.round(avg) : null;
-  }
+  // Sortie plus courte que la fenêtre : la puissance moyenne maximale sur `windowSec`
+  // n'est pas établie (la moyenne d'une sortie de 25 min n'est pas un « 60 min »).
+  // La renvoyer gonflerait la courbe puissance-durée et donc CP / W'.
+  if (watts.length < n) return null;
   let windowSum = 0;
   for (let i = 0; i < n; i++) windowSum += watts[i];
   let best = windowSum;

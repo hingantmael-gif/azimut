@@ -84,6 +84,28 @@ function danielsPercentMax(tMin: number): number {
   );
 }
 
+/**
+ * Vitesse (m/min) dont le coût en O₂ vaut `vo2` (ml/kg/min) — inverse exact de
+ * {@link danielsOxygenCost} (racine positive de 0,000104·v² + 0,182258·v − 4,6 − vo2 = 0).
+ */
+export function velocityAtVo2(vo2: number): number {
+  const a = 0.000104;
+  const b = 0.182258;
+  const c = -4.6 - vo2;
+  const disc = b * b - 4 * a * c;
+  if (!Number.isFinite(disc) || disc < 0) return 0;
+  return (-b + Math.sqrt(disc)) / (2 * a);
+}
+
+/**
+ * Allure (s/km) à `fraction` de la VO₂max d’un athlète de VDOT donné.
+ * Ex. seuil ≈ 0,88, intervalles ≈ 0,98–1,0 (Daniels).
+ */
+export function paceAtVdotFraction(vdot: number, fraction: number): number {
+  const v = velocityAtVo2(vdot * fraction);
+  return v > 0 ? 60_000 / v : 0;
+}
+
 /** VDOT à partir d’une perf connue. */
 export function vdotFromRace(refKm: number, refTimeSec: number): number {
   const tMin = refTimeSec / 60;
