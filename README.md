@@ -18,3 +18,7 @@ Sur **iPhone** : Safari → Partager → Sur l’écran d’accueil.
 cd C:\Users\Utilisateur\Documents\azimut
 npm run deploy:install-site
 ```
+
+## Crédits
+
+- Photo du programme « Semi » : « Woman running a race on asphalt road », Quan-You Zhang, [Unsplash](https://unsplash.com/photos/woman-running-a-race-on-asphalt-road-0-di3PxkxTQ) (licence Unsplash). Recadrée, dossard flouté.
