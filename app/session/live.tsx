@@ -16,6 +16,7 @@ import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { ActivityRouteMap } from '../../src/ui/ActivityRouteMap';
 import { useLiveGpsTrack } from '../../src/hooks/useLiveGpsTrack';
 import { FlowBadge, FlowField } from '../../src/ui/live/FlowField';
+import { LiveIdleBackdrop } from '../../src/ui/live/LiveIdleBackdrop';
 import {
   buildLiveActivity,
   canStartLiveWorkout,
@@ -69,7 +70,7 @@ import {
   LiveFocusBoard,
   LiveMetricsCapsule,
   LivePreStartDock,
-  LiveRouteSlot,
+  LiveGpsSlot,
   LiveSportPickButton,
   type FreeRecordSport,
 } from '../../src/ui/live/AzimutTrackerHud';
@@ -806,7 +807,23 @@ export default function LiveSessionScreen() {
             />
           ) : undefined
         }
-        sideRight={phase === 'ready' ? <LiveRouteSlot /> : undefined}
+        sideRight={
+          phase === 'ready' ? (
+            <LiveGpsSlot
+              state={
+                gps.permission === 'denied'
+                  ? 'denied'
+                  : gps.lastAccuracy == null
+                    ? 'searching'
+                    : gps.lastAccuracy > 25
+                      ? 'weak'
+                      : 'ok'
+              }
+              accuracyM={gps.lastAccuracy}
+              onPress={() => void gps.prepare()}
+            />
+          ) : undefined
+        }
       />
       {phase === 'ready' && pendingDraft ? (
         <PressableScale
@@ -949,7 +966,17 @@ export default function LiveSessionScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.mapFill}>
+      {phase === 'ready' && !gps.lastPoint ? (
+        <LiveIdleBackdrop
+          denied={gps.permission === 'denied'}
+          message={
+            gps.permission === 'denied'
+              ? 'Localisation désactivée — touche le bouton GPS pour l’activer'
+              : 'Recherche du signal GPS… sors à l’air libre pour aller plus vite'
+          }
+        />
+      ) : null}
+      <View style={[styles.mapFill, phase === 'ready' && !gps.lastPoint && { opacity: 0 }]}>
         <ActivityRouteMap
           latlng={latlng}
           height={mapHeight + Math.round(screenH * 0.28)}

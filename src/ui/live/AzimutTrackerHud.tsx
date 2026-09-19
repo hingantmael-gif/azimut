@@ -12,7 +12,7 @@ import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import { PressableScale } from '../motion/softMotion';
-import { ComingSoonLock } from '../ComingSoon';
+import { Ionicons } from '@expo/vector-icons';
 import {
   LiveGlyph,
   LiveRoundButton,
@@ -505,20 +505,40 @@ export function LiveSportPickButton({
   );
 }
 
-/** Slot itinéraire WIP — réduit, visible, casque, non cliquable. */
-export function LiveRouteSlot() {
+/**
+ * Bouton GPS du dock pré-départ (remplace l'ancien slot « Itinéraire — bientôt ») :
+ * état du signal en un coup d'œil, et un tap relance la localisation.
+ */
+export function LiveGpsSlot({
+  state,
+  accuracyM,
+  onPress,
+}: {
+  state: 'searching' | 'ok' | 'weak' | 'denied';
+  accuracyM?: number | null;
+  onPress: () => void;
+}) {
+  const color =
+    state === 'ok' ? LIVE_MINT : state === 'weak' ? '#FBBF24' : state === 'denied' ? '#FB7185' : 'rgba(255,255,255,0.7)';
+  const label =
+    state === 'ok' || state === 'weak'
+      ? `±${Math.round(accuracyM ?? 0)} m`
+      : state === 'denied'
+        ? 'Activer'
+        : 'Recherche';
   return (
-    <ComingSoonLock
-      label="Itinéraire"
-      caption="Bientôt"
-      style={routeSlot.lock}
-      overlayStyle={routeSlot.overlay}
+    <PressableScale
+      variant="pop"
+      onPress={onPress}
+      accessibilityLabel={state === 'denied' ? 'Activer la localisation' : 'Signal GPS — relancer'}
+      style={gpsSlot.trigger}
+      contentStyle={gpsSlot.content}
     >
-      <View style={routeSlot.inner}>
-        <Text style={routeSlot.glyph}>∿</Text>
-        <Text style={routeSlot.caption}>Bientôt</Text>
+      <View style={[gpsSlot.ring, { borderColor: color }]}>
+        <Ionicons name={state === 'denied' ? 'location-outline' : 'locate'} size={22} color={color} />
       </View>
-    </ComingSoonLock>
+      <Text style={[gpsSlot.caption, { color }]}>{label}</Text>
+    </PressableScale>
   );
 }
 
@@ -919,6 +939,21 @@ const chip = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
   check: { fontSize: 13, fontWeight: '900' },
+});
+
+const gpsSlot = StyleSheet.create({
+  trigger: { width: 88 },
+  content: { alignItems: 'center', gap: 4 },
+  ring: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  caption: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
 });
 
 const routeSlot = StyleSheet.create({

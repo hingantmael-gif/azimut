@@ -14,16 +14,18 @@ import {
  * - top → promotion, bas → rétrogradation (sauf Bronze 3 = plancher)
  * - règles **identiques dans toute une classe** (Bronze 3/2/1 = même barre)
  * - progression **par classe** : plus on monte de ligue, moins de places de promo
- *   (Bronze large → Elite resserré : 40 / 28 / 22 / 18 / 14 / 10)
+ *   (Bronze large → Elite resserré : 45 / 38 / 32 / 28 / 22 / 10)
+ *   Seul le passage Élite → Champion reste très exclusif (top 10). Les paliers du
+ *   milieu (Or → Diamant, Platine → Élite) étaient trop serrés (22 et 14 places).
  */
 
 /** Places de promotion (sur ~100) — une valeur par classe, pas par division. */
 export const TIER_PROMOTE_SLOTS: Record<RankTier, number> = {
-  bronze: 40,
-  argent: 28,
-  or: 22,
-  diamant: 18,
-  platine: 14,
+  bronze: 45,
+  argent: 38,
+  or: 32,
+  diamant: 28,
+  platine: 22,
   elite: 10,
   champion: 0,
   master: 0,
@@ -32,13 +34,13 @@ export const TIER_PROMOTE_SLOTS: Record<RankTier, number> = {
 /** Places de rétrogradation — plus risqué en haut ; Bronze 3 reste plancher (0). */
 export const TIER_RELEGATE_SLOTS: Record<RankTier, number> = {
   bronze: 15,
-  argent: 18,
-  or: 22,
-  diamant: 26,
-  platine: 30,
-  elite: 32,
-  champion: 35,
-  master: 35,
+  argent: 17,
+  or: 19,
+  diamant: 22,
+  platine: 25,
+  elite: 28,
+  champion: 30,
+  master: 30,
 };
 
 /** @deprecated — dérivé de TIER_* pour compat ; même valeur dans une classe. */

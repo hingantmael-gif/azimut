@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { LoadCurvePreview } from '../../src/ui/program/LoadCurvePreview';
+import { WizardBackdrop, WizardPhotoScrim } from '../../src/ui/program/WizardBackdrop';
+import { WizardGlassCard, WizardSessionGrid } from '../../src/ui/program/WizardPickers';
 import {
   ImageBackground,
   StyleSheet,
@@ -996,7 +998,85 @@ export default function NewProgramScreen() {
     return SPORT_HERO_IMAGES[sport] ?? SPORT_HERO_IMAGES.run;
   }, [step, sport, selectedTemplate, S.days]);
 
-  const onHero = Boolean(wizardBg);
+  const onHero = true;
+
+  /** Étape finale : mode (superposer / remplacer), rappel horaire, aperçu de charge — dans le défilement. */
+  const generatePanel = (
+    <>
+  {activePrograms.length > 0 ? (
+    <View style={styles.multiProgramNotice}>
+      <View style={styles.modeRow}>
+        <PressableScale
+          variant="nav"
+          style={[
+            styles.modeCard,
+            scheduleModeChoice === 'stack' && styles.modeCardOn,
+          ]}
+          contentStyle={styles.modeCardInner}
+          onPress={() => setScheduleModeChoice('stack')}
+          accessibilityLabel="Superposer"
+        >
+          <Text
+            style={[
+              styles.modeTitle,
+              scheduleModeChoice === 'stack' && styles.modeTitleOn,
+            ]}
+          >
+            Superposer
+          </Text>
+          <Text
+            style={[
+              styles.modeSub,
+              scheduleModeChoice === 'stack' && styles.modeSubOn,
+            ]}
+          >
+            Mêmes jours
+          </Text>
+        </PressableScale>
+        <PressableScale
+          variant="nav"
+          style={[
+            styles.modeCard,
+            scheduleModeChoice === 'replace' && styles.modeCardOn,
+          ]}
+          contentStyle={styles.modeCardInner}
+          onPress={() => setScheduleModeChoice('replace')}
+          accessibilityLabel="Remplacer"
+        >
+          <Text
+            style={[
+              styles.modeTitle,
+              scheduleModeChoice === 'replace' && styles.modeTitleOn,
+            ]}
+          >
+            Remplacer
+          </Text>
+          <Text
+            style={[
+              styles.modeSub,
+              scheduleModeChoice === 'replace' && styles.modeSubOn,
+            ]}
+          >
+            Nouvel seul
+          </Text>
+        </PressableScale>
+      </View>
+    </View>
+  ) : null}
+  {(() => {
+    const hour = new Date().getHours();
+    if (hour < PROGRAM_GEN_SAME_DAY_CUTOFF_HOUR) return null;
+    const start = effectiveProgramStartIso();
+    const [, m, d] = start.split('-');
+    return (
+      <WizardHint tone="ok" surface={onHero ? 'hero' : 'surface'}>
+        {`Soir · 1ʳᵉ séance dès ${d}/${m}.`}
+      </WizardHint>
+    );
+  })()}
+  <LoadCurvePreview plan={previewPlan} />
+    </>
+  );
 
   const wizardBody = (
     <>
@@ -1022,9 +1102,16 @@ export default function NewProgramScreen() {
           { paddingHorizontal: onHero ? spacing.md : 0 },
         ]}
       >
-        <Muted style={[styles.stepMeta, onHero ? styles.mutedOnHero : undefined]}>
-          Étape {step + 1} / {STEP_COUNT}
-        </Muted>
+        <View style={styles.progressRow} accessibilityLabel={`Étape ${step + 1} sur ${STEP_COUNT}`}>
+          <View style={styles.progressTrack}>
+            {Array.from({ length: STEP_COUNT }).map((_, i) => (
+              <View key={i} style={[styles.progressSeg, i <= step && styles.progressSegOn]} />
+            ))}
+          </View>
+          <Text style={styles.progressText}>
+            {step + 1}/{STEP_COUNT}
+          </Text>
+        </View>
         <Title style={[styles.stepTitle, onHero && styles.titleOnHero]}>{displayTitle}</Title>
 
         {step > 0 ? (
@@ -1040,7 +1127,7 @@ export default function NewProgramScreen() {
 
         {step === 0 && (
           <WizardStepShell resetKey="sport-0">
-            <Body style={{ marginTop: 8, marginBottom: spacing.md }}>
+            <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
               Touchez une discipline — passage automatique à l&apos;étape suivante.
             </Body>
             {POPULAR_SPORT_CATEGORIES.map((cat, idx) => (
@@ -1054,9 +1141,9 @@ export default function NewProgramScreen() {
                 >
                   <SportCover
                     source={SPORT_HERO_IMAGES[cat.id]}
-                    height={168}
-                    minHeight={168}
-                    borderRadius={radii.lg}
+                    height={176}
+                    minHeight={176}
+                    borderRadius={radii.xl}
                     objectPosition={COVER_CROP_CENTER}
                     scrim="rgba(7, 17, 31, 0.22)"
                     style={styles.sportHero}
@@ -1080,7 +1167,7 @@ export default function NewProgramScreen() {
 
         {step === S.venue && isSwim && (
           <WizardStepShell resetKey="swim-venue">
-            <Body style={{ marginTop: 8, marginBottom: spacing.md }}>
+            <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
               Choisis ton environnement — les distances et chronos s&apos;adaptent.
             </Body>
             <StaggerIn index={0} step={70} duration={560}>
@@ -1158,7 +1245,7 @@ export default function NewProgramScreen() {
         {step === S.program && sport && (
           <WizardStepShell resetKey={`program-${sport}-${swimVenue ?? 'x'}`}>
             {isSwim && swimVenue ? (
-              <Muted style={{ marginBottom: spacing.sm }}>
+              <Muted style={[{ marginBottom: spacing.sm }, styles.mutedOnHero]}>
                 {swimVenue === 'pool'
                   ? 'Distances piscine (World Aquatics)'
                   : 'Distances eau libre'}
@@ -1173,7 +1260,7 @@ export default function NewProgramScreen() {
                     : 'Rechercher (ex. 2 km…)'
                   : 'Rechercher (ex. marathon…)'
               }
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="rgba(255,255,255,0.5)"
               value={search}
               onChangeText={setSearch}
             />
@@ -1187,7 +1274,7 @@ export default function NewProgramScreen() {
               />
             ))}
             {filteredPrograms.length > VISIBLE_PROGRAM_COUNT && !search ? (
-              <Muted style={{ textAlign: 'center', marginVertical: spacing.sm }}>
+              <Muted style={[{ textAlign: 'center', marginVertical: spacing.sm }, styles.mutedOnHero]}>
                 + {filteredPrograms.length - VISIBLE_PROGRAM_COUNT} — recherchez pour
                 voir plus
               </Muted>
@@ -1214,7 +1301,7 @@ export default function NewProgramScreen() {
                 <AppTextInput
                   style={styles.input}
                   placeholder={customDistancePlaceholder(sport)}
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="rgba(255,255,255,0.5)"
                   keyboardType="decimal-pad"
                   value={customDistance}
                   onChangeText={setCustomDistance}
@@ -1222,7 +1309,7 @@ export default function NewProgramScreen() {
                 <AppTextInput
                   style={styles.input}
                   placeholder="Nom de l'objectif (optionnel)"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="rgba(255,255,255,0.5)"
                   value={customTitle}
                   onChangeText={setCustomTitle}
                 />
@@ -1233,7 +1320,7 @@ export default function NewProgramScreen() {
 
         {step === S.setup && isCalis && (
           <WizardStepShell resetKey="calis-goal">
-            <Body style={{ marginTop: 8, marginBottom: spacing.md }}>
+            <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
               Touchez un objectif — passage automatique à l&apos;étape suivante.
             </Body>
             {CALISTHENICS_GOAL_OPTIONS.map((opt) => (
@@ -1247,7 +1334,7 @@ export default function NewProgramScreen() {
                   setStep((s) => s + 1);
                 }}
                 accent={colors.accent}
-                tone="surface"
+                tone="hero"
               />
             ))}
           </WizardStepShell>
@@ -1258,7 +1345,7 @@ export default function NewProgramScreen() {
             selected={strengthEquipment}
             onToggle={toggleStrengthEquipment}
             accent={colors.accent}
-            tone="surface"
+            tone="hero"
           />
         )}
 
@@ -1276,7 +1363,7 @@ export default function NewProgramScreen() {
               setStrengthSetupPhase('focus');
             }}
             accent={colors.accent}
-            tone="surface"
+            tone="hero"
           />
         )}
 
@@ -1288,7 +1375,7 @@ export default function NewProgramScreen() {
               setStep((s) => s + 1);
             }}
             accent={colors.accent}
-            tone="surface"
+            tone="hero"
           />
         )}
 
@@ -1297,22 +1384,13 @@ export default function NewProgramScreen() {
             <Muted style={[{ marginBottom: 8 }, onHero && styles.mutedOnHero]}>
               {sessionGuide.blurb} ★ = idéal
             </Muted>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {([1, 2, 3, 4, 5, 6, 7] as WeeklySessionCount[]).map((n, idx) => {
-                const isRec = n === sessionGuide.recommended;
-                return (
-                  <WizardPill
-                    key={n}
-                    index={idx}
-                    label={`${n}${isRec ? ' ★' : ''}`}
-                    selected={weeklySessionsTarget === n}
-                    onPress={() => applySessionCount(n)}
-                    accent={colors.accent}
-                    tone={onHero ? 'hero' : 'surface'}
-                  />
-                );
-              })}
-            </View>
+            <WizardSessionGrid
+              values={[1, 2, 3, 4, 5, 6, 7]}
+              value={weeklySessionsTarget}
+              recommended={sessionGuide.recommended}
+              onSelect={(n) => applySessionCount(n as WeeklySessionCount)}
+              accent={colors.accent}
+            />
             <WizardHint
               title={`${sessionBandLabel(sessionLoadBand(weeklySessionsTarget))} · ${weeklySessionsTarget}×`}
               tone={wizardHintTone(sessionCoach.tone)}
@@ -1417,7 +1495,7 @@ export default function NewProgramScreen() {
               index={0}
               title="Oui, avec renfo"
               subtitle="Gainage, mobilité, force utile à ta discipline"
-              emoji="💪"
+              icon="barbell"
               selected={includePpg}
               onPress={() => setIncludePpg(true)}
               accent={colors.accent}
@@ -1427,7 +1505,7 @@ export default function NewProgramScreen() {
               index={1}
               title="Non, sport seul"
               subtitle="Uniquement les séances de ta discipline"
-              emoji="🏃"
+              icon="walk"
               selected={!includePpg}
               onPress={() => setIncludePpg(false)}
               accent={colors.accent}
@@ -1480,7 +1558,7 @@ export default function NewProgramScreen() {
                     ? 'ex. 14500 → 1:45:00'
                     : 'ex. 1530 → 15:30'
               }
-              placeholderTextColor={onHero ? 'rgba(18,32,28,0.45)' : colors.textMuted}
+              placeholderTextColor="rgba(255,255,255,0.5)"
               value={raceTimeInput}
               onChangeText={(t) => {
                 const next = formatRaceClockInput(t);
@@ -1493,7 +1571,7 @@ export default function NewProgramScreen() {
                 }
               }}
               keyboardType="number-pad"
-              selectionColor={onHero ? '#0F766E' : colors.accent}
+              selectionColor="#3DFF9A"
             />
             {parsedTimeSec ? (
               <WizardHint tone="ok" surface="hero">{`Allure ${formatPace(parsedTimeSec / refDistanceKm)} · VMA ${vmaFromRaceTime(refDistanceKm, parsedTimeSec).toFixed(1)} km/h`}</WizardHint>
@@ -1551,6 +1629,7 @@ export default function NewProgramScreen() {
               </WizardHint>
             )}
 
+            {generatePanel}
             <View style={[styles.recapCard, { marginTop: spacing.md }]}>
               <Text style={styles.recapTitle}>{summaryTitle}</Text>
               <Text style={styles.recapSub}>
@@ -1609,18 +1688,19 @@ export default function NewProgramScreen() {
                 <AppTextInput
                   style={[styles.input, onHero && styles.inputOnHero]}
                   placeholder="JJ/MM/AAAA — ex. 22/10/2026"
-                  placeholderTextColor={onHero ? 'rgba(18,32,28,0.45)' : colors.textMuted}
+                  placeholderTextColor="rgba(255,255,255,0.5)"
                   value={raceDateInput}
                   onChangeText={(t) => setRaceDateInput(formatDateSlashInput(t))}
                   keyboardType="number-pad"
                   maxLength={10}
-                  selectionColor={onHero ? '#0F766E' : colors.accent}
+                  selectionColor="#3DFF9A"
                 />
                 {parsedRaceDate ? (
                   <WizardHint tone="ok" surface="hero">{`${formatRaceDateFr(parsedRaceDate)} · ${weeksUntilDate(parsedRaceDate)} sem. → plan de ${durationResolved.weeks} semaines`}</WizardHint>
                 ) : null}
               </>
             )}
+            {generatePanel}
           </WizardStepShell>
         )}
       </AppScrollView>
@@ -1646,78 +1726,6 @@ export default function NewProgramScreen() {
           ) : null}
           {showGenerate ? (
             <>
-              {activePrograms.length > 0 ? (
-                <View style={styles.multiProgramNotice}>
-                  <View style={styles.modeRow}>
-                    <PressableScale
-                      variant="nav"
-                      style={[
-                        styles.modeCard,
-                        scheduleModeChoice === 'stack' && styles.modeCardOn,
-                      ]}
-                      contentStyle={styles.modeCardInner}
-                      onPress={() => setScheduleModeChoice('stack')}
-                      accessibilityLabel="Superposer"
-                    >
-                      <Text
-                        style={[
-                          styles.modeTitle,
-                          scheduleModeChoice === 'stack' && styles.modeTitleOn,
-                        ]}
-                      >
-                        Superposer
-                      </Text>
-                      <Text
-                        style={[
-                          styles.modeSub,
-                          scheduleModeChoice === 'stack' && styles.modeSubOn,
-                        ]}
-                      >
-                        Mêmes jours
-                      </Text>
-                    </PressableScale>
-                    <PressableScale
-                      variant="nav"
-                      style={[
-                        styles.modeCard,
-                        scheduleModeChoice === 'replace' && styles.modeCardOn,
-                      ]}
-                      contentStyle={styles.modeCardInner}
-                      onPress={() => setScheduleModeChoice('replace')}
-                      accessibilityLabel="Remplacer"
-                    >
-                      <Text
-                        style={[
-                          styles.modeTitle,
-                          scheduleModeChoice === 'replace' && styles.modeTitleOn,
-                        ]}
-                      >
-                        Remplacer
-                      </Text>
-                      <Text
-                        style={[
-                          styles.modeSub,
-                          scheduleModeChoice === 'replace' && styles.modeSubOn,
-                        ]}
-                      >
-                        Nouvel seul
-                      </Text>
-                    </PressableScale>
-                  </View>
-                </View>
-              ) : null}
-              {(() => {
-                const hour = new Date().getHours();
-                if (hour < PROGRAM_GEN_SAME_DAY_CUTOFF_HOUR) return null;
-                const start = effectiveProgramStartIso();
-                const [, m, d] = start.split('-');
-                return (
-                  <WizardHint tone="ok" surface={onHero ? 'hero' : 'surface'}>
-                    {`Soir · 1ʳᵉ séance dès ${d}/${m}.`}
-                  </WizardHint>
-                );
-              })()}
-              <LoadCurvePreview plan={previewPlan} />
               <PrimaryButton
                 label={generating ? 'Préparation…' : 'Voir mon programme'}
                 disabled={!canGenerate || generating}
@@ -1735,33 +1743,8 @@ export default function NewProgramScreen() {
       ? programImageFocus(selectedTemplate.id)
       : COVER_CROP_CENTER;
 
-  if (wizardBg) {
-    return (
-      <View style={styles.heroRoot}>
-        <ProgramCreatedCelebration
-          visible={Boolean(createdCelebration)}
-          title={createdCelebration?.title ?? ''}
-          subtitle={createdCelebration?.subtitle}
-          onDone={() => {
-            setCreatedCelebration(null);
-            router.replace('/(tabs)/calendar');
-          }}
-        />
-        <ImageBackground
-          source={wizardBg}
-          style={styles.heroBg}
-          imageStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
-          resizeMode="cover"
-        >
-          <View style={styles.heroScrim} pointerEvents="none" />
-          <View style={styles.heroContent}>{wizardBody}</View>
-        </ImageBackground>
-      </View>
-    );
-  }
-
   return (
-    <Screen>
+    <View style={styles.heroRoot}>
       <ProgramCreatedCelebration
         visible={Boolean(createdCelebration)}
         title={createdCelebration?.title ?? ''}
@@ -1771,8 +1754,20 @@ export default function NewProgramScreen() {
           router.replace('/(tabs)/calendar');
         }}
       />
-      {wizardBody}
-    </Screen>
+      {wizardBg ? (
+        <ImageBackground
+          source={wizardBg}
+          style={StyleSheet.absoluteFill}
+          imageStyle={[styles.heroBgImage, coverCropImageStyle(wizardFocus)]}
+          resizeMode="cover"
+        >
+          <WizardPhotoScrim />
+        </ImageBackground>
+      ) : (
+        <WizardBackdrop />
+      )}
+      <View style={styles.heroContent}>{wizardBody}</View>
+    </View>
   );
 }
 function ProgramCard({
@@ -1853,7 +1848,12 @@ function sportColor(cat: ProgramSportCategory, colors: ColorPalette): string {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    heroRoot: { flex: 1, backgroundColor: colors.bgSecondary },
+    heroRoot: { flex: 1, backgroundColor: '#050B16' },
+    progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6, marginTop: 4 },
+    progressTrack: { flex: 1, flexDirection: 'row', gap: 4 },
+    progressSeg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)' },
+    progressSegOn: { backgroundColor: '#3DFF9A' },
+    progressText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
     heroBg: { flex: 1 },
     heroBgImage: {},
     heroScrim: {
@@ -1901,8 +1901,9 @@ function makeStyles(colors: ColorPalette) {
       gap: spacing.sm,
     },
     footerOnHero: {
-      backgroundColor: 'rgba(7, 17, 31, 0.92)',
-      borderTopColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'rgba(5, 11, 22, 0.94)',
+      borderTopColor: 'rgba(255,255,255,0.10)',
+      paddingBottom: spacing.lg,
     },
     multiProgramNotice: {
       gap: 8,
@@ -1919,16 +1920,16 @@ function makeStyles(colors: ColorPalette) {
     },
     modeCard: {
       flex: 1,
-      borderRadius: radii.lg,
       borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.28)',
-      backgroundColor: 'rgba(7, 17, 31, 0.88)',
+      borderColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: 'rgba(255,255,255,0.09)',
       height: 76,
       minHeight: 76,
+      borderRadius: 20,
     },
     modeCardOn: {
-      borderColor: colors.accent,
-      backgroundColor: colors.accent,
+      borderColor: '#3DFF9A',
+      backgroundColor: 'rgba(61,255,154,0.16)',
     },
     modeCardInner: {
       flex: 1,
@@ -1971,10 +1972,9 @@ function makeStyles(colors: ColorPalette) {
       textShadowRadius: 4,
     },
     inputOnHero: {
-      backgroundColor: '#FFFFFF',
-      borderColor: 'rgba(18, 32, 28, 0.18)',
-      // Toujours sombre sur fond blanc — litible en mode clair et sombre
-      color: '#12201C',
+      backgroundColor: 'rgba(255,255,255,0.10)',
+      borderColor: 'rgba(255,255,255,0.24)',
+      color: '#FFFFFF',
     },
     sportHero: {
       marginBottom: spacing.sm,
@@ -2015,13 +2015,13 @@ function makeStyles(colors: ColorPalette) {
     chevron: { fontSize: 22, color: colors.textMuted, fontWeight: '300' },
     search: {
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
+      borderColor: 'rgba(255,255,255,0.22)',
+      borderRadius: radii.lg,
       paddingHorizontal: spacing.md,
-      paddingVertical: 12,
+      paddingVertical: 13,
       fontSize: 15,
-      color: colors.text,
-      backgroundColor: colors.bg,
+      color: '#FFFFFF',
+      backgroundColor: 'rgba(255,255,255,0.09)',
       marginBottom: spacing.md,
       marginTop: spacing.sm,
     },
@@ -2051,23 +2051,23 @@ function makeStyles(colors: ColorPalette) {
     otherCard: {
       padding: spacing.md,
       marginTop: spacing.sm,
-      borderRadius: radii.lg,
-      borderWidth: 2,
-      borderColor: colors.border,
+      borderRadius: radii.xl,
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.28)',
       borderStyle: 'dashed',
-      backgroundColor: colors.bg,
+      backgroundColor: 'rgba(255,255,255,0.06)',
     },
-    otherTitle: { fontWeight: '800', color: colors.text, fontSize: 15 },
-    otherDesc: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+    otherTitle: { fontWeight: '800', color: '#FFFFFF', fontSize: 15 },
+    otherDesc: { color: 'rgba(255,255,255,0.68)', fontSize: 13, marginTop: 4 },
     input: {
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
+      borderColor: 'rgba(255,255,255,0.22)',
+      borderRadius: radii.lg,
       paddingHorizontal: spacing.md,
-      paddingVertical: 12,
+      paddingVertical: 13,
       fontSize: 15,
-      color: colors.text,
-      backgroundColor: colors.bg,
+      color: '#FFFFFF',
+      backgroundColor: 'rgba(255,255,255,0.09)',
       marginTop: spacing.sm,
     },
     timeInputHero: {
@@ -2081,13 +2081,13 @@ function makeStyles(colors: ColorPalette) {
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm },
     recapCard: {
       padding: spacing.md,
-      borderRadius: radii.lg,
-      backgroundColor: colors.bg,
+      borderRadius: radii.xl,
+      backgroundColor: 'rgba(255,255,255,0.08)',
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255,255,255,0.18)',
     },
-    recapTitle: { fontWeight: '800', fontSize: 17, color: colors.text },
-    recapSub: { color: colors.textMuted, fontSize: 13, marginTop: 4, lineHeight: 18 },
+    recapTitle: { fontWeight: '800', fontSize: 17, color: '#FFFFFF' },
+    recapSub: { color: 'rgba(255,255,255,0.72)', fontSize: 13, marginTop: 4, lineHeight: 18 },
     ongoingCard: {
       backgroundColor: colors.accentLight,
       borderColor: colors.accent,
