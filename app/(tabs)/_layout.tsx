@@ -180,7 +180,16 @@ export default function TabsLayout() {
       />
       {/* Nouveau retiré de la barre → FAB + sur Accueil / Plan */}
       <Tabs.Screen name="create" options={{ href: null }} />
-      <Tabs.Screen name="analyse" options={{ href: null }} />
+      <Tabs.Screen
+        name="analyse"
+        options={{
+          href: null,
+          title: 'Progrès',
+          headerLeft: () => (
+            <AlwaysBackButton fallbackHref="/(tabs)/body" tintColor={colors.text} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="maps"
         options={{
