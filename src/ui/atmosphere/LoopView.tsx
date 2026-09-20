@@ -54,7 +54,8 @@ function resolveStops({ from, to, stops }: Pick<Props, 'from' | 'to' | 'stops'>)
 export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear = false, paused: pausedProp = false, origin, style, children }: Props) {
   const resolved = useMemo(() => resolveStops({ from, to, stops }), [from, to, stops]);
   // Réglage « réduire les animations » (ou préférence du système) : tout reste immobile.
-  const paused = pausedProp || useReducedMotion();
+  const reducedMotion = useReducedMotion();
+  const paused = pausedProp || reducedMotion;
 
   if (Platform.OS === 'web') {
     return (

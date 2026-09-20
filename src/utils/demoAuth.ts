@@ -5,11 +5,16 @@ export const TRIAL_EMAIL_INPUT = '1';
 export const TRIAL_PASSWORD = '1';
 export const TRIAL_ACCOUNT_EMAIL = '1@demo.local';
 
+/** Le compte d'essai n'existe qu'en développement (ou EXPO_PUBLIC_ENABLE_TRIAL=1) — jamais dans une version publiée. */
+const TRIAL_ENABLED =
+  (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.EXPO_PUBLIC_ENABLE_TRIAL === '1';
+
 export function isTrialCredentials(
   emailOrUsername: string,
   password: string,
 ): boolean {
   return (
+    TRIAL_ENABLED &&
     emailOrUsername.trim() === TRIAL_EMAIL_INPUT &&
     password.trim() === TRIAL_PASSWORD
   );

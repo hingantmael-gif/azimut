@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { startBackgroundTracking, stopBackgroundTracking } from '../services/backgroundTracking';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { haversineM } from '../engines/liveWorkout';
@@ -410,6 +411,9 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
       if (fresh) ingestPoint(fresh);
     }
 
+    // Natif : garde le suivi actif écran verrouillé (service de premier plan Android / mode arrière-plan iOS).
+    if (Platform.OS !== 'web') void startBackgroundTracking();
+
     setState((s) => {
       const startPts =
         s.lastPoint != null
@@ -464,6 +468,7 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
       movingStartRef.current = null;
     }
     stillSecRef.current = 0;
+    void stopBackgroundTracking();
     stopWatch();
     setState((s) => ({
       ...s,

@@ -59,7 +59,7 @@ export function useGoogleAuth(
       Platform.OS === 'web'
         ? webGoogleRedirectUri()
         : makeRedirectUri({
-            scheme: 'azimut',
+            scheme: 'mova',
             path: 'oauth',
           }),
     [],

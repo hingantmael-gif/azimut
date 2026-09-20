@@ -1,15 +1,7 @@
-/**
- * Module Community Mova — persistance JSON (users.json style).
- * Multi-utilisateur dès que l’API est déployée ; le client garde un fallback local.
- */
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { readDoc, writeDoc } from './storage.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-const communityFile = path.join(dataDir, 'community.json');
+const DOC = 'community';
 
 const EMPTY = () => ({
   posts: [],
@@ -25,61 +17,71 @@ const EMPTY = () => ({
   notifications: [],
 });
 
-function ensure() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(communityFile)) {
-    const seed = EMPTY();
-    seed.posts = [
-      {
-        id: 'seed_1',
-        authorUsername: 'leamartin',
-        authorName: 'Léa Martin',
-        text: '6×1000 m validés — merci pour les likes !',
-        km: 12.4,
-        insight: 'Negative split réussi — tu as bien géré l’allure.',
-        rankTier: 'or',
-        rankDivision: 2,
-        createdAt: new Date(Date.now() - 3600_000).toISOString(),
-      },
-      {
-        id: 'seed_2',
-        authorUsername: 'noahpetit',
-        authorName: 'Noah Petit',
-        text: 'Sortie longue 22 km · D+ 650',
-        km: 22,
-        insight: 'Bonne compliance au plan — rythme maîtrisé.',
-        rankTier: 'argent',
-        rankDivision: 1,
-        createdAt: new Date(Date.now() - 7200_000).toISOString(),
-      },
-      {
-        id: 'seed_3',
-        authorUsername: 'annap',
-        authorName: 'Anna P.',
-        text: 'Brick vélo + footing transition',
-        km: 45,
-        insight: null,
-        rankTier: 'platine',
-        rankDivision: 3,
-        createdAt: new Date(Date.now() - 10800_000).toISOString(),
-      },
-    ];
-    fs.writeFileSync(communityFile, JSON.stringify(seed, null, 2), 'utf8');
-  }
+/** Publications d'exemple, créées une seule fois à la première lecture. */
+function seedCommunity() {
+  const seed = EMPTY();
+  seed.posts = [
+    {
+      id: 'seed_1',
+      authorUsername: 'leamartin',
+      authorName: 'Léa Martin',
+      text: '6×1000 m validés — merci pour les likes !',
+      km: 12.4,
+      insight: 'Negative split réussi — tu as bien géré l’allure.',
+      rankTier: 'or',
+      rankDivision: 2,
+      createdAt: new Date(Date.now() - 3600_000).toISOString(),
+    },
+    {
+      id: 'seed_2',
+      authorUsername: 'noahpetit',
+      authorName: 'Noah Petit',
+      text: 'Sortie longue 22 km · D+ 650',
+      km: 22,
+      insight: 'Bonne compliance au plan — rythme maîtrisé.',
+      rankTier: 'argent',
+      rankDivision: 1,
+      createdAt: new Date(Date.now() - 7200_000).toISOString(),
+    },
+    {
+      id: 'seed_3',
+      authorUsername: 'annap',
+      authorName: 'Anna P.',
+      text: 'Brick vélo + footing transition',
+      km: 45,
+      insight: null,
+      rankTier: 'platine',
+      rankDivision: 3,
+      createdAt: new Date(Date.now() - 10800_000).toISOString(),
+    },
+  ];
+  return seed;
 }
 
 export function loadCommunity() {
-  ensure();
-  try {
-    return { ...EMPTY(), ...JSON.parse(fs.readFileSync(communityFile, 'utf8')) };
-  } catch {
-    return EMPTY();
-  }
+  return { ...EMPTY(), ...readDoc(DOC, seedCommunity) };
 }
 
 export function saveCommunity(data) {
-  ensure();
-  fs.writeFileSync(communityFile, JSON.stringify(data, null, 2), 'utf8');
+  writeDoc(DOC, data);
+}
+
+/** Supprime toutes les traces communautaires d'un utilisateur (suppression de compte, RGPD). */
+export function purgeUserCommunity(username) {
+  const u = String(username || '').toLowerCase();
+  if (!u) return;
+  const db = loadCommunity();
+  const ownPostIds = new Set(db.posts.filter((p) => p.authorUsername === u).map((p) => p.id));
+  db.posts = db.posts.filter((p) => p.authorUsername !== u);
+  db.likes = db.likes.filter((l) => l.username !== u && !ownPostIds.has(l.postId));
+  db.reactions = db.reactions.filter((r) => r.username !== u && !ownPostIds.has(r.postId));
+  db.comments = db.comments.filter((c) => c.username !== u && !ownPostIds.has(c.postId));
+  db.follows = db.follows.filter((f) => f.followerUsername !== u && f.followeeUsername !== u);
+  db.blocks = db.blocks.filter((b) => b.blockerUsername !== u && b.blockedUsername !== u);
+  db.notifications = db.notifications.filter((n) => n.toUsername !== u && n.fromUsername !== u);
+  db.reports = db.reports.filter((r) => r.reporterUsername !== u);
+  db.clubMembers = db.clubMembers.filter((m) => m.username !== u);
+  saveCommunity(db);
 }
 
 function id(prefix) {

@@ -8,11 +8,6 @@ export const APP_LOCALES: Array<{
 }> = [
   { code: 'fr', label: 'Français', nativeLabel: 'Français' },
   { code: 'en', label: 'English', nativeLabel: 'English' },
-  { code: 'es', label: 'Espagnol', nativeLabel: 'Español' },
-  { code: 'de', label: 'Allemand', nativeLabel: 'Deutsch' },
-  { code: 'it', label: 'Italien', nativeLabel: 'Italiano' },
-  { code: 'pt', label: 'Portugais', nativeLabel: 'Português' },
-  { code: 'nl', label: 'Néerlandais', nativeLabel: 'Nederlands' },
 ];
 
 export type CountryEntry = {
@@ -75,9 +70,9 @@ export function normalizeLocale(raw?: string | null): AppLocale {
     .trim()
     .toLowerCase()
     .slice(0, 2);
-  if (c === 'fr' || c === 'en' || c === 'es' || c === 'de' || c === 'it' || c === 'pt' || c === 'nl') {
-    return c;
-  }
+  if (c === 'fr' || c === 'en') return c;
+  // Langues encore incomplètes (es, de, it, pt, nl) : anglais plutôt qu'un mélange de langues.
+  if (c === 'es' || c === 'de' || c === 'it' || c === 'pt' || c === 'nl') return 'en';
   return 'fr';
 }
 
@@ -93,7 +88,7 @@ export function findCountryEntry(countryId?: string | null): CountryEntry | unde
 }
 
 export function localeFromCountry(countryId?: string | null): AppLocale {
-  return findCountryEntry(countryId)?.locale ?? 'fr';
+  return normalizeLocale(findCountryEntry(countryId)?.locale ?? 'fr');
 }
 
 export function localeLabel(code: AppLocale): string {

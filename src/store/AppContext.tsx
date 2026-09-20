@@ -195,6 +195,8 @@ type Action =
     }
   | { type: 'LOGOUT' }
   | { type: 'DELETE_ACCOUNT' }
+  | { type: 'APPLY_REMOTE_SYNC'; patch: Partial<AppState> }
+  | { type: 'REFRESH_TOKEN'; authToken: string }
   | { type: 'RESTORE_SESSION'; state: PersistedAppState }
   | { type: 'SYNC_PREMIUM_ENTITLEMENT'; gifted: boolean; confirmed?: boolean }
   | {
@@ -667,7 +669,7 @@ function ensureOwnerAccountInvariants(state: AppState): AppState {
   return { ...state, profile };
 }
 
-function reduceAppState(state: AppState, action: Action): AppState {
+export function reduceAppState(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'REGISTER': {
       const code = genCode();
@@ -763,6 +765,17 @@ function reduceAppState(state: AppState, action: Action): AppState {
       return emptyState();
     case 'DELETE_ACCOUNT':
       return emptyState();
+    case 'APPLY_REMOTE_SYNC': {
+      // Données venues d'un autre appareil : jamais le jeton, ni l'état d'écran en cours.
+      const { authToken: _t, pending2faCode: _p, pendingRpeActivityId: _r, profile, ...rest } = action.patch;
+      return {
+        ...state,
+        ...rest,
+        profile: profile ? { ...state.profile, ...profile } : state.profile,
+      };
+    }
+    case 'REFRESH_TOKEN':
+      return state.authToken ? { ...state, authToken: action.authToken } : state;
     case 'RESTORE_SESSION': {
       const incoming = action.state.profile;
       const waitlistCalis = Boolean(incoming.waitlistCalisthenics);

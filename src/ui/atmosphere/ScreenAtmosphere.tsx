@@ -19,6 +19,8 @@ import { AuroraPattern, patternForSport } from './AuroraPatterns';
 const InsideLayer = createContext(false);
 
 function AuroraLayer({ tint, sport, isDark, paused }: { tint: SportTint; sport: string; isDark: boolean; paused: boolean }) {
+  // Les hooks passent AVANT tout retour anticipé (ordre constant à chaque rendu).
+  const { width, height } = useWindowDimensions();
   const base0 = atmosphereBase(tint, isDark);
   // Écran caché (pile de pages, onglet en arrière-plan) : simple dégradé, AUCUNE couche animée.
   // Empiler des dizaines de couches animées saturait la mémoire graphique des téléphones (scintillement).
@@ -29,7 +31,6 @@ function AuroraLayer({ tint, sport, isDark, paused }: { tint: SportTint; sport: 
       </View>
     );
   }
-  const { width, height } = useWindowDimensions();
   const w = Math.max(320, width);
   const h = Math.max(560, height);
   const [c1, c2] = tint;

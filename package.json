@@ -14,7 +14,9 @@
     "api": "npm run start --prefix backend",
     "api:dev": "npm run dev --prefix backend",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint app src --max-warnings=100000",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
@@ -39,6 +41,7 @@
     "expo-secure-store": "~57.0.1",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
+    "expo-task-manager": "~57.0.19",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -53,6 +56,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
     "typescript": "~6.0.3",

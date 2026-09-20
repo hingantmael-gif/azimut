@@ -15,8 +15,21 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
+      # Le code de vérification n'est JAMAIS renvoyé par l'API en production.
       - key: AUTH_ALLOW_DEMO_CODE
-        value: "true"
+        value: "false"
+      # Base de données PostgreSQL (Neon / Supabase / Render Postgres) — OBLIGATOIRE pour ne pas perdre les comptes.
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://hingantmael-gif.github.io
+      # Optionnel : envoi réel des codes par e-mail
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: JWT_SECRET
         generateValue: true
 

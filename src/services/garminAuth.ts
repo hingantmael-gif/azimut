@@ -16,7 +16,7 @@ export function isGarminAuthConfigured(): boolean {
 }
 
 export function garminRedirectUri(): string {
-  return makeRedirectUri({ scheme: 'endurancetraining', path: 'oauth/garmin' });
+  return makeRedirectUri({ scheme: 'mova', path: 'oauth/garmin' });
 }
 
 /**

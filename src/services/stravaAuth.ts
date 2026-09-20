@@ -15,7 +15,7 @@ export function isStravaAuthConfigured(): boolean {
 }
 
 export function stravaRedirectUri(): string {
-  return makeRedirectUri({ scheme: 'endurancetraining', path: 'oauth/strava' });
+  return makeRedirectUri({ scheme: 'mova', path: 'oauth/strava' });
 }
 
 /** OAuth Strava — consentement réel, jetons stockés par utilisateur côté serveur. */

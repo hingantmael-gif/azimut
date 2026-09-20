@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, redesign/mova]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Types (TypeScript)
+        run: npm run typecheck
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Unit tests (Vitest)
+        run: npm test
+
+      - name: Rank badge integrity (logos must not change)
+        run: sha256sum -c .claude/rank-badges.sha256
+
+      - name: Backend syntax check
+        run: |
+          cd backend
+          npm ci
+          node --check src/index.js
+          node --check src/storage.js
+          node --check src/security.js
+          node --check src/community.js
