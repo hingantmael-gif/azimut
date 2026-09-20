@@ -22,7 +22,7 @@ import {
   parseCalisExerciseIdFromStepLabel,
   stripCalisStepLabel,
 } from '../../src/engines/calisthenicsProgramming';
-import { canStartGuidedStrengthSession } from '../../src/engines/guidedStrengthSession';
+import { canStartGuidedStrengthSession, visualKeyFor } from '../../src/engines/guidedStrengthSession';
 import {
   calisthenicsDemoImage,
   COVER_CROP_CENTER,
@@ -222,33 +222,7 @@ export default function SessionDetailScreen() {
               : summary.stepLines[i]?.detail;
             const demo =
               calisthenicsDemoImage(calisId) ??
-              (canGuided
-                ? guidedExerciseImage(
-                    /planche|gainage|hollow/i.test(title)
-                      ? 'plank'
-                      : /chaise|wall/i.test(title)
-                        ? 'wallsit'
-                        : /pompe|push|développé couché|écarté/i.test(title)
-                          ? 'pushup'
-                          : /squat|goblet|presse/i.test(title)
-                            ? 'squat'
-                            : /fente|lunge|bulgare/i.test(title)
-                              ? 'lunge'
-                              : /traction|tirage|pull/i.test(title)
-                                ? 'pullup'
-                                : /rowing|row/i.test(title)
-                                  ? 'row'
-                                  : /curl|biceps/i.test(title)
-                                    ? 'curl'
-                                    : /soulevé|hip thrust|hinge|mollet|pont/i.test(title)
-                                      ? 'hinge'
-                                      : /épaule|latéral|développé assis/i.test(title)
-                                        ? 'shoulder'
-                                        : /développé|press|triceps/i.test(title)
-                                          ? 'press'
-                                          : 'generic',
-                  )
-                : undefined);
+              (canGuided ? guidedExerciseImage(visualKeyFor(title, calisId)) : undefined);
             return (
               <View key={`${workout.id}-line-${step.id}-${i}`} style={styles.step}>
                 {demo ? (

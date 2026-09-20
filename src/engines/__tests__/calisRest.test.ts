@@ -58,3 +58,14 @@ describe('jamais deux séances de callisthénie le même jour', () => {
     expect(out.map((x) => x.id)).toEqual(['run1']);
   });
 });
+
+describe('visuels d’exercices : jamais une photo trompeuse', () => {
+  it('pompes pike / déclinées → image neutre, pompes classiques → pompes', async () => {
+    const { visualKeyFor } = await import('../guidedStrengthSession');
+    expect(visualKeyFor('Pompes pike', 'pike_pushup')).toBe('generic');
+    expect(visualKeyFor('Pompes déclinées')).toBe('generic');
+    expect(visualKeyFor('Pompes')).toBe('pushup');
+    expect(visualKeyFor('Développé couché')).toBe('press');
+    expect(visualKeyFor('Rowing australien')).toBe('row');
+  });
+});

@@ -79,6 +79,7 @@ import {
   LiveGpsSlot,
   LiveSportPickButton,
   type FreeRecordSport,
+  useVerticalSwipe,
 } from '../../src/ui/live/AzimutTrackerHud';
 import { BRAND } from '../../src/constants/brand';
 type Phase = 'ready' | 'running' | 'paused' | 'saving';
@@ -154,6 +155,7 @@ export default function LiveSessionScreen() {
   const [autoPauseCue, setAutoPauseCue] = useState(false);
   /** Focus métriques plein écran (≠ carte compacte). */
   const [focusOpen, setFocusOpen] = useState(false);
+  const focusSwipe = useVerticalSwipe({ onDown: () => setFocusOpen(false) });
   const [finishConfirmOpen, setFinishConfirmOpen] = useState(false);
   const startIsoRef = useRef<string | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -967,6 +969,7 @@ export default function LiveSessionScreen() {
         onLayout={(e) =>
           setFlowSize({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })
         }
+        {...(phase === 'running' ? focusSwipe : {})}
       >
         <FlowField status={phase === 'running' ? paceSt : 'none'} size={flowSize} />
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 4 }}>
@@ -1074,6 +1077,7 @@ export default function LiveSessionScreen() {
       {topBar}
 
       <LivePreStartDock
+        onSwipeUp={phase === 'running' ? () => setFocusOpen(true) : undefined}
         style={{
           position: 'absolute',
           left: 0,

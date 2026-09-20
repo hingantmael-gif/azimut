@@ -1,6 +1,7 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Modal,
+  PanResponder,
   Platform,
   Pressable,
   StyleSheet,
@@ -543,14 +544,46 @@ export function LiveGpsSlot({
 }
 
 /** Dock bas pré-départ — pas de poignée « resize » trompeuse. */
+/**
+ * Geste vertical de type « feuille glissante » : glisser vers le haut / le bas déclenche l'action.
+ * Ne capte que les mouvements nettement verticaux — les boutons gardent leurs appuis.
+ */
+export function useVerticalSwipe(handlers: { onUp?: () => void; onDown?: () => void }) {
+  const ref = useRef(handlers);
+  ref.current = handlers;
+  return useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 14 && Math.abs(g.dy) > Math.abs(g.dx) * 1.5,
+        onPanResponderRelease: (_e, g) => {
+          if (g.dy < -40) ref.current.onUp?.();
+          else if (g.dy > 40) ref.current.onDown?.();
+        },
+      }).panHandlers,
+    [],
+  );
+}
+
 export function LivePreStartDock({
   children,
   style,
+  onSwipeUp,
+  onSwipeDown,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** Glisser vers le haut : la donnée prend tout l'écran. */
+  onSwipeUp?: () => void;
+  /** Glisser vers le bas : la carte se dévoile. */
+  onSwipeDown?: () => void;
 }) {
-  return <View style={[preDock.sheet, style]}>{children}</View>;
+  const pan = useVerticalSwipe({ onUp: onSwipeUp, onDown: onSwipeDown });
+  return (
+    <View style={[preDock.sheet, style]} {...pan}>
+      {onSwipeUp || onSwipeDown ? <View style={preDock.grab} /> : null}
+      {children}
+    </View>
+  );
 }
 
 /** Feuille de confirmation Mova (remplace window.confirm / Alert système). */
@@ -1070,6 +1103,7 @@ const sportPick = StyleSheet.create({
 });
 
 const preDock = StyleSheet.create({
+  grab: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)', marginTop: -8, marginBottom: 10 },
   sheet: {
     backgroundColor: 'rgba(7,17,31,0.97)',
     borderTopLeftRadius: 28,

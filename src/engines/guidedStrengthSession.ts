@@ -83,8 +83,15 @@ function isHoldExercise(name: string, calisId?: string | null): boolean {
   );
 }
 
-function visualKeyFor(name: string, calisId?: string | null): GuidedVisualKey {
-  if (calisId === 'pushup' || calisId === 'pike_pushup') return 'pushup';
+/**
+ * Variantes de pompes / squats sans visuel exact : on préfère l'image neutre à une photo trompeuse
+ * (une pompe pike n'est pas une pompe classique, une pompe déclinée non plus).
+ */
+const VARIANT_WITHOUT_IMAGE = /pike|d[ée]clin|sur[ée]lev|archer|diamant|hindou|pseudo|pistol|sissy|explosi|claquée|une main|à un bras/i;
+
+export function visualKeyFor(name: string, calisId?: string | null): GuidedVisualKey {
+  if (calisId === 'pike_pushup') return 'generic';
+  if (calisId === 'pushup') return VARIANT_WITHOUT_IMAGE.test(name) ? 'generic' : 'pushup';
   if (calisId === 'pullup' || calisId === 'scapular') return 'pullup';
   if (calisId === 'squat') return 'squat';
   if (calisId === 'lunge') return 'lunge';
@@ -94,13 +101,15 @@ function visualKeyFor(name: string, calisId?: string | null): GuidedVisualKey {
   if (calisId === 'row') return 'row';
 
   const n = name.toLowerCase();
+  if (/pompe|push.?up|squat|fente|lunge/.test(n) && VARIANT_WITHOUT_IMAGE.test(n)) return 'generic';
   if (/chaise|wall.?sit/.test(n)) return 'wallsit';
   if (/hollow/.test(n)) return 'hollow';
   if (/planche|gainage latéral|gainage/.test(n)) return 'plank';
-  if (/pompe|push.?up|chest press|pec deck|écarté|développé couché|développé incliné/.test(n))
-    return 'pushup';
+  if (/chest press|pec deck|écarté|développé couché|développé incliné/.test(n)) return 'press';
+  if (/pompe|push.?up/.test(n)) return 'pushup';
   if (/dip/.test(n)) return 'dip';
-  if (/traction|pull.?up|tirage|face pull|australien|suspension/.test(n)) return 'pullup';
+  if (/australien/.test(n)) return 'row';
+  if (/traction|pull.?up|tirage|face pull|suspension/.test(n)) return 'pullup';
   if (/rowing|row /.test(n) || n.includes('rowing')) return 'row';
   if (/fente|lunge|step.?up|bulgare/.test(n)) return 'lunge';
   if (/squat|goblet|presse à cuisses|leg extension/.test(n)) return 'squat';
