@@ -84,7 +84,7 @@ function Ribbons({ height, color, color2 }: { height: number; color: string; col
 
 /** Éclairs violets qui claquent par salves irrégulières. */
 function Lightning({ height, color }: { height: number; color: string }) {
-  const v = useLoop(3400, 0, 0);
+  const v = useLoop(6200, 0, 0);
   const bolts = useMemo(() => {
     return [200, -20, 150, 28].map((deg) => {
       const a = (deg * Math.PI) / 180;
@@ -105,7 +105,7 @@ function Lightning({ height, color }: { height: number; color: string }) {
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
-        { opacity: v.interpolate({ inputRange: [0, 0.04, 0.08, 0.14, 0.5, 0.54, 0.58, 0.62, 1], outputRange: [0, 1, 0.1, 0.9, 0, 0.8, 0.05, 1, 0] }) },
+        { opacity: v.interpolate({ inputRange: [0, 0.1, 0.25, 0.5, 0.6, 0.75, 1], outputRange: [0, 0.75, 0, 0, 0.7, 0, 0] }) },
       ]}
     >
       <Svg width="100%" height="100%" viewBox={`0 0 520 ${height}`} preserveAspectRatio="xMidYMid slice">

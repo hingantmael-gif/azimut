@@ -8,12 +8,14 @@ import { APP_LOCALES, type AppLocale } from '../../src/i18n/locales';
 import { Text } from '../../src/ui/Text';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { spacing } from '../../src/theme/tokens';
+import { setReducedMotion, useReducedMotion } from '../../src/utils/motionPrefs';
 
 export default function DisplaySettingsScreen() {
   const { state, dispatch } = useApp();
   const { t, locale, setLocale } = useI18n();
   const { colors } = useThemeColors();
   const p = state.profile;
+  const reduceMotion = useReducedMotion();
 
   const setUnits = (units: UnitsSystem) => {
     dispatch({ type: 'UPDATE_PROFILE', patch: { units } });
@@ -62,11 +64,12 @@ export default function DisplaySettingsScreen() {
           />
         </SettingsSection>
 
-        <SettingsSection title={t('settings.map')}>
+        <SettingsSection title="Confort visuel">
           <SettingsToggleRow
-            label={t('settings.mapPosition')}
-            value
-            onToggle={() => undefined}
+            label="Réduire les animations"
+            subtitle="Fonds immobiles, sans mouvement ni scintillement — recommandé si les animations te gênent"
+            value={reduceMotion}
+            onToggle={() => setReducedMotion(!reduceMotion)}
           />
         </SettingsSection>
       </AppScrollView>

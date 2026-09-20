@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useReducedMotion } from '../../utils/motionPrefs';
 
 /**
  * Vue animée en boucle, pensée pour les fonds.
@@ -50,8 +51,10 @@ function resolveStops({ from, to, stops }: Pick<Props, 'from' | 'to' | 'stops'>)
   ];
 }
 
-export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear = false, paused = false, origin, style, children }: Props) {
+export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear = false, paused: pausedProp = false, origin, style, children }: Props) {
   const resolved = useMemo(() => resolveStops({ from, to, stops }), [from, to, stops]);
+  // Réglage « réduire les animations » (ou préférence du système) : tout reste immobile.
+  const paused = pausedProp || useReducedMotion();
 
   if (Platform.OS === 'web') {
     return (
@@ -100,7 +103,7 @@ function WebLoop({
       animationTimingFunction: linear ? 'linear' : 'ease-in-out',
       animationPlayState: paused ? 'paused' : 'running',
       animationFillMode: 'backwards',
-      willChange: 'transform, opacity',
+      willChange: 'transform',
       ...(origin ? { transformOrigin: origin } : null),
     };
     return StyleSheet.create({ loop: css as unknown as ViewStyle }).loop;

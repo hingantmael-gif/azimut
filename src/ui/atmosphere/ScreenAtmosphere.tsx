@@ -19,6 +19,16 @@ import { AuroraPattern, patternForSport } from './AuroraPatterns';
 const InsideLayer = createContext(false);
 
 function AuroraLayer({ tint, sport, isDark, paused }: { tint: SportTint; sport: string; isDark: boolean; paused: boolean }) {
+  const base0 = atmosphereBase(tint, isDark);
+  // Écran caché (pile de pages, onglet en arrière-plan) : simple dégradé, AUCUNE couche animée.
+  // Empiler des dizaines de couches animées saturait la mémoire graphique des téléphones (scintillement).
+  if (paused) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <LinearGradient colors={[...base0]} locations={[0, 0.55, 1]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
+      </View>
+    );
+  }
   const { width, height } = useWindowDimensions();
   const w = Math.max(320, width);
   const h = Math.max(560, height);

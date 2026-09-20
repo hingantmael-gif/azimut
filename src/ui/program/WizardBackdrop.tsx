@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import {
   ImageBackground,
+  Platform,
   StyleSheet,
   View,
   useWindowDimensions,
@@ -42,6 +43,27 @@ export function DriftBlob({
   paused?: boolean;
 }) {
   const id = useMemo(() => `wb${Math.random().toString(36).slice(2, 8)}`, []);
+  if (Platform.OS === 'web') {
+    // Dégradé radial CSS : léger pour le processeur graphique, déplacement seul (pas de redimensionnement).
+    const rgba = (hex: string, a: number) => {
+      const n = parseInt(hex.slice(1), 16);
+      return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+    };
+    return (
+      <LoopView
+        from={{ x: -dx, y: dy }}
+        to={{ x: dx, y: -dy }}
+        ms={ms}
+        delay={delay}
+        paused={paused}
+        style={[
+          { position: 'absolute', width: size, height: size, borderRadius: size / 2 },
+          { backgroundImage: `radial-gradient(circle closest-side, ${rgba(color, opacity)}, ${rgba(color, 0)})` } as object,
+          style,
+        ]}
+      />
+    );
+  }
   return (
     <LoopView
       from={{ x: -dx, y: dy, scale: 0.94 }}

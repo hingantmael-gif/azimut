@@ -19,6 +19,7 @@ import { PhoneShell } from '../src/ui/PhoneShell';
 import { DialogHost } from '../src/ui/dialog/DialogHost';
 import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { AmbientSportProvider } from '../src/theme/AmbientSport';
+import { InstalledAccountGate } from '../src/ui/auth/InstalledAccountGate';
 import { AtmosphereLayer, useHeaderColor } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
 import { SocialInboxBootstrap } from '../src/ui/notifications/SocialInboxBootstrap';
@@ -95,6 +96,7 @@ function AppShell() {
       <PhoneShell>
         <AuthGate>
           <NotificationBootstrap />
+          <InstalledAccountGate />
           <SocialInboxBootstrap />
           <PendingProgramReviewModal />
           <GlobalLevelUpHost />

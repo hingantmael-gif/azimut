@@ -26,6 +26,23 @@ export function patternForSport(sport?: string | null): PatternKind {
   return (sport && SPORT_PATTERN[sport]) || 'topo';
 }
 
+/**
+ * Motif d'un fond de profil (hors rangs) : cohérent avec le sport (course = courbes, vélo = traînées,
+ * natation = vagues) ; les fonds « libres » ont chacun leur matière propre.
+ */
+export function patternForCover(coverId: string, unlock: { type: string; sport?: string }): PatternKind {
+  if (unlock.type === 'distance' || unlock.type === 'personal_best') {
+    return unlock.sport === 'bike' ? 'speed' : unlock.sport === 'swim' ? 'waves' : 'topo';
+  }
+  const byId: Record<string, PatternKind> = {
+    'free-teal': 'waves',
+    'free-night': 'dots',
+    'free-sky': 'speed',
+    'free-forest': 'topo',
+  };
+  return byId[coverId] ?? patternForSeed(coverId.split('').reduce((a, c) => a + c.charCodeAt(0), 0));
+}
+
 /** Motif stable pour un identifiant quelconque (fonds de profil : chacun le sien). */
 export function patternForSeed(seed: number): PatternKind {
   const all: PatternKind[] = ['topo', 'speed', 'waves', 'orbits', 'embers', 'hex', 'bars', 'dots'];

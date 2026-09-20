@@ -5,7 +5,7 @@ import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
 import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
-import { AuroraPattern, patternForSeed } from '../atmosphere/AuroraPatterns';
+import { AuroraPattern, patternForCover } from '../atmosphere/AuroraPatterns';
 import { TierAmbience } from './TierAmbience';
 import { TierStage } from './TierStage';
 import {
@@ -134,7 +134,7 @@ export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
           jamais sur les fonds de rang (le logo de rang reste net). */}
       {cover.unlock.type !== 'rank' ? (
         <AuroraPattern
-          kind={patternForSeed(seedFromString(cover.id))}
+          kind={patternForCover(cover.id, cover.unlock as { type: string; sport?: string })}
           color={cover.colors[2]}
           color2={cover.colors[1]}
           seed={seedFromString(cover.id)}
@@ -176,7 +176,7 @@ export function ProfileCoverPreview({
       <Scene cover={cover} height={84} compact personalBestKm={personalBestKm} />
       {cover.unlock.type !== 'rank' ? (
         <AuroraPattern
-          kind={patternForSeed(seedFromString(cover.id))}
+          kind={patternForCover(cover.id, cover.unlock as { type: string; sport?: string })}
           color={cover.colors[2]}
           color2={cover.colors[1]}
           seed={seedFromString(cover.id)}
