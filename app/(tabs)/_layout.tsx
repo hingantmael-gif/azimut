@@ -1,6 +1,6 @@
 /** Accueil · Plan · Enregistrer · Progrès · Vous — FAB + remplace Nouveau */
-import { useEffect } from 'react';
-import { Tabs, useRouter, type Href } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
@@ -46,26 +46,13 @@ export default function TabsLayout() {
   const router = useRouter();
   const { t } = useI18n();
 
-  // Préchargement : une fois l'accueil affiché, on télécharge en douceur les autres pages
-  // (Plan, Progrès, Profil, Classement…) pour qu'un appui sur un onglet soit instantané.
+  // Préchargement : une fois l'accueil affiché, les onglets principaux (Plan, Progrès, Vous)
+  // se chargent en arrière-plan — un appui sur l'onglet est alors instantané.
+  const [eager, setEager] = useState(false);
   useEffect(() => {
-    const targets = ['/(tabs)/calendar', '/(tabs)/body', '/(tabs)/profile', '/ranked', '/settings', '/program/new'];
-    let i = 0;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const next = () => {
-      if (i >= targets.length) return;
-      try {
-        router.prefetch(targets[i++] as Href);
-      } catch {
-        /* préchargement facultatif */
-      }
-      timer = setTimeout(next, 600);
-    };
-    timer = setTimeout(next, 1200);
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [router]);
+    const timer = setTimeout(() => setEager(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <Tabs
@@ -114,6 +101,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
+          lazy: !eager,
           title: t('tabs.plan'),
           tabBarIcon: ({ focused, color }) => (
             <TabIcon name="plan" focused={focused} color={color} />
@@ -171,6 +159,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="body"
         options={{
+          lazy: !eager,
           title: t('tabs.progress'),
           tabBarIcon: ({ focused, color }) => (
             <TabIcon name="corps" focused={focused} color={color} />
@@ -188,6 +177,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          lazy: !eager,
           title: t('tabs.you'),
           headerRight: () => <TabHeaderActions showSettings />,
           tabBarIcon: ({ focused, color }) => (
