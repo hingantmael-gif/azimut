@@ -1,3 +1,4 @@
+import { dedupeCalisthenicsPerDay } from '../calisthenicsProgramming';
 import { describe, expect, it } from 'vitest';
 import { buildCalisthenicsSession, restForExercise } from '../calisthenicsProgramming';
 import { buildRunWarmupProtocol } from '../sportsScience';
@@ -40,5 +41,20 @@ describe('échauffement de course simplifié', () => {
   it('les séances intenses ajoutent 4 accélérations chiffrées', () => {
     const steps = buildRunWarmupProtocol({ sessionKind: 'vma', raceDistanceKm: 10 });
     expect(steps.some((s) => /4 accélérations de 15 s/.test(s.label ?? ""))).toBe(true);
+  });
+});
+
+describe('jamais deux séances de callisthénie le même jour', () => {
+  const w = (id: string, date: string, title = 'Callisthénie · Push') => ({ id, date, title });
+  it('garde la première par date', () => {
+    const out = dedupeCalisthenicsPerDay([w('w-2026-09-21-calis', '2026-09-21'), w('p2__w-2026-09-21-calis', '2026-09-21'), w('w-2026-09-22-calis', '2026-09-22')]);
+    expect(out.map((x) => x.date)).toEqual(['2026-09-21', '2026-09-22']);
+  });
+  it('respecte les séances déjà planifiées et ne touche pas aux autres sports', () => {
+    const out = dedupeCalisthenicsPerDay(
+      [w('x-calis', '2026-09-21'), { id: 'run1', date: '2026-09-21', title: 'Footing' }],
+      [w('old-calis', '2026-09-21')],
+    );
+    expect(out.map((x) => x.id)).toEqual(['run1']);
   });
 });

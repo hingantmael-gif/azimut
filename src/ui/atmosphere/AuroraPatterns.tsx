@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { TopoLines } from '../profile/TopoLines';
 import { LoopView } from './LoopView';
 
@@ -300,20 +300,34 @@ function Bars({ w, h, color, color2, seed, opacity, paused }: P) {
   );
 }
 
-/** Trame de points qui respire : sobre, pour les disciplines « autres ». */
-function Dots({ w, h, color, opacity, paused }: P) {
-  const gap = 26;
-  const cells = useMemo(() => {
-    const out: { x: number; y: number }[] = [];
-    for (let x = gap / 2; x < w + gap; x += gap) for (let y = gap / 2; y < h + gap; y += gap) out.push({ x, y });
-    return out;
-  }, [w, h]);
+/**
+ * Maillage de dégradés radiaux doux (sobre, sans points ni traits) : trois halos qui dérivent lentement.
+ * Remplace l'ancienne trame de points pour les disciplines « autres » et le fond « nuit ».
+ */
+function Dots({ w, h, color, color2, seed, opacity, paused }: P) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const blobs = useMemo(() => {
+    const r = rng(seed + 7);
+    return [
+      { cx: w * (0.15 + r() * 0.2), cy: h * (0.1 + r() * 0.2), rad: Math.max(w, h) * 0.75, c: color, a: 0.42 },
+      { cx: w * (0.65 + r() * 0.25), cy: h * (0.45 + r() * 0.2), rad: Math.max(w, h) * 0.8, c: color2, a: 0.34 },
+      { cx: w * (0.2 + r() * 0.3), cy: h * (0.85 + r() * 0.1), rad: Math.max(w, h) * 0.7, c: color, a: 0.26 },
+    ];
+  }, [w, h, seed, color, color2]);
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
-      <LoopView from={{ opacity: 0.4, y: -6 }} to={{ opacity: 1, y: 6 }} ms={4800} paused={paused} style={StyleSheet.absoluteFill}>
-        <Svg width={w} height={h + gap}>
-          {cells.map((c, i) => (
-            <Rect key={i} x={c.x - 1.4} y={c.y - 1.4} width={2.8} height={2.8} rx={1.4} fill={color} fillOpacity={0.7} />
+      <LoopView from={{ opacity: 0.75, y: -10 }} to={{ opacity: 1, y: 10 }} ms={9000} paused={paused} style={StyleSheet.absoluteFill}>
+        <Svg width={w} height={h}>
+          <Defs>
+            {blobs.map((b, i) => (
+              <RadialGradient key={i} id={`mesh${uid}${i}`} cx={b.cx} cy={b.cy} r={b.rad} gradientUnits="userSpaceOnUse">
+                <Stop offset="0" stopColor={b.c} stopOpacity={b.a} />
+                <Stop offset="1" stopColor={b.c} stopOpacity={0} />
+              </RadialGradient>
+            ))}
+          </Defs>
+          {blobs.map((_, i) => (
+            <Rect key={i} x={0} y={0} width={w} height={h} fill={`url(#mesh${uid}${i})`} />
           ))}
         </Svg>
       </LoopView>

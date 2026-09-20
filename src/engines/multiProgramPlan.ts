@@ -1,3 +1,4 @@
+import { dedupeCalisthenicsPerDay } from './calisthenicsProgramming';
 import type { ActiveProgram, AthleteProfile, PlannedWorkout } from '../types/domain';
 
 /** Programmes actuellement actifs (multi-sports simultanés). */
@@ -21,7 +22,10 @@ export function mergeProgramPlans(
   incoming: PlannedWorkout[],
 ): PlannedWorkout[] {
   const ids = new Set(existing.map((w) => w.id));
-  const added = incoming.filter((w) => !ids.has(w.id));
+  const added = dedupeCalisthenicsPerDay(
+    incoming.filter((w) => !ids.has(w.id)),
+    existing,
+  );
   return [...existing, ...added].sort(
     (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
   );

@@ -57,6 +57,7 @@ import {
 } from './strengthProgramming';
 import {
   buildCalisthenicsSession,
+  dedupeCalisthenicsPerDay,
   parseCalisthenicsGoal,
 } from './calisthenicsProgramming';
 
@@ -858,7 +859,7 @@ export function generateCoachedWeek(
     }
   }
 
-  return workouts
+  return dedupeCalisthenicsPerDay(workouts)
     .map((w) =>
       enrichRunWarmup(w, answers.targetDistanceKm ?? answers.recentDistanceKm),
     )

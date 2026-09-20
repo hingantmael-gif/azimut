@@ -533,3 +533,25 @@ export function calisProgramLevelFromTemplateId(
   if (templateId === 'prog-calisthenics-endurance') return 'advanced';
   return 'beginner';
 }
+
+/** Séance de callisthénie du planning (id `w-<date>-calis`, éventuellement préfixé par le programme). */
+export function isCalisPlanned(w: { id: string; title?: string }): boolean {
+  return /-calis$/.test(w.id) || /^Callisthénie/i.test(w.title ?? '');
+}
+
+/**
+ * Jamais deux séances de callisthénie le même jour : garde la première par date
+ * (les séances déjà présentes dans `already` sont prioritaires).
+ */
+export function dedupeCalisthenicsPerDay<T extends { id: string; title?: string; date: string }>(
+  workouts: T[],
+  already: Array<{ id: string; title?: string; date: string }> = [],
+): T[] {
+  const taken = new Set(already.filter(isCalisPlanned).map((w) => w.date));
+  return workouts.filter((w) => {
+    if (!isCalisPlanned(w)) return true;
+    if (taken.has(w.date)) return false;
+    taken.add(w.date);
+    return true;
+  });
+}
