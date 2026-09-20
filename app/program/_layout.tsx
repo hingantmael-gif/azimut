@@ -29,3 +29,5 @@ export default function ProgramLayout() {
     </Stack>
   );
 }
+
+export { RouteLoading as SuspenseFallback } from '../../src/ui/RouteLoading';

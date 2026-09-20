@@ -83,3 +83,5 @@ export default function AuthLayout() {
     </Stack>
   );
 }
+
+export { RouteLoading as SuspenseFallback } from '../../src/ui/RouteLoading';

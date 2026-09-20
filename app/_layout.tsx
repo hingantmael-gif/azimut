@@ -1,4 +1,5 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, type ErrorBoundaryProps } from 'expo-router';
+import { RouteError } from '../src/ui/RouteError';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -233,3 +234,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/** Pendant le chargement d'une page (découpage par écran) : squelette, jamais du blanc. */
+export { RouteLoading as SuspenseFallback } from '../src/ui/RouteLoading';
+
+/** Une page qui plante ou qui ne se charge pas : message + « Réessayer » au lieu d'un écran vide. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <RouteError error={error} retry={retry} />;
+}

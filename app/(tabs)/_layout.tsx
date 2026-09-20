@@ -1,5 +1,6 @@
 /** Accueil · Plan · Enregistrer · Progrès · Vous — FAB + remplace Nouveau */
-import { Tabs, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Tabs, useRouter, type Href } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
@@ -44,6 +45,27 @@ export default function TabsLayout() {
   const headerColor = useHeaderColor();
   const router = useRouter();
   const { t } = useI18n();
+
+  // Préchargement : une fois l'accueil affiché, on télécharge en douceur les autres pages
+  // (Plan, Progrès, Profil, Classement…) pour qu'un appui sur un onglet soit instantané.
+  useEffect(() => {
+    const targets = ['/(tabs)/calendar', '/(tabs)/body', '/(tabs)/profile', '/ranked', '/settings', '/program/new'];
+    let i = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const next = () => {
+      if (i >= targets.length) return;
+      try {
+        router.prefetch(targets[i++] as Href);
+      } catch {
+        /* préchargement facultatif */
+      }
+      timer = setTimeout(next, 600);
+    };
+    timer = setTimeout(next, 1200);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [router]);
 
   return (
     <Tabs
@@ -245,3 +267,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+export { RouteLoading as SuspenseFallback } from '../../src/ui/RouteLoading';
