@@ -80,6 +80,7 @@ import {
   syncActiveProgramInProfile,
   tagPlanForProgram,
 } from '../engines/multiProgramPlan';
+import { findPlannedForFreeActivity, pickProgramForActivity } from '../engines/programSessions';
 import {
   applyConcurrentDaySoftening,
   rebalanceIncomingAgainstPlan,
@@ -1652,6 +1653,8 @@ function reduceAppState(state: AppState, action: Action): AppState {
       const planned = skipPlan
         ? undefined
         : state.plan.find((p) => p.id === action.plannedId) ??
+          // Même jour ET même sport, séance pas encore réalisée : la plus fiable.
+          findPlannedForFreeActivity(state.plan, linkedIds, action.activity) ??
           state.plan.find((p) => p.date === activityDay && p.discipline !== 'rest') ??
           // Rattrapage : séance d’hier non encore liée
           (() => {
@@ -1812,7 +1815,13 @@ function reduceAppState(state: AppState, action: Action): AppState {
       achievements = unlocked.achievements;
       ranked = unlocked.ranked;
 
-      let activeProgram = state.profile.activeProgram;
+      // Programme concerné : celui de la séance liée, sinon celui du même sport (multi-programmes).
+      let activeProgram = pickProgramForActivity(
+        resolveActivePrograms(state.profile),
+        state.profile.activeProgram,
+        planned,
+        action.activity,
+      );
       const prevBest = activeProgram?.currentBestTimeSec;
       let onboarding = state.profile.onboarding;
       if (activeProgram) {

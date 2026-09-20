@@ -47,6 +47,11 @@ export function useAmbientTint(): SportTint {
   return useContext(AmbientContext).tint;
 }
 
+/** Clé du sport ambiant (choisit aussi la famille de motif du fond). */
+export function useAmbientSportKey(): string {
+  return useContext(AmbientContext).sport;
+}
+
 /** Impose le sport de l'écran affiché (pris en compte tant que l'écran est au premier plan). */
 export function useAmbientSport(sport?: string | null) {
   const { setOverride } = useContext(AmbientContext);

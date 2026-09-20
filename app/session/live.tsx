@@ -42,6 +42,7 @@ import {
   paceStatus,
   stepPhaseTitle,
 } from '../../src/engines/liveWorkout';
+import { findPlannedForFreeActivity } from '../../src/engines/programSessions';
 import type { PlannedWorkout } from '../../src/types/domain';
 import { PressableScale } from '../../src/ui/motion/softMotion';
 import { safeGoBack } from '../../src/ui/navigation/AlwaysBackButton';
@@ -491,11 +492,20 @@ export default function LiveSessionScreen() {
         timeStream,
         velocitySmooth: velocity,
       });
+      // Sortie libre : si une séance du plan (même jour, même sport) reste à faire, elle compte
+      // pour cette séance — donc pour le programme, la conformité et la progression.
+      const freeMatch = isFree
+        ? findPlannedForFreeActivity(
+            state.plan,
+            new Set(state.analyses.map((a) => a.plannedWorkoutId)),
+            activity,
+          )
+        : undefined;
       dispatch({
         type: 'INGEST_STRAVA',
         activity,
-        plannedId: isFree ? undefined : workout.id,
-        linkPlan: isFree ? false : true,
+        plannedId: isFree ? freeMatch?.id : workout.id,
+        linkPlan: isFree ? Boolean(freeMatch) : true,
       });
       router.replace(`/activity/${encodeURIComponent(activity.id)}`);
     })();

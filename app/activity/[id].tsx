@@ -241,6 +241,11 @@ export default function ActivityDetailScreen() {
               void shareActivityRecap(activity).finally(() => setSharing(false));
             }}
           />
+          <View style={{ height: spacing.sm }} />
+          <SecondaryButton
+            label="Voir toutes mes activités"
+            onPress={() => router.push('/activities')}
+          />
           {coachingInsight ? (
             <Text style={styles.insightMuted}>
               Insight coach : {coachingInsight}

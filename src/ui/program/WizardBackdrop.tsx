@@ -13,7 +13,7 @@ import {
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
-import { TopoLines } from '../profile/TopoLines';
+import { AuroraPattern, patternForSport } from '../atmosphere/AuroraPatterns';
 
 import { SPORT_TINTS, tintForSport } from '../../theme/sportTints';
 
@@ -129,13 +129,17 @@ export function WizardBackdrop({
       <DriftBlob size={w * 1.5} color={accent} opacity={0.4} dx={46} dy={34} ms={7600} style={{ top: -h * 0.12, left: -w * 0.55 }} />
       <DriftBlob size={w * 1.4} color={accent2} opacity={0.36} dx={40} dy={44} ms={9200} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
       <DriftBlob size={w * 1.1} color={accent} opacity={0.22} dx={34} dy={30} ms={11000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
-      <TopoLines
+      <AuroraPattern
+        kind={patternForSport(sport)}
         color={accent}
-        height={h}
+        color2={accent2}
         seed={seedFromString(`mova-wizard-${sport ?? 'x'}`)}
-        lines={16}
-        opacity={0.26}
-        drift={2.4}
+        opacity={0.8}
+      />
+      {/* Voile en haut : titre et progression « 1/7 » restent lisibles. */}
+      <LinearGradient
+        colors={['rgba(5,11,22,0.7)', 'rgba(5,11,22,0)']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: h * 0.24 }}
       />
     </View>
   );

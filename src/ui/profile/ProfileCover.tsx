@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
 import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
-import { TopoLines } from './TopoLines';
+import { AuroraPattern, patternForSeed } from '../atmosphere/AuroraPatterns';
 import { TierAmbience } from './TierAmbience';
 import { TierStage } from './TierStage';
 import {
@@ -126,9 +126,16 @@ export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
         <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
       </Animated.View>
-      {/* Courbes de niveau : jamais sur les fonds de rang (le logo de rang reste net). */}
+      {/* Motif animé propre à chaque fond (courbes, traînées, vagues, hexagones…) ;
+          jamais sur les fonds de rang (le logo de rang reste net). */}
       {cover.unlock.type !== 'rank' ? (
-        <TopoLines color={cover.colors[2]} height={height} seed={seedFromString(cover.id)} />
+        <AuroraPattern
+          kind={patternForSeed(seedFromString(cover.id))}
+          color={cover.colors[2]}
+          color2={cover.colors[1]}
+          seed={seedFromString(cover.id)}
+          opacity={0.75}
+        />
       ) : (
         <TierAmbience color={cover.colors[2]} height={height} seed={seedFromString(cover.id)} />
       )}
@@ -164,7 +171,14 @@ export function ProfileCoverPreview({
     >
       <Scene cover={cover} height={84} compact personalBestKm={personalBestKm} />
       {cover.unlock.type !== 'rank' ? (
-        <TopoLines color={cover.colors[2]} height={84} seed={seedFromString(cover.id)} lines={8} opacity={0.34} />
+        <AuroraPattern
+          kind={patternForSeed(seedFromString(cover.id))}
+          color={cover.colors[2]}
+          color2={cover.colors[1]}
+          seed={seedFromString(cover.id)}
+          opacity={0.75}
+          paused
+        />
       ) : (
         <TierAmbience color={cover.colors[2]} height={84} seed={seedFromString(cover.id)} count={6} />
       )}
