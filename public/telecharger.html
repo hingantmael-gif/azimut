@@ -4,142 +4,243 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#07111F" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Mova" />
     <meta name="application-name" content="Mova" />
-    <link rel="icon" href="/icon.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mova" />
+    <meta name="description" content="Installe Mova sur ton téléphone en 10 secondes : coaching multi-sport, tracker GPS, plans d'entraînement." />
+    <meta property="og:title" content="Installer Mova" />
+    <meta property="og:description" content="Ton coach multi-sport, directement sur ton écran d'accueil." />
+    <meta property="og:image" content="https://hingantmael-gif.github.io/icon-512.png" />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <title>Télécharger Mova</title>
+    <title>Installer Mova</title>
+    <script>
+      /* Capturé le plus tôt possible : le navigateur peut le déclencher avant la fin du chargement. */
+      window.__bip = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__bip = e;
+        if (window.__onBip) window.__onBip();
+      });
+    </script>
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+      :root { --mint: #3dff9a; --cyan: #22d3ee; --ink: #07111f; }
+      * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+      html, body { min-height: 100%; }
       body {
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        background: #07111f;
+        font-family: 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: var(--ink);
         color: #f4f7fa;
         min-height: 100vh;
+        min-height: 100dvh;
         display: flex;
-        align-items: center;
         justify-content: center;
-        padding: 24px;
+        padding: max(20px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+        overflow-x: hidden;
+        position: relative;
       }
+      /* Fond aurore animé (même identité que l'app) */
+      .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+      .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; animation: drift 14s ease-in-out infinite alternate; }
+      .b1 { width: 420px; height: 420px; background: var(--mint); top: -140px; left: -120px; opacity: 0.32; }
+      .b2 { width: 380px; height: 380px; background: var(--cyan); bottom: -120px; right: -120px; opacity: 0.30; animation-duration: 18s; }
+      .b3 { width: 300px; height: 300px; background: #a78bfa; top: 40%; left: 55%; opacity: 0.14; animation-duration: 22s; }
+      @keyframes drift { to { transform: translate(40px, 30px) scale(1.12); } }
+      @media (prefers-reduced-motion: reduce) { .blob { animation: none; } }
+
+      main { position: relative; z-index: 1; width: 100%; max-width: 440px; }
       .card {
-        max-width: 420px;
-        width: 100%;
-        background: #0f1c2e;
-        border: 1px solid #252b36;
-        border-radius: 16px;
-        padding: 32px 28px;
+        background: rgba(10, 22, 40, 0.82);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 28px;
+        padding: 30px 24px 24px;
         text-align: center;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
       }
-      .logo {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-        display: block;
-        margin: 0 auto 20px;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.35);
-      }
-      h1 { font-size: 1.5rem; margin-bottom: 8px; }
-      p { color: #8892a4; font-size: 0.9rem; line-height: 1.5; margin-bottom: 24px; }
+      .logo { width: 96px; height: 96px; border-radius: 24px; display: block; margin: 0 auto 16px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45); }
+      h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; }
+      .tag { color: #c5d0dd; font-size: 0.98rem; line-height: 1.5; margin: 8px 0 22px; }
+
       .btn {
-        display: block;
-        width: 100%;
-        padding: 14px 20px;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 600;
-        text-decoration: none;
-        border: none;
-        cursor: pointer;
-        margin-bottom: 12px;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        width: 100%; padding: 16px 20px; border-radius: 16px;
+        font: inherit; font-size: 1.05rem; font-weight: 800; text-decoration: none; cursor: pointer; border: none;
+        transition: transform 0.15s ease, opacity 0.15s ease;
       }
-      .btn-primary { background: #0E8F6F; color: #fff; }
-      .btn-secondary { background: #111318; color: #f4f7fa; border: 1px solid #252b36; }
-      .hint { font-size: 0.75rem; color: #8892a4; margin-top: 16px; }
-      #ios-guide {
-        display: none;
-        text-align: left;
-        margin-top: 16px;
-        padding: 16px;
-        background: #111318;
-        border-radius: 10px;
-        font-size: 0.8rem;
-        color: #8892a4;
-      }
-      #ios-guide strong { color: #fff; }
-      #ios-guide ol { margin: 8px 0 0 18px; }
-      #ios-guide li { margin-bottom: 4px; }
+      .btn:active { transform: scale(0.98); }
+      .btn-primary { background: linear-gradient(135deg, #12b87a, var(--cyan)); color: #04140d; box-shadow: 0 10px 26px rgba(18, 184, 122, 0.4); }
+      .btn-ghost { background: #0a1628; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.4); margin-top: 12px; }
+      .btn[disabled] { opacity: 0.6; cursor: default; }
+      .status { min-height: 1.3em; margin-top: 12px; font-size: 0.85rem; color: #9fb0c3; }
+
+      .panel { display: none; text-align: left; margin-top: 18px; padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); }
+      .panel.show { display: block; }
+      .panel h2 { font-size: 0.95rem; margin-bottom: 10px; }
+      .steps { list-style: none; counter-reset: s; display: grid; gap: 10px; }
+      .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; font-size: 0.92rem; line-height: 1.45; color: #dbe4ee; }
+      .steps li::before { content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--mint); color: #04140d; font-weight: 800; font-size: 0.8rem; display: grid; place-items: center; margin-top: 1px; }
+      .steps b { color: #fff; }
+      .ico { display: inline-block; vertical-align: -3px; width: 18px; height: 18px; }
+
+      .qr { margin-top: 22px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+      .qr-box { background: #fff; padding: 10px; border-radius: 18px; display: inline-block; }
+      .qr img { display: block; width: 168px; height: 168px; image-rendering: pixelated; }
+      .qr p { font-size: 0.85rem; color: #9fb0c3; margin-top: 10px; line-height: 1.45; }
+      .qr.desktop-first { border-top: none; padding-top: 0; margin: 0 0 22px; }
+      .qr.desktop-first img { width: 200px; height: 200px; }
+
+      .how { margin-top: 22px; display: grid; gap: 10px; text-align: left; }
+      .how div { display: flex; gap: 12px; align-items: center; font-size: 0.9rem; color: #c5d0dd; }
+      .how span { flex: none; width: 34px; height: 34px; border-radius: 12px; background: rgba(61, 255, 154, 0.14); display: grid; place-items: center; font-size: 1.1rem; }
+
+      .links { display: flex; gap: 8px; margin-top: 16px; }
+      .links button { flex: 1; padding: 11px 8px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: #e6edf5; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+      footer { text-align: center; margin-top: 18px; font-size: 0.78rem; color: #7f90a5; }
+      footer a { color: #9fdcc4; text-decoration: none; margin: 0 6px; }
+      .arrow { display: none; position: fixed; left: 50%; bottom: 8px; transform: translateX(-50%); font-size: 2rem; animation: bounce 1s infinite; z-index: 5; }
+      .arrow.show { display: block; }
+      @keyframes bounce { 50% { transform: translate(-50%, 8px); } }
     </style>
   </head>
   <body>
-    <div class="card">
-      <img class="logo" src="/icon.png" width="72" height="72" alt="Mova" />
-      <h1>Mova</h1>
-      <p>Coaching multi-sport — installez l&apos;application sur votre téléphone ou ordinateur.</p>
+    <div class="aurora" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
-      <button type="button" class="btn btn-primary" id="install-btn">Installer sur cet appareil</button>
-      <a href="/" class="btn btn-secondary" id="open-app">Ouvrir l&apos;application</a>
+    <main>
+      <div class="card">
+        <img class="logo" src="/icon-192.png" width="96" height="96" alt="Mova" />
+        <h1>Installe Mova</h1>
+        <p class="tag">Ton coach multi-sport sur l'écran d'accueil — plein écran, comme une vraie application. Sans store, en 10 secondes.</p>
 
-      <div id="ios-guide">
-        <strong>iPhone / iPad</strong>
-        <ol>
-          <li>Ouvrez cette page dans <strong>Safari</strong></li>
-          <li>Appuyez sur <strong>Partager</strong></li>
-          <li>Choisissez <strong>Sur l&apos;écran d&apos;accueil</strong></li>
-        </ol>
+        <!-- Ordinateur : le QR d'abord -->
+        <div class="qr desktop-first" id="qr-desktop" hidden>
+          <div class="qr-box"><img src="/qr-install.png" alt="QR code pour installer Mova" /></div>
+          <p><b>Scanne ce QR code avec ton téléphone</b><br />La page d'installation s'ouvre : appuie sur « Installer ».</p>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="install-btn">Installer l'application</button>
+        <a href="/" class="btn btn-ghost" id="open-app">Ouvrir dans le navigateur</a>
+        <p class="status" id="status" role="status"></p>
+
+        <div class="panel" id="panel-ios">
+          <h2>Sur iPhone / iPad (Safari)</h2>
+          <ol class="steps">
+            <li>Touche <b>Partager</b>
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="#3dff9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+              en bas de l'écran</li>
+            <li>Fais défiler puis choisis <b>« Sur l'écran d'accueil »</b></li>
+            <li>Touche <b>Ajouter</b> : Mova apparaît avec les autres applications</li>
+          </ol>
+        </div>
+
+        <div class="panel" id="panel-android">
+          <h2>Installer manuellement</h2>
+          <ol class="steps">
+            <li>Ouvre le menu du navigateur <b>⋮</b> (en haut à droite)</li>
+            <li>Choisis <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b></li>
+            <li>Confirme : Mova apparaît sur ton écran d'accueil</li>
+          </ol>
+        </div>
+
+        <div class="panel" id="panel-inapp">
+          <h2>Ouvre-moi dans ton navigateur</h2>
+          <ol class="steps">
+            <li>Touche <b>⋮</b> ou <b>Partager</b> dans cette fenêtre</li>
+            <li>Choisis <b>« Ouvrir dans Chrome / Safari »</b></li>
+            <li>Reviens sur cette page et touche <b>Installer</b></li>
+          </ol>
+        </div>
+
+        <!-- Téléphone : le QR sert à installer sur un autre appareil -->
+        <div class="qr" id="qr-mobile">
+          <div class="qr-box"><img src="/qr-install.png" alt="QR code pour installer Mova" /></div>
+          <p>Un autre appareil ? Scanne ce QR code.</p>
+        </div>
+
+        <div class="how">
+          <div><span>📷</span> Scanne le QR code ou ouvre le lien</div>
+          <div><span>⬇️</span> Touche « Installer l'application »</div>
+          <div><span>🚀</span> Ouvre Mova depuis ton écran d'accueil</div>
+        </div>
+
+        <div class="links">
+          <button type="button" id="copy-btn">Copier le lien</button>
+          <button type="button" id="share-btn" hidden>Partager</button>
+        </div>
       </div>
-
-      <p class="hint" id="url-hint"></p>
-    </div>
+      <footer>
+        <a href="/settings/legal/terms">Conditions</a>·<a href="/settings/legal/privacy">Confidentialité</a>
+      </footer>
+    </main>
+    <div class="arrow" id="arrow" aria-hidden="true">👇</div>
 
     <script>
-      /* Exactement comme BTP Pro : capturer BIP, un clic → prompt(). */
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js?v=25', { scope: '/' }).then(function (reg) {
-          try { reg.update(); } catch (e) {}
-        }).catch(function () {});
-      }
+      (function () {
+        var $ = function (id) { return document.getElementById(id); };
+        var ua = navigator.userAgent || '';
+        var isIos = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var isAndroid = /android/i.test(ua);
+        var isMobile = isIos || isAndroid;
+        var inApp = /FBAN|FBAV|Instagram|Snapchat|TikTok|MicroMessenger|Line\/|Twitter|LinkedInApp|GSA\/|; wv\)/i.test(ua);
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+        var LINK = 'https://hingantmael-gif.github.io/telecharger.html';
 
-      document.getElementById('url-hint').textContent = 'Lien : ' + window.location.origin;
+        var btn = $('install-btn');
+        var status = $('status');
 
-      var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      var isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        Boolean(navigator.standalone);
-
-      if (isStandalone) {
-        document.getElementById('install-btn').textContent = 'Application installée ✓';
-        document.getElementById('install-btn').disabled = true;
-      }
-
-      var deferredPrompt = null;
-      window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
-        deferredPrompt = e;
-      });
-
-      window.addEventListener('appinstalled', function () {
-        deferredPrompt = null;
-        document.getElementById('install-btn').textContent = 'Application installée ✓';
-        document.getElementById('install-btn').disabled = true;
-      });
-
-      document.getElementById('install-btn').addEventListener('click', async function () {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          deferredPrompt = null;
-          return;
+        function show(id) { $(id).classList.add('show'); }
+        function setInstalled() {
+          btn.textContent = 'Ouvrir Mova';
+          btn.onclick = function () { location.href = '/'; };
+          status.textContent = 'Mova est installée sur cet appareil ✓';
+          $('open-app').style.display = 'none';
         }
-        if (isIos) {
-          document.getElementById('ios-guide').style.display = 'block';
-          return;
+
+        /* Le service worker rend l'installation possible et l'app disponible hors ligne. */
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js?v=48', { scope: '/' }).then(function (r) { try { r.update(); } catch (e) {} }).catch(function () {});
         }
-        alert(
-          'Utilisez le menu du navigateur (⋮) → « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».'
-        );
-      });
+
+        if (!isMobile) { $('qr-desktop').hidden = false; $('qr-mobile').style.display = 'none'; }
+        if (navigator.share) $('share-btn').hidden = false;
+
+        if (isStandalone) { setInstalled(); return; }
+
+        window.addEventListener('appinstalled', function () { window.__bip = null; setInstalled(); });
+
+        btn.addEventListener('click', function () {
+          if (inApp) { show('panel-inapp'); status.textContent = 'Ce navigateur intégré ne peut pas installer d\'application.'; return; }
+          if (window.__bip) {
+            window.__bip.prompt();
+            window.__bip.userChoice.then(function (c) {
+              window.__bip = null;
+              status.textContent = c.outcome === 'accepted' ? 'Installation en cours…' : 'Installation annulée — tu peux réessayer.';
+            });
+            return;
+          }
+          if (isIos) { show('panel-ios'); $('arrow').classList.add('show'); setTimeout(function () { $('arrow').classList.remove('show'); }, 5000); return; }
+          show('panel-android');
+        });
+
+        /* iPhone : pas d'invite automatique possible (règle d'Apple) → on affiche directement le guide. */
+        if (isIos && !inApp) { show('panel-ios'); }
+        if (inApp) { show('panel-inapp'); }
+
+        window.__onBip = function () { status.textContent = 'Prête à installer ✓'; };
+        if (window.__bip) window.__onBip();
+
+        $('copy-btn').addEventListener('click', function () {
+          var done = function () { $('copy-btn').textContent = 'Lien copié ✓'; setTimeout(function () { $('copy-btn').textContent = 'Copier le lien'; }, 2000); };
+          if (navigator.clipboard) navigator.clipboard.writeText(LINK).then(done, function () { prompt('Copie ce lien :', LINK); });
+          else prompt('Copie ce lien :', LINK);
+        });
+        $('share-btn').addEventListener('click', function () {
+          navigator.share({ title: 'Mova', text: 'Installe Mova, ton coach multi-sport', url: LINK }).catch(function () {});
+        });
+      })();
     </script>
   </body>
 </html>

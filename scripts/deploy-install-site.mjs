@@ -47,6 +47,8 @@ for (const f of [
   'icon.png',
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable-512.png',
+  'apple-touch-icon.png',
   'favicon.png',
   'telecharger.html',
   'qr-install.png',

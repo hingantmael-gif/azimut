@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -31,6 +31,12 @@ import { hasPremiumAccess } from '../../src/premium/entitlement';
  */
 export default function SettingsIndex() {
   const router = useRouter();
+  // Visible seulement dans le navigateur (pas une fois l'app installée).
+  const canInstallPwa =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    !window.matchMedia('(display-mode: standalone)').matches &&
+    (window.navigator as Navigator & { standalone?: boolean }).standalone !== true;
   const { state, dispatch } = useApp();
   const { colors } = useThemeColors();
   const { t, locale } = useI18n();
@@ -218,6 +224,14 @@ export default function SettingsIndex() {
             </SettingsSection>
 
             <SettingsSection title="Aide">
+              {canInstallPwa ? (
+                <SettingsRow
+                  label="Installer sur l'écran d'accueil"
+                  value="QR code"
+                  icon={{ name: 'download', color: '#0B8262' }}
+                  onPress={() => window.location.assign('/telecharger.html')}
+                />
+              ) : null}
               <SettingsRow label="Centre d'aide" onPress={() => router.push('/settings/help')} />
               <SettingsRow
                 label="Conditions d'utilisation"

@@ -28,7 +28,7 @@ export default function Root({ children }: PropsWithChildren) {
           content="6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw"
         />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="icon" type="image/png" href="/favicon.png" />
         <title>Mova</title>
         <ScrollViewStyleReset />
