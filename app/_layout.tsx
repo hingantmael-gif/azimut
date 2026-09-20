@@ -163,7 +163,8 @@ function AppShell() {
             <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
             <Stack.Screen name="settings/email" options={{ title: 'E-mail' }} />
             <Stack.Screen name="settings/help" options={{ title: 'Centre d\'aide' }} />
-            <Stack.Screen name="settings/terms" options={{ title: 'CGU' }} />
+            <Stack.Screen name="settings/terms" options={{ title: 'Informations légales' }} />
+            <Stack.Screen name="settings/legal/[doc]" options={{ title: 'Document légal' }} />
             <Stack.Screen name="settings/privacy-policy" options={{ title: 'Politique de confidentialité' }} />
             <Stack.Screen name="settings/account" options={{ title: 'Compte et sécurité' }} />
             <Stack.Screen

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import {
   AuthDivider,
   AuthScreen,
@@ -421,7 +421,7 @@ export default function RegisterScreen() {
             setTerms((v) => !v);
             setError('');
           }}
-          onOpenTerms={() => router.push('/settings/terms')}
+          onOpenTerms={() => router.push('/settings/legal/terms' as Href)}
         />
 
         <SocialAuthButtons

@@ -25,6 +25,7 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   const isPublicLegal =
     pathKey === 'settings/privacy-policy' ||
     pathKey === 'settings/terms' ||
+    pathKey.startsWith('settings/legal/') ||
     pathKey === 'apropos';
 
   // Sans compte → écran d’accueil / login (comme BTP Pro), PAS /install (évite spinner infini)

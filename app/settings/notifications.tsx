@@ -83,7 +83,7 @@ export default function NotificationsSettingsScreen() {
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <Text style={styles.hint}>
           {inAppOnly
-            ? 'Sur le web, les alertes s’affichent dans Mova (bannières in-app) — pas comme des notifications système du téléphone.'
+            ? 'Les alertes s’affichent dans Mova et, si tu as autorisé les notifications, aussi sur ton téléphone lorsque l’app est en arrière-plan. Pour changer l’autorisation : réglages du navigateur ou de l’app installée.'
             : 'Les rappels d’entraînement peuvent utiliser les notifications du téléphone. L’activité sociale apparaît aussi dans Mova.'}
         </Text>
         {!inAppOnly ? (

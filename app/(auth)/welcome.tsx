@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
 import { OrangeButton } from '../../src/ui/strava/AuthScreen';
 import { BRAND } from '../../src/constants/brand';
@@ -33,6 +33,7 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.root}>
       <WizardBackdrop sport="run" />
+      <View pointerEvents="none" style={styles.scrim} />
       <View style={styles.hero}>
         <View style={styles.heroContent}>
           <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
@@ -51,7 +52,7 @@ export default function WelcomeScreen() {
           variant="outline"
           onPress={() => router.push('/(auth)/login')}
         />
-        <Text style={styles.legal} onPress={() => router.push('/settings/terms')}>
+        <Text style={styles.legal} onPress={() => router.push('/settings/legal/terms' as Href)}>
           {t('settings.terms')}
         </Text>
       </View>
@@ -64,6 +65,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BRAND.ink,
   },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(3,8,16,0.5)' },
   hero: {
     flex: 1,
     justifyContent: 'flex-end',

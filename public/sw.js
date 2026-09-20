@@ -1,5 +1,5 @@
 /* Service worker Azimut — mises à jour auto à chaque réouverture. */
-const CACHE = 'azimut-static-v92';
+const CACHE = 'azimut-static-v93';
 const IMMUTABLE = 'azimut-immutable-v1';
 /** Nom de fichier avec empreinte (…-<hash 32 hex>.ext ou entry-<hash>.js) : jamais modifié après publication. */
 const HASHED = /[.-][0-9a-f]{32}\.[a-z0-9]+$/i;
@@ -19,6 +19,20 @@ self.addEventListener('install', (event) => {
         Promise.all(PRECACHE.map((u) => cache.add(u).catch(function () {}))),
       )
       .then(() => self.skipWaiting()),
+  );
+});
+
+/* Clic sur une notification : ramène l'app au premier plan (ou l'ouvre). */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ('focus' in c) return c.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
   );
 });
 

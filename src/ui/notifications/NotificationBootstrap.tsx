@@ -6,9 +6,12 @@ import * as Notifications from 'expo-notifications';
 import { useApp, todayWorkout } from '../../store/AppContext';
 import { NotificationPermissionModal } from './NotificationPermissionModal';
 import {
+  askSystemPermission,
   ensureNotificationHandler,
   getPushPermissionStatus,
+  getSystemPermissionStatus,
   requestPushPermission,
+  supportsSystemPermission,
   syncLocalReminders,
   usesInAppNotificationsOnly,
 } from '../../services/pushNotifications';
@@ -25,7 +28,11 @@ import { radii, spacing } from '../../theme/tokens';
 import { SoftPulse } from '../motion/softMotion';
 import { BRAND } from '../../constants/brand';
 
+/** Clé « appareil » : la question du premier lancement n'est posée qu'une fois, avant même la connexion. */
+const DEVICE_KEY = '__device__';
+
 /**
+ * - Premier lancement : la toute première chose affichée est la demande de notifications
  * - Web / PWA : alertes uniquement dans Mova (pas de notif téléphone / domaine GitHub)
  * - Natif : permission OS pour rappels en arrière-plan ; social = toast in-app
  * - Bandeau pré-séance in-app
@@ -42,6 +49,7 @@ export function NotificationBootstrap() {
   const promptHandledRef = useRef(Boolean(state.profile.pushPermissionAsked));
   const checkGen = useRef(0);
   const inAppOnly = usesInAppNotificationsOnly();
+  const [firstLaunchVisible, setFirstLaunchVisible] = useState(false);
 
   const ready =
     Boolean(state.authToken) &&
@@ -82,6 +90,42 @@ export function NotificationBootstrap() {
   useEffect(() => {
     ensureNotificationHandler();
   }, []);
+
+  // Tout premier lancement (avant connexion) : on propose les notifications tout de suite.
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    void (async () => {
+      if (!supportsSystemPermission()) return;
+      const [handled, status] = await Promise.all([
+        loadNotificationPromptHandled(DEVICE_KEY),
+        getSystemPermissionStatus(),
+      ]);
+      if (cancelled) return;
+      if (status !== 'undetermined') {
+        if (!handled) void markNotificationPromptHandled(DEVICE_KEY);
+        return;
+      }
+      if (handled) return;
+      timer = setTimeout(() => {
+        if (!cancelled) setFirstLaunchVisible(true);
+      }, 600);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const answerFirstLaunch = async (allow: boolean) => {
+    setFirstLaunchVisible(false);
+    void markNotificationPromptHandled(DEVICE_KEY);
+    if (!allow) return;
+    const granted = await askSystemPermission();
+    if (granted && state.authToken) {
+      dispatch({ type: 'UPDATE_PROFILE', patch: { pushPermissionAsked: true, pushEnabled: true } });
+    }
+  };
 
   useEffect(() => {
     if (!state.authToken) {
@@ -143,14 +187,16 @@ export function NotificationBootstrap() {
     }
 
     void (async () => {
-      const [stored, osStatus] = await Promise.all([
+      const [stored, osStatus, deviceHandled] = await Promise.all([
         loadNotificationPromptHandled(profileId, email, username),
         getPushPermissionStatus(),
+        loadNotificationPromptHandled(DEVICE_KEY),
       ]);
       if (cancelled || gen !== checkGen.current) return;
 
       const osSettled = osStatus === 'denied' || osStatus === 'granted';
-      if (stored || osSettled) {
+      // Déjà répondu au lancement (autoriser / refuser) : on ne redemande pas après la connexion.
+      if (stored || osSettled || deviceHandled) {
         promptHandledRef.current = true;
         await markNotificationPromptHandled(profileId, email, username);
         if (!state.profile.pushPermissionAsked) {
@@ -318,6 +364,16 @@ export function NotificationBootstrap() {
           </SoftPulse>
         </View>
       ) : null}
+      <NotificationPermissionModal
+        visible={firstLaunchVisible}
+        inAppOnly={false}
+        onAllow={() => {
+          void answerFirstLaunch(true);
+        }}
+        onDeny={() => {
+          void answerFirstLaunch(false);
+        }}
+      />
       <NotificationPermissionModal
         visible={promptVisible && !promptHandledRef.current && !inAppOnly}
         inAppOnly={false}

@@ -15,8 +15,11 @@ const A = {
   textSecondary: 'rgba(255,255,255,0.74)',
   textMuted: 'rgba(255,255,255,0.5)',
   border: 'rgba(255,255,255,0.18)',
-  borderStrong: 'rgba(255,255,255,0.28)',
-  glass: 'rgba(255,255,255,0.08)',
+  borderStrong: 'rgba(255,255,255,0.4)',
+  /** Surfaces OPAQUES (≈ 90 %) : le fond animé ne doit jamais transparaître sous le texte. */
+  glass: 'rgba(6,14,28,0.88)',
+  /** Halo sombre autour des boutons : sépare nettement le bouton du fond animé. */
+  halo: '0px 0px 0px 5px rgba(3,8,16,0.55), 0px 10px 28px rgba(0,0,0,0.55)',
   accent: '#3DFF9A',
   onAccent: '#04140D',
   gradient: ['#12B87A', '#22D3EE'] as const,
@@ -26,6 +29,7 @@ export function AuthScreen({ children, style, ...props }: ViewProps) {
   return (
     <View style={styles.shell}>
       <WizardBackdrop sport="run" />
+      <View pointerEvents="none" style={styles.scrim} />
       <AppScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.scroll, style]}
@@ -173,6 +177,7 @@ export function TermsCheckbox({
 
 const styles = StyleSheet.create({
   shell: { flex: 1, backgroundColor: A.bg },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(3,8,16,0.5)' },
   root: { flex: 1, backgroundColor: 'transparent' },
   scroll: {
     flexGrow: 1,
@@ -189,9 +194,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.body,
-    color: A.textSecondary,
+    color: '#E6EEF7',
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowRadius: 8,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -224,6 +231,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderRadius: radii.lg,
     overflow: 'hidden',
+    boxShadow: A.halo,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
   orangeBtnContent: { width: '100%' },
@@ -234,9 +242,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   orangeBtnOutline: {
-    backgroundColor: A.glass,
+    backgroundColor: '#0A1628',
     borderWidth: 1.5,
-    borderColor: A.borderStrong,
+    borderColor: 'rgba(255,255,255,0.55)',
   },
   orangeBtnDisabled: {
     opacity: 0.45,
@@ -248,14 +256,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'ltr',
   },
-  orangeBtnTextOutline: { color: A.text },
+  orangeBtnTextOutline: { color: '#FFFFFF' },
   textLinkWrap: { alignItems: 'center', paddingVertical: spacing.md },
   textLink: {
-    color: A.textSecondary,
+    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowRadius: 6,
   },
-  textLinkAccent: { color: A.accent },
+  textLinkAccent: { color: A.accent, textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 6 },
   termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -56,7 +56,7 @@ export function NotificationPermissionModal({
             style={[styles.primary, { backgroundColor: colors.accent }]}
             onPress={onAllow}
           >
-            <Text style={styles.primaryText}>
+            <Text style={[styles.primaryText, { color: colors.onAccent }]}>
               {inAppOnly ? 'Activer les alertes Mova' : 'Autoriser les notifications'}
             </Text>
           </Pressable>

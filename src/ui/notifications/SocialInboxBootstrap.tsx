@@ -4,7 +4,7 @@ import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../store/AppContext';
 import { claimSocialInboxEvents } from '../../storage/socialInbox';
-import { socialPushCopy } from '../../services/pushNotifications';
+import { showSystemNotification, socialPushCopy } from '../../services/pushNotifications';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import { SoftPulse } from '../motion/softMotion';
@@ -68,6 +68,8 @@ export function SocialInboxBootstrap() {
 
   const showToast = useCallback((title: string, body: string) => {
     setToast({ title, body });
+    // App en arrière-plan (PWA) : la même alerte part aussi en notification système.
+    void showSystemNotification(title, body, '/notifications');
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 4200);
   }, []);

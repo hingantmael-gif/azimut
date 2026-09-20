@@ -25,11 +25,73 @@ export function ensureNotificationHandler() {
   });
 }
 
-export async function getPushPermissionStatus(): Promise<
-  'granted' | 'denied' | 'undetermined'
-> {
+type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+
+/** API Notification du navigateur (Chrome/Edge/Android, Safari iOS 16.4+ en PWA installée). */
+function webNotificationApi(): typeof Notification | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  return 'Notification' in window ? window.Notification : null;
+}
+
+/** L'appareil sait afficher une demande d'autorisation système (natif, ou navigateur compatible). */
+export function supportsSystemPermission(): boolean {
+  return Platform.OS !== 'web' || webNotificationApi() !== null;
+}
+
+/** Autorisation système actuelle (web : `Notification.permission`). */
+export async function getSystemPermissionStatus(): Promise<PermissionStatus> {
+  const api = webNotificationApi();
+  if (Platform.OS === 'web') {
+    if (!api) return 'denied';
+    return api.permission === 'default' ? 'undetermined' : api.permission;
+  }
+  return getPushPermissionStatus();
+}
+
+/**
+ * Déclenche la vraie demande du téléphone / du navigateur. À appeler depuis un geste
+ * de l'utilisateur (obligatoire sur iOS).
+ */
+export async function askSystemPermission(): Promise<boolean> {
+  const api = webNotificationApi();
+  if (Platform.OS === 'web') {
+    if (!api) return false;
+    try {
+      return (await api.requestPermission()) === 'granted';
+    } catch {
+      return false;
+    }
+  }
+  return requestPushPermission();
+}
+
+/**
+ * Notification système sur le web (via le service worker) quand l'app est en arrière-plan.
+ * Sans effet si l'autorisation n'a pas été accordée ou si l'app est au premier plan
+ * (les bannières in-app prennent alors le relais).
+ */
+export async function showSystemNotification(title: string, body: string, url = '/'): Promise<void> {
+  const api = webNotificationApi();
+  if (!api || api.permission !== 'granted') return;
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible') return;
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const options: NotificationOptions = {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url },
+    };
+    if (reg) await reg.showNotification(title, options);
+    else new api(title, options);
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function getPushPermissionStatus(): Promise<PermissionStatus> {
   if (usesInAppNotificationsOnly()) {
-    // Sur le web : pas de permission OS — les alertes vivent dans Mova.
+    // Web : les alertes in-app sont toujours actives ; l'autorisation système est distincte.
     return 'granted';
   }
   try {
@@ -48,7 +110,11 @@ export async function getPushPermissionStatus(): Promise<
  * Sur le web : active les alertes in-app sans permission navigateur.
  */
 export async function requestPushPermission(): Promise<boolean> {
-  if (usesInAppNotificationsOnly()) return true;
+  if (usesInAppNotificationsOnly()) {
+    // Web : on demande aussi l'autorisation du navigateur, mais les alertes in-app restent actives.
+    await askSystemPermission();
+    return true;
+  }
   try {
     ensureNotificationHandler();
 
@@ -157,7 +223,7 @@ export function socialPushCopy(n: SocialNotification): { title: string; body: st
  * Push OS (natif, app en arrière-plan seulement).
  * Sur web / PWA : jamais — évite le badge « hingantmael-gif.github.io ».
  */
-export async function presentSocialPush(_n: SocialNotification): Promise<void> {
-  // In-app only (SocialInboxBootstrap). Pas de notification téléphone.
-  return;
+export async function presentSocialPush(n: SocialNotification): Promise<void> {
+  const copy = socialPushCopy(n);
+  await showSystemNotification(copy.title, copy.body, '/notifications');
 }
