@@ -23,8 +23,12 @@ services:
       # Base de données PostgreSQL (Neon / Supabase / Render Postgres) — OBLIGATOIRE pour ne pas perdre les comptes.
       - key: DATABASE_URL
         sync: false
+      # Adresse publique du site Mova (ex. https://mova.app), séparées par des virgules si plusieurs.
       - key: CORS_ORIGINS
-        value: https://hingantmael-gif.github.io
+        sync: false
+      # E-mail du compte propriétaire (Premium offert, Google uniquement).
+      - key: OWNER_PREMIUM_EMAIL
+        sync: false
       # Optionnel : envoi réel des codes par e-mail
       - key: RESEND_API_KEY
         sync: false

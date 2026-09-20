@@ -201,7 +201,7 @@ const TRIAL_EMAIL = '1@demo.local';
 const TRIAL_ENABLED = process.env.ALLOW_TRIAL_ACCOUNT === 'true';
 
 /** Compte propriétaire : Premium gratuit, Google uniquement. */
-const OWNER_PREMIUM_EMAIL = 'hingant.mael@gmail.com';
+const OWNER_PREMIUM_EMAIL = String(process.env.OWNER_PREMIUM_EMAIL ?? '').trim().toLowerCase();
 const OWNER_GOOGLE_ONLY_MESSAGE =
   'Ce compte ultra-sécurisé doit se connecter uniquement avec Google.';
 
@@ -214,7 +214,7 @@ function normalizeEmail(email) {
 }
 
 function isOwnerPremiumEmail(email) {
-  return normalizeEmail(email) === OWNER_PREMIUM_EMAIL;
+  return OWNER_PREMIUM_EMAIL !== '' && normalizeEmail(email) === OWNER_PREMIUM_EMAIL;
 }
 
 function isValidEmail(email) {
@@ -289,7 +289,7 @@ async function handleRequestOtp(req, res) {
   const email = normalizeEmail(req.body?.email);
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({
-      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      error: 'E-mail invalide — ex. prenom@exemple.com',
     });
   }
   if (isOwnerPremiumEmail(email)) {
@@ -402,7 +402,7 @@ app.post('/auth/signup', (req, res) => {
   const { firstName, lastName, username, password } = req.body ?? {};
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({
-      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      error: 'E-mail invalide — ex. prenom@exemple.com',
     });
   }
   if (isOwnerPremiumEmail(email)) {

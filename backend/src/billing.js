@@ -220,7 +220,7 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
       .toLowerCase();
   }
 
-  const OWNER_EMAIL = 'hingant.mael@gmail.com';
+  const OWNER_EMAIL = String(process.env.OWNER_PREMIUM_EMAIL ?? '').trim().toLowerCase();
 
   /** Le compte connecté est-il Premium offert ? */
   app.get('/billing/gift-status', authMiddleware, (req, res) => {

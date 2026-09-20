@@ -22,7 +22,7 @@ const androidClientId = (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? web
 const SAFE_PLACEHOLDER = '000000000000-azimut.apps.googleusercontent.com';
 
 /** Origine PWA prod — doit matcher exactement les URI autorisées Google Cloud. */
-const PROD_WEB_ORIGIN = 'https://hingantmael-gif.github.io';
+const PROD_WEB_ORIGIN = String(process.env.EXPO_PUBLIC_SITE_URL ?? 'https://mova.app').replace(/\/$/, '');
 
 export function isGoogleAuthConfigured(): boolean {
   return Boolean(webClientId) && !webClientId.includes('azimut.apps.googleusercontent.com');
@@ -31,7 +31,7 @@ export function isGoogleAuthConfigured(): boolean {
 /**
  * URI de retour Google.
  * Console OAuth (client Web) : origins + redirect = racine du site
- * (`https://hingantmael-gif.github.io` et `/`), PAS /welcome.
+ * (l’adresse du site Mova, avec et sans `/` final), PAS /welcome.
  * Un path non enregistré → « Accès bloqué / demande non valide ».
  */
 function webGoogleRedirectUri(): string {

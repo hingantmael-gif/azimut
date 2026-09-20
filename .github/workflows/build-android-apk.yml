@@ -68,7 +68,7 @@ jobs:
             2. Ouvre le fichier → Installer
             3. L’icône Mova apparaît comme une app Play Store
 
-            Page simple : https://hingantmael-gif.github.io/azimut/get.html
+            Page simple : le site Mova (page /get.html)
           files: out/mova.apk
           make_latest: true
         env:

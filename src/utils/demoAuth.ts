@@ -82,7 +82,7 @@ export function validateRegistrationEmail(
   if (!value.includes('@')) {
     return {
       ok: false,
-      error: 'Il manque le @ — ex. prenom@gmail.com ou toi@orange.fr.',
+      error: 'Il manque le @ — ex. prenom@exemple.com.',
     };
   }
   if (isValidEmailFormat(value)) {
@@ -91,7 +91,7 @@ export function validateRegistrationEmail(
   return {
     ok: false,
     error:
-      'Adresse incomplète. Exemples : toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      'Adresse incomplète. Exemple : prenom@exemple.com',
   };
 }
 

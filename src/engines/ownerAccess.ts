@@ -5,7 +5,9 @@ import { levelFromXp, totalXpToReachLevel } from './core';
  * Compte propriétaire : Premium gratuit, connexion Google obligatoire.
  * (Client + backend — l’e-mail doit matcher exactement après normalisation.)
  */
-export const OWNER_PREMIUM_EMAIL = 'hingant.mael@gmail.com';
+export const OWNER_PREMIUM_EMAIL = String(process.env.EXPO_PUBLIC_OWNER_EMAIL ?? '')
+  .trim()
+  .toLowerCase();
 
 export const OWNER_GOOGLE_ONLY_MESSAGE =
   'Ce compte ultra-sécurisé doit se connecter uniquement avec Google.';
@@ -22,7 +24,7 @@ export function normalizeAccountEmail(email: string | undefined | null): string 
 }
 
 export function isOwnerPremiumEmail(email: string | undefined | null): boolean {
-  return normalizeAccountEmail(email) === OWNER_PREMIUM_EMAIL;
+  return OWNER_PREMIUM_EMAIL !== '' && normalizeAccountEmail(email) === OWNER_PREMIUM_EMAIL;
 }
 
 /** Premium gratuit uniquement si e-mail propriétaire + Google. */
