@@ -123,7 +123,7 @@ export default function WeekReviewScreen() {
           />
           <SecondaryButton
             label="Voir le plan"
-            onPress={() => router.push('/(tabs)/calendar')}
+            onPress={() => router.navigate('/calendar')}
           />
         </View>
       </FadeInUp>

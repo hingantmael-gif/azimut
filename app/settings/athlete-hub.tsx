@@ -156,11 +156,11 @@ export default function AthleteHubScreen() {
             <SettingsSection title="Entraînement">
               <SettingsRow
                 label="Plan du jour"
-                onPress={() => router.push('/(tabs)/training')}
+                onPress={() => router.navigate('/(tabs)/training')}
               />
               <SettingsRow
                 label="Progrès et stats"
-                onPress={() => router.push('/(tabs)/analyse')}
+                onPress={() => router.navigate('/(tabs)/analyse')}
               />
               <SettingsRow
                 label="Prédiction de course"

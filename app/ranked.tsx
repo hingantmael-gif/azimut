@@ -280,7 +280,7 @@ export default function RankedScreen() {
   const openAthleteProfile = useCallback(
     (athleteUsername: string, isYou?: boolean) => {
       if (isYou) {
-        router.push('/(tabs)/profile');
+        router.navigate('/(tabs)/profile');
         return;
       }
       const u = athleteUsername.trim().toLowerCase();

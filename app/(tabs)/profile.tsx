@@ -261,7 +261,7 @@ export default function ProfileScreen() {
         <View style={[styles.linkGroup, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
           <PressableScale
             variant="subtle"
-            onPress={() => router.push('/(tabs)/social')}
+            onPress={() => router.navigate('/(tabs)/social')}
             contentStyle={styles.linkRowInner}
           >
             <View style={{ flex: 1 }}>
@@ -279,7 +279,7 @@ export default function ProfileScreen() {
           <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
           <PressableScale
             variant="subtle"
-            onPress={() => router.push('/(tabs)/maps')}
+            onPress={() => router.navigate('/(tabs)/maps')}
             contentStyle={styles.linkRowInner}
           >
             <View style={{ flex: 1 }}>
@@ -293,7 +293,7 @@ export default function ProfileScreen() {
           <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
           <PressableScale
             variant="subtle"
-            onPress={() => router.push('/(tabs)/groups')}
+            onPress={() => router.navigate('/(tabs)/groups')}
             contentStyle={styles.linkRowInner}
           >
             <View style={{ flex: 1 }}>

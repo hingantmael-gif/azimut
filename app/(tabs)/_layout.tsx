@@ -47,6 +47,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenLayout={({ children }) => <AtmosphereLayer>{children}</AtmosphereLayer>}
       screenOptions={{
         headerStyle: { backgroundColor: headerColor },

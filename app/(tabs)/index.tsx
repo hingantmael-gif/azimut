@@ -179,7 +179,7 @@ export default function HomeDashboard() {
     if (!isTodayTraining && focus) {
       return {
         label: 'Voir le plan',
-        onPress: () => router.push('/(tabs)/calendar'),
+        onPress: () => router.navigate('/calendar'),
         color: discColor,
       };
     }
@@ -239,7 +239,7 @@ export default function HomeDashboard() {
     }
     return {
       label: 'Sortie libre',
-      onPress: () => router.push('/(tabs)/record'),
+      onPress: () => router.navigate('/(tabs)/record'),
       color: colors.accent,
     };
   })();
@@ -272,7 +272,7 @@ export default function HomeDashboard() {
 
         <DayStatusBanner
           adjustment={adjustment}
-          onPress={() => router.push('/(tabs)/body')}
+          onPress={() => router.navigate('/(tabs)/body')}
         />
 
         {adjustment.whyLine ? <WhyCoachExpand whyLine={adjustment.whyLine} /> : null}
@@ -304,7 +304,7 @@ export default function HomeDashboard() {
                 ? {
                     title: learnInsight ? 'Apprentissage' : 'Ajustement coach',
                     body: state.coachAdaptations[0],
-                    onPress: () => router.push('/(tabs)/calendar'),
+                    onPress: () => router.navigate('/calendar'),
                     pulse: learnPulse,
                   }
                 : null
@@ -454,13 +454,13 @@ export default function HomeDashboard() {
                     </PressableScale>
                     <PressableScale
                       variant="subtle"
-                      onPress={() => router.push('/(tabs)/calendar')}
+                      onPress={() => router.navigate('/calendar')}
                     >
                       <Text style={styles.moreLink}>Voir le plan</Text>
                     </PressableScale>
                     <PressableScale
                       variant="subtle"
-                      onPress={() => router.push('/(tabs)/record')}
+                      onPress={() => router.navigate('/(tabs)/record')}
                     >
                       <Text style={styles.moreLink}>Enregistrer une sortie libre</Text>
                     </PressableScale>
@@ -506,7 +506,7 @@ export default function HomeDashboard() {
                 <PressableScale
                   variant="subtle"
                   style={styles.secondaryLink}
-                  onPress={() => router.push('/(tabs)/record')}
+                  onPress={() => router.navigate('/(tabs)/record')}
                 >
                   <Text style={styles.secondaryLinkText}>Ou sortie libre</Text>
                 </PressableScale>

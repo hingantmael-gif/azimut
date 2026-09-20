@@ -20,7 +20,7 @@ export function ProfileHeaderButton() {
     <PressableScale
       style={styles.wrap}
       variant="pop"
-      onPress={() => router.push('/(tabs)/profile')}
+      onPress={() => router.navigate('/(tabs)/profile')}
       accessibilityLabel="Mon profil"
     >
       <ProfileAvatar

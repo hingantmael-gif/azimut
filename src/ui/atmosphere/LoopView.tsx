@@ -7,6 +7,8 @@ import { useReducedMotion } from '../../utils/motionPrefs';
  * - Web : animation CSS (keyframes) → tourne sur le processeur graphique, ZÉRO JavaScript par image.
  *   (Animated en JS coûtait ~90 rappels par image et gelait les téléphones.)
  * - Natif : Animated avec driver natif.
+ * Les enfants restent cliquables (box-none) : SoftPulse enveloppe de vrais boutons. Les fonds purement décoratifs
+ * posent déjà pointerEvents="none" sur leur conteneur.
  */
 export type Pose = {
   x?: number;
@@ -111,7 +113,7 @@ function WebLoop({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return (
-    <View pointerEvents="none" style={[style, cssStyle]}>
+    <View pointerEvents="box-none" style={[style, cssStyle]}>
       {children}
     </View>
   );
@@ -154,7 +156,7 @@ function NativeLoop({
 
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents="box-none"
       style={[style, { transform: transform as never, ...(has('opacity') ? { opacity: interp('opacity', 1) } : null) }]}
     >
       {children}

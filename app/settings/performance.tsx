@@ -19,8 +19,8 @@ export default function PerformanceSettingsScreen() {
           <SettingsRow label="Forme (TSB)" value={b.formTsb.toFixed(0)} showChevron={false} />
         </SettingsSection>
         <SettingsSection title="Entraînement">
-          <SettingsRow label="Plan du jour" onPress={() => router.push('/(tabs)/training')} />
-          <SettingsRow label="Progrès et stats" onPress={() => router.push('/(tabs)/analyse')} />
+          <SettingsRow label="Plan du jour" onPress={() => router.navigate('/(tabs)/training')} />
+          <SettingsRow label="Progrès et stats" onPress={() => router.navigate('/(tabs)/analyse')} />
           <SettingsRow label="Prédiction de course" onPress={() => router.push('/race-predictor')} />
         </SettingsSection>
       </AppScrollView>

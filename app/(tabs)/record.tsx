@@ -6,7 +6,7 @@ import { BRAND } from '../../src/constants/brand';
 /**
  * Onglet Enregistrer — ouvre directement le tracker (pré-départ).
  * Le tap barre d’onglets est aussi intercepté dans `_layout` ; ce redirect
- * couvre les deep links / router.push('/(tabs)/record').
+ * couvre les deep links / router.navigate('/(tabs)/record').
  */
 export default function RecordScreen() {
   const router = useRouter();

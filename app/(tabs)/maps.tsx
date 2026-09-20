@@ -74,7 +74,7 @@ export default function MapsScreen() {
           </Text>
           <PrimaryButton
             label="Enregistrer une séance"
-            onPress={() => router.push('/(tabs)/record')}
+            onPress={() => router.navigate('/(tabs)/record')}
           />
         </View>
       ) : (

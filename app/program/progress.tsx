@@ -94,7 +94,7 @@ export default function ProgramProgressScreen() {
           </Text>
         ) : null}
 
-        <Pressable style={styles.link} onPress={() => router.push('/(tabs)/calendar')}>
+        <Pressable style={styles.link} onPress={() => router.navigate('/calendar')}>
           <Text style={styles.linkText}>Voir le planning →</Text>
         </Pressable>
       </AppScrollView>
