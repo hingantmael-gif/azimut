@@ -130,6 +130,13 @@ export default function SettingsIndex() {
               ) : null}
               {isOwnerPremiumEmail(state.profile.email) ? (
                 <SettingsRow
+                  label="Règles de la communauté"
+                  value="Groupes · certification"
+                  onPress={() => router.push('/settings/community-rules')}
+                />
+              ) : null}
+              {isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
                   label="Gestion compte premium"
                   value="Cadeaux Premium"
                   onPress={() => router.push('/settings/premium-manage')}

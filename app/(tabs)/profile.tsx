@@ -21,6 +21,7 @@ import { longestSessionKmBySport } from '../../src/engines/profileCovers';
 import { AvatarPickerSheet } from '../../src/ui/profile/AvatarPickerSheet';
 import { ProfileAvatar } from '../../src/ui/profile/ProfileAvatar';
 import { BioRichText } from '../../src/ui/profile/BioRichText';
+import { CertificationCard } from '../../src/ui/profile/CertificationCard';
 import { RankBadge } from '../../src/ui/ranked/RankBadge';
 import { ProgramSportCover } from '../../src/ui/program/SportCover';
 import { formatProgramDurationLabel } from '../../src/constants/programs';
@@ -251,8 +252,8 @@ export default function ProfileScreen() {
 
       <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
         <SectionHeader
-          title="Communauté (bêta)"
-          subtitle="Social, cartes et groupes — fonctionnalités en test"
+          title="Communauté"
+          subtitle="Fil social, cartes et groupes"
           accentColor={colors.accent}
           delay={50}
         />
@@ -274,7 +275,7 @@ export default function ProfileScreen() {
                   : 'Activités des athlètes que tu suis'}
               </Text>
             </View>
-            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
           </PressableScale>
           <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
           <PressableScale
@@ -288,7 +289,7 @@ export default function ProfileScreen() {
                 Tes traces — heatmap communauté bientôt
               </Text>
             </View>
-            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
           </PressableScale>
           <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
           <PressableScale
@@ -304,10 +305,12 @@ export default function ProfileScreen() {
                   : `${state.clubs?.length ?? 0} club${(state.clubs?.length ?? 0) !== 1 ? 's' : ''} sur cet appareil`}
               </Text>
             </View>
-            <Text style={[styles.linkRowValue, { color: colors.accent }]}>Bêta ›</Text>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
           </PressableScale>
         </View>
       </FadeInUp>
+
+      <CertificationCard />
 
       <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
         <SectionHeader

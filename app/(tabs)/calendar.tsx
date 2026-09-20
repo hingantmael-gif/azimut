@@ -15,6 +15,7 @@ import {
 } from '../../src/engines/workoutPresentation';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
+import { canStartGuidedStrengthSession } from '../../src/engines/guidedStrengthSession';
 import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
 import { FadeInUp, RevealPanel, SoftPulse, StaggerIn } from '../../src/ui/motion/softMotion';
@@ -238,6 +239,18 @@ export default function PlanScreen() {
                             ))}
                             <FadeInUp delay={90 + summary.stepLines.length * 45} duration={600}>
                               <View style={styles.actionRow}>
+                                {workout.discipline !== 'rest' && canStartGuidedStrengthSession(workout) ? (
+                                  <Pressable
+                                    style={[styles.actionBtn, styles.actionBtnAccent]}
+                                    onPress={() =>
+                                      router.push({ pathname: '/session/guided', params: { id: workout.id } })
+                                    }
+                                  >
+                                    <Text style={[styles.actionBtnText, styles.actionBtnTextAccent]}>
+                                      Commencer la séance guidée
+                                    </Text>
+                                  </Pressable>
+                                ) : null}
                                 {canStartLiveWorkout(workout.discipline) ? (
                                   <Pressable
                                     style={[styles.actionBtn, styles.actionBtnAccent]}

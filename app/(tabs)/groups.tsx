@@ -10,6 +10,9 @@ import { AppScrollView } from '../../src/ui/scrolling';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
+import { isRemoteAuthToken } from '../../src/services/integrationsApi';
+import { fetchCommunityStatus, useRemoteConfig } from '../../src/services/remoteConfig';
+import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
 import {
   communityCreateClub,
   communityDiscoverClubs,
@@ -25,7 +28,7 @@ type CloudClub = {
   memberCount?: number;
 };
 
-/** Groupes / clubs — cloud quand connecté, sinon seed local (bêta). */
+/** Groupes / clubs — cloud quand connecté, sinon seed local. */
 export default function GroupsScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
@@ -38,6 +41,22 @@ export default function GroupsScreen() {
   const [sportLabel, setSportLabel] = useState('');
   const [cloudClubs, setCloudClubs] = useState<CloudClub[]>([]);
   const [cloudMode, setCloudMode] = useState(false);
+
+  const cfg = useRemoteConfig();
+  const [serverFollowers, setServerFollowers] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isRemoteAuthToken(state.authToken)) return;
+    let off = false;
+    void fetchCommunityStatus(state.authToken!).then((r) => {
+      if (!off && r) setServerFollowers(r.followers);
+    });
+    return () => {
+      off = true;
+    };
+  }, [state.authToken, cfg.groupMinFollowers]);
+  // Créer un groupe demande un nombre minimal d'abonnés, réglé par le propriétaire pour tout le monde.
+  const followers = serverFollowers ?? state.profile.followerUsernames?.length ?? 0;
+  const canCreate = isOwnerPremiumEmail(state.profile.email) || followers >= cfg.groupMinFollowers;
 
   const myClubs = state.clubs ?? [];
   const joinedIds = useMemo(
@@ -79,7 +98,9 @@ export default function GroupsScreen() {
     }));
   }, [cloudMode, cloudClubs, joinedIds]);
 
-  const openCreate = () => setCreating(true);
+  const openCreate = () => {
+    if (canCreate) setCreating(true);
+  };
 
   const submitCreate = async () => {
     const trimmed = name.trim();
@@ -137,12 +158,25 @@ export default function GroupsScreen() {
         <Text style={styles.header}>Mes groupes et clubs</Text>
         <Text style={styles.sub}>
           {cloudMode
-            ? 'Clubs synchronisés cloud — rejoignables entre appareils (bêta).'
-            : 'Bêta locale : les clubs créés ici restent sur cet appareil tant que tu n’es pas connecté au cloud.'}
+            ? 'Tes clubs sont synchronisés : tu les retrouves sur tous tes appareils.'
+            : 'Les clubs créés ici restent sur cet appareil tant que tu n’es pas connecté.'}
         </Text>
 
         <View style={{ paddingHorizontal: spacing.md }}>
-          <PrimaryButton label="Créer un groupe" onPress={openCreate} />
+          {canCreate ? (
+            <PrimaryButton label="Créer un groupe" onPress={openCreate} />
+          ) : (
+            <View style={styles.lockBox}>
+              <Text style={styles.lockTitle}>Créer un groupe</Text>
+              <Text style={styles.lockBody}>
+                Réservé aux athlètes qui ont au moins {cfg.groupMinFollowers.toLocaleString('fr-FR')} abonnés. Tu en as{' '}
+                {followers.toLocaleString('fr-FR')} — plus que {Math.max(0, cfg.groupMinFollowers - followers).toLocaleString('fr-FR')}.
+              </Text>
+              <View style={styles.lockBar}>
+                <View style={[styles.lockFill, { width: `${Math.min(100, Math.round((followers / Math.max(1, cfg.groupMinFollowers)) * 100))}%` }]} />
+              </View>
+            </View>
+          )}
         </View>
 
         <Text style={styles.section}>Mes clubs</Text>
@@ -262,6 +296,11 @@ export default function GroupsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    lockBox: { padding: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard, gap: 6, opacity: 0.95 },
+    lockTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
+    lockBody: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+    lockBar: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden', marginTop: 4 },
+    lockFill: { height: 6, borderRadius: 3, backgroundColor: colors.accent },
     root: { flex: 1, backgroundColor: 'transparent' },
     header: {
       fontSize: 22,

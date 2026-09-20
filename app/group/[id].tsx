@@ -34,14 +34,28 @@ export default function GroupDetailScreen() {
     club?.members.some((m) => m.username === me && m.role === 'owner') ||
     club?.createdByUsername === me;
 
-  const programs = resolveActivePrograms(state.profile);
-  const recentActivities = useMemo(
-    () =>
-      [...state.activities]
-        .sort((a, b) => b.startDate.localeCompare(a.startDate))
-        .slice(0, 12),
-    [state.activities],
-  );
+  // Programmes partageables : en cours ET terminés (un programme arrêté n'est pas terminé).
+  const programs = useMemo(() => {
+    const active = resolveActivePrograms(state.profile).map((p) => ({ p, status: 'En cours' }));
+    const done = (state.profile.programHistory ?? [])
+      .filter((p) => !p.abandoned)
+      .map((p) => ({ p, status: 'Terminé' }));
+    return [...active, ...done];
+  }, [state.profile]);
+  // Toutes les séances effectuées, retrouvables par nom, sport ou date.
+  const [shareQuery, setShareQuery] = useState('');
+  const [shareNote, setShareNote] = useState('');
+  const recentActivities = useMemo(() => {
+    const q = shareQuery.trim().toLowerCase();
+    return [...state.activities]
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))
+      .filter((a) => {
+        if (!q) return true;
+        const hay = `${a.name} ${a.sport ?? ''} ${a.startDate.slice(0, 10)} ${new Date(a.startDate).toLocaleDateString('fr-FR')}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .slice(0, 60);
+  }, [state.activities, shareQuery]);
 
   if (!club) {
     return (
@@ -228,14 +242,14 @@ export default function GroupDetailScreen() {
         {tab === 'partager' ? (
           <View style={styles.pad}>
             <Text style={styles.hint}>
-              Partage une séance GPS ou un programme actif avec les membres du club.
+              Partage n’importe quelle séance effectuée, ou un programme en cours ou terminé, avec un commentaire.
             </Text>
             <PrimaryButton
               label="Partager une séance"
               onPress={() => setShareOpen('activity')}
-              disabled={!isMember || recentActivities.length === 0}
+              disabled={!isMember || state.activities.length === 0}
             />
-            {recentActivities.length === 0 ? (
+            {state.activities.length === 0 ? (
               <Text style={styles.empty}>Enregistre d’abord une séance pour la partager.</Text>
             ) : null}
             <View style={{ height: spacing.sm }} />
@@ -245,7 +259,7 @@ export default function GroupDetailScreen() {
               disabled={!isMember || programs.length === 0}
             />
             {programs.length === 0 ? (
-              <Text style={styles.empty}>Aucun programme actif à partager.</Text>
+              <Text style={styles.empty}>Aucun programme à partager pour l’instant.</Text>
             ) : null}
             <View style={{ height: spacing.lg }} />
             <SecondaryButton
@@ -262,7 +276,24 @@ export default function GroupDetailScreen() {
             <Text style={styles.modalTitle}>
               {shareOpen === 'activity' ? 'Choisir une séance' : 'Choisir un programme'}
             </Text>
+            {shareOpen === 'activity' ? (
+              <AppTextInput
+                placeholder="Rechercher (nom, sport, date)…"
+                value={shareQuery}
+                onChangeText={setShareQuery}
+                style={styles.input}
+              />
+            ) : null}
+            <AppTextInput
+              placeholder="Ajouter un commentaire (facultatif)"
+              value={shareNote}
+              onChangeText={setShareNote}
+              style={styles.input}
+            />
             <AppScrollView style={{ maxHeight: 320 }}>
+              {shareOpen === 'activity' && recentActivities.length === 0 ? (
+                <Text style={styles.empty}>Aucune séance ne correspond.</Text>
+              ) : null}
               {shareOpen === 'activity'
                 ? recentActivities.map((a) => {
                     const km = a.distanceM
@@ -277,7 +308,10 @@ export default function GroupDetailScreen() {
                             type: 'SHARE_ACTIVITY_TO_CLUB',
                             clubId: club.id,
                             activityId: a.id,
+                            note: shareNote,
                           });
+                          setShareNote('');
+                          setShareQuery('');
                           setShareOpen(null);
                           setTab('fil');
                         }}
@@ -290,9 +324,9 @@ export default function GroupDetailScreen() {
                       </Pressable>
                     );
                   })
-                : programs.map((p) => (
+                : programs.map(({ p, status }) => (
                     <Pressable
-                      key={p.id}
+                      key={`${p.id}-${status}`}
                       style={styles.pickRow}
                       onPress={() => {
                         dispatch({
@@ -300,13 +334,15 @@ export default function GroupDetailScreen() {
                           clubId: club.id,
                           programId: p.id,
                           programTitle: p.title,
+                          note: shareNote,
                         });
+                        setShareNote('');
                         setShareOpen(null);
                         setTab('fil');
                       }}
                     >
                       <Text style={styles.name}>{p.title}</Text>
-                      <Text style={styles.meta}>Programme actif</Text>
+                      <Text style={styles.meta}>{status === 'Terminé' ? 'Programme terminé' : 'Programme en cours'}</Text>
                     </Pressable>
                   ))}
             </AppScrollView>

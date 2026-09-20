@@ -18,6 +18,7 @@ import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
 import type { ColorPalette } from '../src/theme/palettes';
 import { detectSportFromActivity } from '../src/engines/sportSessionAnalysis';
+import { matchActivityToPlanned } from '../src/engines/activityPlanMatch';
 import { useActionFocus } from '../src/hooks/useActionFocus';
 import { FocusTarget } from '../src/ui/FocusTarget';
 import { AppScrollView } from '../src/ui/scrolling';
@@ -44,6 +45,13 @@ export default function ImportActivityScreen() {
   const [paywall, setPaywall] = useState(false);
   const planned = todayWorkout(state.plan);
   const focusPick = useActionFocus('pick');
+  // « C'est ma séance prévue » : proposé d'office si la sortie ressemble à celle du jour, modifiable.
+  const [linkOverride, setLinkOverride] = useState<boolean | null>(null);
+  const planMatch = useMemo(
+    () => (preview ? matchActivityToPlanned({ ...preview, sport: sportOfPreview(preview, planned) }, planned) : null),
+    [preview, planned],
+  );
+  const linkToPlanned = linkOverride ?? planMatch?.matches ?? false;
 
   const ingest = useCallback(
     async (activity: ImportedActivityMetrics) => {
@@ -83,7 +91,7 @@ export default function ImportActivityScreen() {
             sport: sportStore,
           },
           plannedId:
-            planned && planned.discipline !== 'rest' ? planned.id : undefined,
+            planned && planned.discipline !== 'rest' && linkToPlanned ? planned.id : undefined,
         });
         router.replace(`/activity/${encodeURIComponent(activity.id)}` as '/activity/[id]');
       } catch {
@@ -91,11 +99,12 @@ export default function ImportActivityScreen() {
         setImporting(false);
       }
     },
-    [dispatch, importing, planned, router, state.activities, state.profile],
+    [dispatch, importing, planned, router, state.activities, state.profile, linkToPlanned],
   );
 
   const handleContent = useCallback((name: string, text: string) => {
     try {
+      setLinkOverride(null);
       const parsed = parseActivityFile(name, text);
       if (parsed.distanceM < 50 && parsed.pointCount < 5) {
         setError(
@@ -260,6 +269,23 @@ export default function ImportActivityScreen() {
           <View style={styles.preview}>
             <Text style={styles.previewTitle}>{preview.name}</Text>
             <Body style={{ marginTop: 6 }}>{formatImportedSummary(preview)}</Body>
+            {planned && planned.discipline !== 'rest' ? (
+              <Pressable
+                style={[styles.matchBox, linkToPlanned && styles.matchBoxOn]}
+                onPress={() => setLinkOverride(!linkToPlanned)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: linkToPlanned }}
+              >
+                <Text style={styles.matchTitle}>
+                  {linkToPlanned ? '✓ Comptée pour ta séance prévue' : 'Non liée à ta séance prévue'}
+                </Text>
+                <Text style={styles.matchText}>
+                  {planMatch?.matches ? 'Cette sortie ressemble à « ' + planned.title + ' ». ' : '« ' + planned.title + ' » est prévue aujourd’hui. '}
+                  {(planMatch?.reasons ?? []).join(' · ')}
+                  {linkToPlanned ? ' Touche pour ne pas la lier.' : ' Touche pour la lier à cette séance.'}
+                </Text>
+              </Pressable>
+            ) : null}
             <PrimaryButton
               label={importing ? 'Import…' : 'Confirmer l’import'}
               disabled={importing}
@@ -277,8 +303,18 @@ export default function ImportActivityScreen() {
   );
 }
 
+/** Sport de l'import (même règle que l'enregistrement de l'activité). */
+function sportOfPreview(a: ImportedActivityMetrics, planned: ReturnType<typeof todayWorkout>): 'run' | 'bike' | 'swim' | 'strength' | 'other' {
+  const d = detectSportFromActivity(a, planned ?? undefined);
+  return d === 'bike' || d === 'swim' || d === 'strength' ? d : d === 'trail' || d === 'run' || d === 'brick' ? 'run' : 'other';
+}
+
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    matchBox: { marginTop: spacing.sm, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg },
+    matchBoxOn: { borderColor: colors.accent, backgroundColor: colors.accentLight },
+    matchTitle: { fontWeight: '800', color: colors.text, fontSize: 14 },
+    matchText: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
     box: {
       marginTop: spacing.sm,
       padding: spacing.md,

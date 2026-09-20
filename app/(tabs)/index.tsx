@@ -11,6 +11,8 @@ import {
 } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { mixHex, radii, readableOn, rgba, spacing } from '../../src/theme/tokens';
+import { InstallBanner } from '../../src/ui/home/InstallBanner';
+import { TopProgramsStrip } from '../../src/ui/program/TopProgramsStrip';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Card, StatTile } from '../../src/ui/primitives';
 import { DISCIPLINE_META, supportsActivityImport } from '../../src/constants/disciplines';
@@ -514,6 +516,16 @@ export default function HomeDashboard() {
             )}
           </LinearGradient>
         </FadeInUp>
+
+        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.sm }}>
+          <InstallBanner />
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.md }}>
+          <TopProgramsStrip
+            countedTemplateIds={state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId}
+          />
+        </View>
 
         <View style={styles.metricsRow}>
           <PressableScale

@@ -16,18 +16,18 @@ export const CALISTHENICS_GOAL_OPTIONS: Array<{
   {
     id: 'endurance',
     label: 'Endurance musculaire',
-    desc: 'Beaucoup de répétitions, repos courts (30–45 s)',
+    desc: 'Beaucoup de répétitions, repos courts (30 s)',
   },
   {
     id: 'hypertrophy',
     // La prise de masse relève de la Musculation (charges additionnelles) ; ici : volume au poids du corps.
     label: 'Volume & maîtrise',
-    desc: '8–12 reps propres, repos 45–60 s — pour la prise de masse, choisis Musculation',
+    desc: '8–12 reps propres, repos ~30–45 s — pour la prise de masse, choisis Musculation',
   },
   {
     id: 'strength',
     label: 'Devenir plus fort',
-    desc: 'Progressions difficiles, 3–6 reps, repos 1 min 15 à 1 min 30',
+    desc: 'Progressions difficiles, 3–6 reps, repos 45–60 s',
   },
   {
     id: 'skill',
@@ -234,17 +234,17 @@ function baseScheme(goal: CalisthenicsGoalFocus, level: AthleticLevel): Scheme {
 
 /**
  * Repos entre séries selon le type d'exercice (physiologie du poids du corps) :
- * - tenues / gainage / isolation : 30–40 s ;
- * - poids du corps de base (pompes, squats, fentes, rowing) : 40–60 s ;
- * - mouvements intenses (tractions, dips) : 60–90 s (plus long seulement pour la force max).
- * Des repos de 1 min 45 après 8–12 pompes refroidissent le muscle et allongent la séance pour rien.
+ * - tenues / gainage / isolation : 30 s ;
+ * - poids du corps de base (pompes, squats, fentes, rowing) : 30 s (45 s en force) ;
+ * - mouvements intenses (tractions, dips) : 40–60 s.
+ * 50 s après 12 pompes ou 1 min 15 après des dips, c'est trop : le muscle refroidit et la séance s'allonge pour rien.
  */
 export function restForExercise(ex: { id: string; isometric?: boolean }, goal: CalisthenicsGoalFocus): number {
-  if (ex.isometric) return 35;
+  if (ex.isometric) return 30;
   if (ex.id === 'pullup' || ex.id === 'dip') {
-    return goal === 'strength' ? 90 : goal === 'endurance' ? 60 : 75;
+    return goal === 'endurance' ? 40 : goal === 'hypertrophy' ? 45 : 60;
   }
-  return goal === 'endurance' ? 40 : goal === 'hypertrophy' ? 50 : 60;
+  return goal === 'strength' ? 45 : goal === 'skill' ? 40 : 30;
 }
 
 function holdSecondsFor(

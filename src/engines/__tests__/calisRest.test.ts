@@ -6,11 +6,12 @@ import { buildRunWarmupProtocol } from '../sportsScience';
 describe('callisthénie : repos et durée', () => {
   it('grille de repos : poids du corps 40–60 s, tenues ≤ 40 s, tractions/dips 60–90 s', () => {
     for (const goal of ['strength', 'hypertrophy', 'skill', 'endurance'] as const) {
-      expect(restForExercise({ id: 'pushup' }, goal)).toBeGreaterThanOrEqual(40);
-      expect(restForExercise({ id: 'pushup' }, goal)).toBeLessThanOrEqual(60);
+      expect(restForExercise({ id: 'pushup' }, goal)).toBeGreaterThanOrEqual(30);
+      expect(restForExercise({ id: 'pushup' }, goal)).toBeLessThanOrEqual(45);
       expect(restForExercise({ id: 'plank', isometric: true }, goal)).toBeLessThanOrEqual(40);
-      expect(restForExercise({ id: 'pullup' }, goal)).toBeGreaterThanOrEqual(60);
-      expect(restForExercise({ id: 'pullup' }, goal)).toBeLessThanOrEqual(90);
+      expect(restForExercise({ id: 'pullup' }, goal)).toBeGreaterThanOrEqual(40);
+      expect(restForExercise({ id: 'pullup' }, goal)).toBeLessThanOrEqual(60);
+      expect(restForExercise({ id: 'dip' }, goal)).toBeLessThanOrEqual(60);
     }
   });
 

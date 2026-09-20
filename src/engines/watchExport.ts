@@ -7,15 +7,15 @@ import { buildWorkoutShareMessage } from './stravaExport';
 
 /**
  * Sports que Garmin Connect accepte en séance structurée (Training / workouts) :
- * course, vélo, natation, musculation.
- * Pas de brick multi-sport ni repos — export peu fiable / inutile.
+ * course, vélo, natation. Pas de musculation ni de callisthénie (séries / répétitions : la séance guidée
+ * de l'app est faite pour ça), pas de brick multi-sport ni de repos — export peu fiable / inutile.
  */
-export const WATCH_EXPORTABLE_DISCIPLINES: readonly SportDiscipline[] = [
-  'run',
-  'bike',
-  'swim',
-  'strength',
-];
+export const WATCH_EXPORTABLE_DISCIPLINES: readonly SportDiscipline[] = ['run', 'bike', 'swim'];
+
+/** Fichier GPX/TCX pour Strava : uniquement les sports à trace GPS. */
+export function canSendWorkoutToStrava(discipline: SportDiscipline | undefined | null): boolean {
+  return discipline === 'run' || discipline === 'bike' || discipline === 'swim';
+}
 
 export function canSendWorkoutToWatch(
   discipline: SportDiscipline | undefined | null,

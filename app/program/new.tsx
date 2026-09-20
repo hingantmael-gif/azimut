@@ -33,6 +33,7 @@ import {
 import { NewProgramLabel } from '../../src/ui/brand/NewProgramLabel';
 import { ProgramCreatedCelebration } from '../../src/ui/program/ProgramCreatedCelebration';
 import { SportArt, artKindFor } from '../../src/ui/program/SportArt';
+import { TopProgramsStrip } from '../../src/ui/program/TopProgramsStrip';
 import { WeekSilhouettePreview } from '../../src/ui/program/WeekSilhouettePreview';
 import {
   WizardDayGrid,
@@ -1131,6 +1132,7 @@ export default function NewProgramScreen() {
 
         {step === 0 && (
           <WizardStepShell resetKey="sport-0">
+            <TopProgramsStrip dark countedTemplateIds={state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId} />
             <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
               Touchez une discipline — passage automatique à l&apos;étape suivante.
             </Body>

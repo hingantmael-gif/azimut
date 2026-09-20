@@ -1,6 +1,6 @@
 /**
  * Client API Communauté — écritures serveur quand token remote ;
- * fallback local / seed si API down (bêta).
+ * fallback local / seed si API down.
  */
 import { resolveApiUrl } from '../services/apiBase';
 
@@ -8,6 +8,8 @@ export type CommunityFeedPost = {
   id: string;
   authorUsername: string;
   authorName?: string;
+  /** Athlète certifié (calculé par le serveur selon les règles en vigueur). */
+  authorVerified?: boolean;
   text: string;
   km?: number;
   insight?: string | null;
@@ -199,7 +201,7 @@ export async function communityHubSummary(token: string | null) {
 }
 
 export async function communitySearchUsers(token: string | null, q: string) {
-  return authGet<{ users?: Array<{ username: string; name: string }> }>(
+  return authGet<{ users?: Array<{ username: string; name: string; verified?: boolean }> }>(
     `/community/users/search?q=${encodeURIComponent(q)}`,
     token,
   );

@@ -11,6 +11,7 @@ import type { ActiveProgram } from '../src/types/domain';
 import { AppScrollView } from '../src/ui/scrolling';
 import { PressableScale } from '../src/ui/motion/softMotion';
 import { ProgramUsageBoard } from '../src/ui/program/ProgramUsageBoard';
+import { TopProgramsStrip } from '../src/ui/program/TopProgramsStrip';
 import { ProgramSportCover } from '../src/ui/program/SportCover';
 import { formatProgramDurationLabel } from '../src/constants/programs';
 import { NewProgramLabel } from '../src/ui/brand/NewProgramLabel';
@@ -29,6 +30,12 @@ export default function ProgramsScreen() {
 
   return (
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 48 }}>
+      <View style={{ paddingHorizontal: spacing.md }}>
+        <TopProgramsStrip
+          countedTemplateIds={state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId}
+        />
+      </View>
+
       <ProgramUsageBoard
         countedTemplateIds={
           state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId

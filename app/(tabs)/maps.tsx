@@ -59,6 +59,8 @@ export default function MapsScreen() {
         emptyLabel="Aucune séance GPS pour l’instant. Enregistre une sortie (Enregistrer) : le trajet s’affichera ici, même dans une autre ville."
       />
 
+      <PrimaryButton label="Importer une séance depuis Strava" onPress={() => router.push('/import-activity')} />
+
       <Text style={styles.section}>
         {tracked.length > 0
           ? `${tracked.length} parcours GPS`

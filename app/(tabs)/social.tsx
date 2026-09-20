@@ -38,6 +38,7 @@ import {
   loadLocalBlocks,
 } from '../../src/storage/communityBlocks';
 import { RankBadge } from '../../src/ui/ranked/RankBadge';
+import { VerifiedBadge } from '../../src/ui/brand/VerifiedBadge';
 import type { RankTier } from '../../src/types/domain';
 import { ReactionBar, type ReactionKind } from '../../src/ui/social/ReactionBar';
 import { ReportSheet } from '../../src/ui/social/ReportSheet';
@@ -184,7 +185,7 @@ export default function SocialScreen() {
       <Muted>
         {fromApi
           ? 'Fil synchronisé — touche un @pseudo pour le profil.'
-          : 'Bêta locale — likes sauvegardés sur cet appareil. Connecte-toi pour le cloud.'}
+          : 'Likes sauvegardés sur cet appareil. Connecte-toi pour les retrouver partout.'}
       </Muted>
       <View style={styles.row}>
         <Chip label="Trouver des athlètes" onPress={() => router.push('/search')} />
@@ -248,7 +249,10 @@ export default function SocialScreen() {
                         size={36}
                       />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.name}>{display}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Text style={styles.name} numberOfLines={1}>{display}</Text>
+                          {item.authorVerified ? <VerifiedBadge size={16} /> : null}
+                        </View>
                         <Text style={styles.handle}>
                           @{formatUsernameDisplay(item.authorUsername)}
                         </Text>

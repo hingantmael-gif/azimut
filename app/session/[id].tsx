@@ -37,7 +37,7 @@ import {
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
-import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
+import { canSendWorkoutToStrava, canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
 import { exportWorkoutToStrava } from '../../src/engines/stravaExport';
 import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
@@ -85,6 +85,7 @@ export default function SessionDetailScreen() {
     workout.discipline === 'ppg' ||
     /gainage/i.test(workout.title);
   const canWatchSend = canSendWorkoutToWatch(workout.discipline);
+  const canStravaSend = canSendWorkoutToStrava(workout.discipline);
   const rpeAlreadyDone = hasRpeFeedbackForSession(state.feedbacks, workout.id);
   const canMarkDone =
     !isRest && !rpeAlreadyDone && (isCalis || isShortSession);
@@ -110,7 +111,7 @@ export default function SessionDetailScreen() {
       ? 'Pas d’export pour un jour de repos.'
       : isShortSession
         ? 'Séance courte (gainage / mobilité) — pas besoin d’envoyer à la montre. Marque-la comme faite ou retire-la du plan.'
-        : 'Course, vélo, natation et musculation uniquement — cette séance ne peut pas être envoyée telle quelle.';
+        : '';
   } else if (workout.exportedToGarmin) {
     watchHint = 'Séance déjà envoyée vers ta montre — tu peux renvoyer si besoin.';
   } else {
@@ -189,6 +190,15 @@ export default function SessionDetailScreen() {
           ) : null}
         </View>
 
+        {canGuided ? (
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              label="Commencer la séance guidée"
+              onPress={() => router.push({ pathname: '/session/guided', params: { id: workout.id } })}
+            />
+          </View>
+        ) : null}
+
         {vmaHint ? (
           <Muted style={{ marginTop: spacing.sm }}>{vmaHint} · allures offline</Muted>
         ) : null}
@@ -248,22 +258,6 @@ export default function SessionDetailScreen() {
           },
         )}
 
-        {canGuided ? (
-          <View style={{ marginTop: spacing.md }}>
-            <PrimaryButton
-              label="Démarrer la séance guidée"
-              onPress={() =>
-                router.push({
-                  pathname: '/session/guided',
-                  params: { id: workout.id },
-                })
-              }
-            />
-            <Muted style={{ marginTop: 6 }}>
-              Chrono, pauses et images — à ton rythme.
-            </Muted>
-          </View>
-        ) : null}
 
         {!isRest && canStartLiveWorkout(workout.discipline) ? (
           <>
@@ -298,21 +292,23 @@ export default function SessionDetailScreen() {
             </FocusTarget>
             <Muted style={{ marginTop: 6 }}>{watchHint}</Muted>
           </>
-        ) : (
+        ) : watchHint ? (
           <Muted style={{ marginTop: spacing.md }}>{watchHint}</Muted>
-        )}
+        ) : null}
 
-        <FocusTarget active={focusStrava} style={{ marginTop: spacing.sm }}>
-          <PrimaryButton
-            label={
-              workout.exportedToStrava
-                ? 'Renvoyer / partager vers Strava'
-                : 'Envoyer vers Strava'
-            }
-            disabled={isRest}
-            onPress={() => void onStravaPress()}
-          />
-        </FocusTarget>
+        {canStravaSend ? (
+          <FocusTarget active={focusStrava} style={{ marginTop: spacing.sm }}>
+            <PrimaryButton
+              label={
+                workout.exportedToStrava
+                  ? 'Renvoyer / partager vers Strava'
+                  : 'Envoyer vers Strava'
+              }
+              disabled={isRest}
+              onPress={() => void onStravaPress()}
+            />
+          </FocusTarget>
+        ) : null}
 
         {canMarkDone && !canGuided ? (
           <View style={{ marginTop: spacing.sm }}>

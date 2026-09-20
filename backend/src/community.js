@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { readDoc, writeDoc } from './storage.js';
+import { followerCount, isVerifiedAccount, loadConfig } from './appConfig.js';
 
 const DOC = 'community';
 
@@ -101,7 +102,26 @@ function isBlocked(db, a, b) {
  * @param {import('express').Express} app
  * @param {{ authMiddleware: Function, loadUsers: Function }} deps
  */
-export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
+export function mountCommunityRoutes(app, { authMiddleware, loadUsers, isOwner = () => false }) {
+  /** Certifié ? (par pseudo) — calculé à la volée, donc un changement de seuil s'applique tout de suite. */
+  const verifiedOf = (db, cfg, users) => {
+    const byName = new Map(users.map((u) => [String(u.username || '').toLowerCase(), u]));
+    return (username) => isVerifiedAccount(db, byName.get(String(username || '').toLowerCase()), cfg);
+  };
+
+  app.get('/community/me/status', authMiddleware, (req, res) => {
+    const db = loadCommunity();
+    const cfg = loadConfig();
+    const me = loadUsers().find((u) => u.email === req.authEmail);
+    const followers = followerCount(db, me?.username);
+    res.json({
+      ok: true,
+      followers,
+      verified: isVerifiedAccount(db, me, cfg),
+      canCreateGroup: isOwner(req.authEmail) || followers >= cfg.groupMinFollowers,
+    });
+  });
+
   app.get('/community/hub-summary', authMiddleware, (req, res) => {
     const db = loadCommunity();
     const me = loadUsers().find((u) => u.email === req.authEmail);
@@ -145,6 +165,7 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
       posts = idx >= 0 ? posts.slice(idx + 1) : posts;
     }
     const page = posts.slice(0, limit);
+    const verified = verifiedOf(db, loadConfig(), loadUsers());
     const enriched = page.map((p) => {
       const likeCount = db.likes.filter((l) => l.postId === p.id).length;
       const likedByMe = db.likes.some(
@@ -165,6 +186,7 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
         reactionCounts,
         myReaction,
         commentCount,
+        authorVerified: verified(p.authorUsername),
       };
     });
     const nextCursor =
@@ -329,6 +351,8 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
       .toLowerCase()
       .trim();
     if (q.length < 1) return res.json({ ok: true, users: [] });
+    const db = loadCommunity();
+    const cfg = loadConfig();
     const users = loadUsers()
       .filter((u) => {
         const un = (u.username || '').toLowerCase();
@@ -340,6 +364,7 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
         username: u.username,
         name: `${u.firstName || ''} ${u.lastName || ''}`.trim(),
         email: undefined,
+        verified: isVerifiedAccount(db, u, cfg),
       }));
     res.json({ ok: true, users });
   });
@@ -454,6 +479,16 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers }) {
     const username = (me?.username || '').toLowerCase();
     const name = String(req.body?.name || '').trim().slice(0, 80);
     if (!name) return res.status(400).json({ error: 'Nom requis' });
+    // Créer un groupe demande un nombre minimal d'abonnés (réglé par le propriétaire, valable pour tous).
+    const required = loadConfig().groupMinFollowers;
+    const current = followerCount(db, username);
+    if (!isOwner(req.authEmail) && current < required) {
+      return res.status(403).json({
+        error: `Il faut ${required} abonnés pour créer un groupe (tu en as ${current}).`,
+        required,
+        current,
+      });
+    }
     const club = {
       id: id('club'),
       name,

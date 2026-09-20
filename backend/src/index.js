@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { mountCommunityRoutes } from './community.js';
 import { mountBillingRoutes } from './billing.js';
 import { mountContactRoutes } from './contact.js';
+import { mountConfigRoutes } from './appConfig.js';
 import { purgeUserCommunity } from './community.js';
 import { deleteDoc, flushStorage, initStorage, readDoc, storageMode, userDocName, writeDoc } from './storage.js';
 import { corsOptions, createLimiter, securityHeaders } from './security.js';
@@ -1108,7 +1109,8 @@ app.put('/sync/state', authMiddleware, (req, res) => {
   res.json({ ok: true, savedAt: snapshot.savedAt });
 });
 
-mountCommunityRoutes(app, { authMiddleware, loadUsers });
+mountConfigRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
+mountCommunityRoutes(app, { authMiddleware, loadUsers, isOwner: isOwnerPremiumEmail });
 mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
 mountContactRoutes(app, {
   authMiddleware,

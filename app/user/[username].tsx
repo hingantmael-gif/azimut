@@ -38,6 +38,8 @@ import {
 import { ProfileAvatar } from '../../src/ui/profile/ProfileAvatar';
 import { BioRichText } from '../../src/ui/profile/BioRichText';
 import { RankBadge } from '../../src/ui/ranked/RankBadge';
+import { VerifiedBadge } from '../../src/ui/brand/VerifiedBadge';
+import { communitySearchUsers } from '../../src/api/community';
 import { SoftPulse } from '../../src/ui/motion/softMotion';
 import { ReportSheet } from '../../src/ui/social/ReportSheet';
 import {
@@ -121,6 +123,17 @@ export default function UserProfileScreen() {
       cancelled = true;
     };
   }, [username]);
+
+  const [verified, setVerified] = useState(false);
+  useEffect(() => {
+    let off = false;
+    void communitySearchUsers(state.authToken, username).then((r) => {
+      if (!off) setVerified(Boolean(r?.users?.some((u) => normalizeUsername(u.username) === username && u.verified)));
+    });
+    return () => {
+      off = true;
+    };
+  }, [username, state.authToken]);
 
   const isSelf = username === normalizeUsername(state.profile.username);
 
@@ -291,7 +304,10 @@ export default function UserProfileScreen() {
               borderColor={colors.accent}
             />
           </View>
-          <Text style={styles.name}>{displayName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.name}>{displayName}</Text>
+            {verified ? <View style={{ marginTop: spacing.sm }}><VerifiedBadge size={20} /></View> : null}
+          </View>
           <Text style={styles.handle}>
             {formatUsernameDisplay(registryUser.username)}
           </Text>

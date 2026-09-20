@@ -21,6 +21,7 @@ import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { AmbientSportProvider } from '../src/theme/AmbientSport';
 import { InstalledAccountGate } from '../src/ui/auth/InstalledAccountGate';
 import { CloudSyncBootstrap } from '../src/ui/sync/CloudSyncBootstrap';
+import { RemoteConfigBootstrap } from '../src/ui/sync/RemoteConfigBootstrap';
 import { AtmosphereLayer, useHeaderColor } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
 import { SocialInboxBootstrap } from '../src/ui/notifications/SocialInboxBootstrap';
@@ -99,6 +100,7 @@ function AppShell() {
           <NotificationBootstrap />
           <InstalledAccountGate />
           <CloudSyncBootstrap />
+          <RemoteConfigBootstrap />
           <SocialInboxBootstrap />
           <PendingProgramReviewModal />
           <GlobalLevelUpHost />
@@ -180,6 +182,7 @@ function AppShell() {
             <Stack.Screen name="settings/help" options={{ title: 'Centre d\'aide' }} />
             <Stack.Screen name="settings/contact" options={{ title: 'Écrire à Mova' }} />
             <Stack.Screen name="settings/messages" options={{ title: 'Messages' }} />
+            <Stack.Screen name="settings/community-rules" options={{ title: 'Règles de la communauté' }} />
             <Stack.Screen name="settings/terms" options={{ title: 'Informations légales' }} />
             <Stack.Screen name="settings/legal/[doc]" options={{ title: 'Document légal' }} />
             <Stack.Screen name="settings/privacy-policy" options={{ title: 'Politique de confidentialité' }} />
