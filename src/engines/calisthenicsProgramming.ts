@@ -16,22 +16,23 @@ export const CALISTHENICS_GOAL_OPTIONS: Array<{
   {
     id: 'endurance',
     label: 'Endurance musculaire',
-    desc: 'Beaucoup de répétitions, repos courts (45–75 s)',
+    desc: 'Beaucoup de répétitions, repos courts (30–45 s)',
   },
   {
     id: 'hypertrophy',
-    label: 'Prendre du muscle',
-    desc: '6–12 reps, repos 90–120 s entre les séries',
+    // La prise de masse relève de la Musculation (charges additionnelles) ; ici : volume au poids du corps.
+    label: 'Volume & maîtrise',
+    desc: '8–12 reps propres, repos 45–60 s — pour la prise de masse, choisis Musculation',
   },
   {
     id: 'strength',
     label: 'Devenir plus fort',
-    desc: 'Progressions difficiles, 3–6 reps, repos 2–3 min',
+    desc: 'Progressions difficiles, 3–6 reps, repos 1 min 15 à 1 min 30',
   },
   {
     id: 'skill',
     label: 'Contrôle & gainage',
-    desc: 'Tenues, qualité du mouvement, repos jusqu’à forme propre',
+    desc: 'Tenues, qualité du mouvement, repos courts',
   },
 ];
 
@@ -231,6 +232,21 @@ function baseScheme(goal: CalisthenicsGoalFocus, level: AthleticLevel): Scheme {
   }
 }
 
+/**
+ * Repos entre séries selon le type d'exercice (physiologie du poids du corps) :
+ * - tenues / gainage / isolation : 30–40 s ;
+ * - poids du corps de base (pompes, squats, fentes, rowing) : 40–60 s ;
+ * - mouvements intenses (tractions, dips) : 60–90 s (plus long seulement pour la force max).
+ * Des repos de 1 min 45 après 8–12 pompes refroidissent le muscle et allongent la séance pour rien.
+ */
+export function restForExercise(ex: { id: string; isometric?: boolean }, goal: CalisthenicsGoalFocus): number {
+  if (ex.isometric) return 35;
+  if (ex.id === 'pullup' || ex.id === 'dip') {
+    return goal === 'strength' ? 90 : goal === 'endurance' ? 60 : 75;
+  }
+  return goal === 'endurance' ? 40 : goal === 'hypertrophy' ? 50 : 60;
+}
+
 function holdSecondsFor(
   goal: CalisthenicsGoalFocus,
   level: AthleticLevel,
@@ -265,7 +281,7 @@ function prescriptionFor(
       id: ex.id,
       sets: goal === 'skill' ? 4 : base.sets,
       holdSec: holdSecondsFor(goal, level, ex.id),
-      restSec: Math.min(90, base.restSec),
+      restSec: restForExercise(ex, goal),
     };
   }
   // Force : un peu moins de volume, plus de repos
@@ -274,14 +290,14 @@ function prescriptionFor(
       id: ex.id,
       sets: level === 'debutant' ? 3 : 4,
       repsLabel: level === 'debutant' ? '3–5' : '3–6',
-      restSec: base.restSec,
+      restSec: restForExercise(ex, goal),
     };
   }
   return {
     id: ex.id,
     sets: base.sets,
     repsLabel: base.repsLabel,
-    restSec: base.restSec,
+    restSec: restForExercise(ex, goal),
   };
 }
 
@@ -394,7 +410,7 @@ export function buildCalisthenicsSession(opts: {
     {
       id: 'wu',
       type: 'warmup',
-      label: `Échauffement ${warmupSec / 60} min — cercles d’épaules, squats légers, gainage court`,
+      label: `Échauffement · ${warmupSec / 60} min`,
       endCondition: 'duration',
       durationSec: warmupSec,
     },
@@ -411,7 +427,7 @@ export function buildCalisthenicsSession(opts: {
       return {
         id: `ex-${i}`,
         type: 'active' as const,
-        label: `${formatCalisStepTag(meta)} ${workLabel} — ${ex.displayCue}`,
+        label: `${formatCalisStepTag(meta)} ${workLabel}`,
         endCondition: 'duration' as const,
         // Durée bloc pour le résumé plan (le player guidé utilise le tag)
         durationSec: Math.min(12 * 60, Math.max(2 * 60, workSec + 20)),
@@ -420,7 +436,7 @@ export function buildCalisthenicsSession(opts: {
     {
       id: 'cd',
       type: 'cooldown',
-      label: `Retour au calme ${cooldownSec / 60} min — étirements poitrine, hanches, ischio`,
+      label: `Retour au calme · ${cooldownSec / 60} min`,
       endCondition: 'duration',
       durationSec: cooldownSec,
     },
@@ -443,11 +459,8 @@ export function buildCalisthenicsSession(opts: {
     date: opts.date,
     discipline: 'strength',
     periodization: opts.block,
-    plannedDurationSec: Math.min(
-      70 * 60,
-      Math.max(25 * 60, estimateDurationSec(steps) + warmupSec),
-    ),
-    coachNote: `Séries droites (pas de circuit). Repos entre séries ~${sampleRest}s. Les tenues (planche, hollow…) sont chronométrées ; les pompes/tractions se valident avec Suivant.`,
+    plannedDurationSec: Math.min(50 * 60, Math.max(20 * 60, estimateDurationSec(steps))),
+    coachNote: `Séries droites, repos courts (~${sampleRest} s). Tenues chronométrées ; pompes et tractions : touche Suivant.`,
     steps,
   };
 }
