@@ -8,6 +8,7 @@ import { BRAND } from '../../src/constants/brand';
 import { useApp } from '../../src/store/AppContext';
 import { spacing } from '../../src/theme/tokens';
 import { useI18n } from '../../src/i18n/I18nContext';
+import { WizardBackdrop } from '../../src/ui/program/WizardBackdrop';
 
 /** Accueil Mova — entrée simple ; CGU à l’inscription. */
 export default function WelcomeScreen() {
@@ -31,11 +32,8 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
+      <WizardBackdrop sport="run" />
       <View style={styles.hero}>
-        <View style={styles.wash} />
-        <View style={styles.orbitA} />
-        <View style={styles.orbitB} />
-        <View style={styles.orbitC} />
         <View style={styles.heroContent}>
           <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
           <BrandMark size="lg" ink surfaceColor={BRAND.ink} />
@@ -73,7 +71,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     minHeight: 440,
     overflow: 'hidden',
-    backgroundColor: BRAND.ink,
   },
   wash: {
     ...StyleSheet.absoluteFill,
@@ -132,11 +129,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    backgroundColor: '#F3F7F5',
     gap: spacing.sm,
   },
   legal: {
-    color: '#0E8F6F',
+    color: '#3DFF9A',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',

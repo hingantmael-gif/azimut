@@ -1,21 +1,40 @@
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, type TextInputProps, type ViewProps } from 'react-native';
 import { Text } from '../Text';
-import { colors, radii, spacing, typography } from '../../theme/tokens';
+import { radii, spacing, typography } from '../../theme/tokens';
+import { LinearGradient } from 'expo-linear-gradient';
+import { WizardBackdrop } from '../program/WizardBackdrop';
 import { AppScrollView } from '../scrolling';
 import { AppTextInput } from '../AppTextInput';
 import { PressableScale } from '../motion/softMotion';
 
+/** Palette des écrans d'authentification : toujours sombre (identité Mova), lisible partout. */
+const A = {
+  bg: '#050B16',
+  text: '#FFFFFF',
+  textSecondary: 'rgba(255,255,255,0.74)',
+  textMuted: 'rgba(255,255,255,0.5)',
+  border: 'rgba(255,255,255,0.18)',
+  borderStrong: 'rgba(255,255,255,0.28)',
+  glass: 'rgba(255,255,255,0.08)',
+  accent: '#3DFF9A',
+  onAccent: '#04140D',
+  gradient: ['#12B87A', '#22D3EE'] as const,
+};
+
 export function AuthScreen({ children, style, ...props }: ViewProps) {
   return (
-    <AppScrollView
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[styles.scroll, style]}
-      style={styles.root}
-      {...props}
-    >
-      {children}
-    </AppScrollView>
+    <View style={styles.shell}>
+      <WizardBackdrop sport="run" />
+      <AppScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.scroll, style]}
+        style={styles.root}
+        {...props}
+      >
+        {children}
+      </AppScrollView>
+    </View>
   );
 }
 
@@ -50,7 +69,8 @@ export function StravaInput({
     <View style={styles.field}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <AppTextInput
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={A.textMuted}
+        selectionColor={A.accent}
         style={styles.input}
         {...props}
       />
@@ -83,14 +103,15 @@ export function OrangeButton({
       ]}
       contentStyle={styles.orangeBtnContent}
     >
-      <Text
-        style={[
-          styles.orangeBtnText,
-          variant === 'outline' && styles.orangeBtnTextOutline,
-        ]}
-      >
-        {plain}
-      </Text>
+      {variant === 'outline' ? (
+        <View style={styles.btnInner}>
+          <Text style={[styles.orangeBtnText, styles.orangeBtnTextOutline]}>{plain}</Text>
+        </View>
+      ) : (
+        <LinearGradient colors={A.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.btnInner}>
+          <Text style={styles.orangeBtnText}>{plain}</Text>
+        </LinearGradient>
+      )}
     </PressableScale>
   );
 }
@@ -151,7 +172,8 @@ export function TermsCheckbox({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  shell: { flex: 1, backgroundColor: A.bg },
+  root: { flex: 1, backgroundColor: 'transparent' },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
@@ -159,15 +181,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   title: {
-    ...typography.hero,
-    color: colors.text,
+    ...typography.display,
+    color: A.text,
     marginTop: spacing.md,
     writingDirection: 'ltr',
     textAlign: 'left',
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: A.textSecondary,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
@@ -177,42 +199,44 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
     gap: spacing.md,
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { color: colors.textMuted, fontSize: 14 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: A.border },
+  dividerText: { color: A.textMuted, fontSize: 14 },
   field: { marginBottom: spacing.md },
   label: {
-    color: colors.textSecondary,
+    color: A.textSecondary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 6,
+    letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderColor: A.borderStrong,
+    borderRadius: radii.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
     fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.bgCard,
+    color: A.text,
+    backgroundColor: A.glass,
     ...(Platform.OS === 'web' ? ({ cursor: 'text' } as object) : null),
   },
   orangeBtn: {
     marginTop: spacing.md,
-    backgroundColor: colors.accent,
-    paddingVertical: 16,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
   },
-  orangeBtnContent: {
+  orangeBtnContent: { width: '100%' },
+  btnInner: {
+    minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    paddingHorizontal: spacing.lg,
   },
   orangeBtnOutline: {
-    backgroundColor: 'transparent',
+    backgroundColor: A.glass,
     borderWidth: 1.5,
-    borderColor: colors.accent,
+    borderColor: A.borderStrong,
   },
   orangeBtnDisabled: {
     opacity: 0.45,
@@ -220,20 +244,18 @@ const styles = StyleSheet.create({
   },
   orangeBtnText: {
     ...typography.button,
-    color: colors.white,
+    color: A.onAccent,
     textAlign: 'center',
     writingDirection: 'ltr',
   },
-  orangeBtnTextOutline: {
-    color: colors.accent,
-  },
+  orangeBtnTextOutline: { color: A.text },
   textLinkWrap: { alignItems: 'center', paddingVertical: spacing.md },
   textLink: {
-    color: colors.textSecondary,
+    color: A.textSecondary,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  textLinkAccent: { color: colors.accent },
+  textLinkAccent: { color: A.accent },
   termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -243,26 +265,26 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.borderStrong,
+    borderColor: A.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   checkboxOn: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: A.accent,
+    borderColor: A.accent,
   },
-  checkmark: { color: colors.white, fontSize: 14, fontWeight: '700' },
+  checkmark: { color: A.onAccent, fontSize: 14, fontWeight: '800' },
   termsText: {
     flex: 1,
-    color: colors.textSecondary,
+    color: A.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
   termsLink: {
-    color: colors.accent,
+    color: A.accent,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },

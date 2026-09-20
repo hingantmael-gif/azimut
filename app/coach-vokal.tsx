@@ -18,7 +18,7 @@ export default function CoachVokalScreen() {
   useEffect(() => {
     // Pas d’entrée produit : on renvoie vers l’entraînement
     const t = setTimeout(() => {
-      router.replace('/(tabs)/training');
+      router.replace('/(tabs)');
     }, 2500);
     return () => clearTimeout(t);
   }, [router]);
@@ -40,7 +40,7 @@ export default function CoachVokalScreen() {
       </ComingSoonLock>
       <PrimaryButton
         label="Retour à l’entraînement"
-        onPress={() => router.replace('/(tabs)/training')}
+        onPress={() => router.replace('/(tabs)')}
       />
     </Screen>
   );

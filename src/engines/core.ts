@@ -18,6 +18,7 @@ import type {
 import { generateCoachedWeek } from './coachingEngine';
 import { computeTrimp, trimpToBanisterLoad } from './sportsScience';
 import { banisterStep } from './banisterPlus';
+import { formatMinutes } from '../utils/formatMinutes';
 
 /** CDC §2.A — Score de conformité 0–100 */
 export function computeCompliance(
@@ -576,12 +577,5 @@ export function formatDuration(sec: number): string {
   return formatMinutes(Math.max(1, Math.round(sec / 60)));
 }
 
-/** Durée lisible à partir de minutes entières. */
-export function formatMinutes(totalMin: number): string {
-  if (!Number.isFinite(totalMin) || totalMin <= 0) return '—';
-  const min = Math.round(totalMin);
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m > 0 ? `${h} h ${m} min` : `${h} h`;
-}
+/** Durée lisible à partir de minutes entières (définie dans utils : évite un cycle avec garminWorkout). */
+export { formatMinutes } from '../utils/formatMinutes';

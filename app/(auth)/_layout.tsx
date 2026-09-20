@@ -1,7 +1,8 @@
 import { View } from 'react-native';
 import { Text } from '../../src/ui/Text';
 import { Stack } from 'expo-router';
-import { colors } from '../../src/theme/tokens';
+// Écrans d'authentification : toujours sombres (identité Mova).
+const colors = { text: '#FFFFFF', bg: '#050B16' };
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
 import { AUTH_LABELS, AUTH_PLAIN } from '../../src/constants/authLabels';
 

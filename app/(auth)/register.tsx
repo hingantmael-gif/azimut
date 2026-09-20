@@ -373,7 +373,7 @@ export default function RegisterScreen() {
   if (step === 'country') {
     return (
       <AuthScreen>
-        <BrandMark size="md" surfaceColor={themeColors.bg} />
+        <BrandMark size="md" ink surfaceColor="#050B16" />
         <AuthTitle>{t('auth.countryTitle')}</AuthTitle>
         <AuthSubtitle>{t('auth.countrySubtitle')}</AuthSubtitle>
         <CountryPicker
@@ -384,7 +384,7 @@ export default function RegisterScreen() {
             setError('');
           }}
         />
-        <Text style={{ color: themeColors.textMuted, fontSize: 12, marginTop: 4 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 4 }}>
           {t('auth.countryLockedHint')}
         </Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -411,7 +411,7 @@ export default function RegisterScreen() {
   if (step === 'options') {
     return (
       <AuthScreen>
-        <BrandMark size="md" surfaceColor={themeColors.bg} />
+        <BrandMark size="md" ink surfaceColor="#050B16" />
         <AuthTitle>{t('welcome.signup')}</AuthTitle>
         <AuthSubtitle>{t('auth.orEmail').replace(/^ou |^or |^o |^oder |^oppure /i, '')}</AuthSubtitle>
 
@@ -567,15 +567,15 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  error: { color: colors.danger, marginTop: 8, fontSize: 14 },
+  error: { color: '#FB7185', marginTop: 8, fontSize: 14, fontWeight: '600' },
   rulesBox: {
-    backgroundColor: colors.accentLight,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: radii.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
     gap: 6,
   },
   ruleLine: { fontSize: 13, fontWeight: '600' },
-  ruleOk: { color: colors.success },
-  rulePending: { color: colors.textMuted },
+  ruleOk: { color: '#3DFF9A' },
+  rulePending: { color: 'rgba(255,255,255,0.6)' },
 });

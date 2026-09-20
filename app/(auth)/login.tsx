@@ -257,7 +257,7 @@ export default function LoginScreen() {
 
   return (
     <AuthScreen>
-      <BrandMark size="md" surfaceColor={themeColors.bg} />
+      <BrandMark size="md" ink surfaceColor="#050B16" />
       <AuthTitle>{t('auth.signInTitle')}</AuthTitle>
       <AuthSubtitle>{t('auth.signInSubtitle')}</AuthSubtitle>
 
@@ -308,5 +308,5 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  error: { color: colors.danger, marginTop: 8, fontSize: 14 },
+  error: { color: '#FB7185', marginTop: 8, fontSize: 14, fontWeight: '600' },
 });

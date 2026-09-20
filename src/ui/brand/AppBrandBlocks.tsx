@@ -64,7 +64,7 @@ export function AuthFlowMark() {
   const { colors } = useThemeColors();
   return (
     <View style={styles.authMark}>
-      <AzimutMark size={36} surfaceColor={colors.bg} />
+      <AzimutMark size={36} surfaceColor="#050B16" />
     </View>
   );
 }

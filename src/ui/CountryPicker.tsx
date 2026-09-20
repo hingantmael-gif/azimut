@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import { AppTextInput } from './AppTextInput';
 import { AppScrollView } from './scrolling';
-import { useThemeColors } from '../theme/ThemeContext';
 import { radii, spacing } from '../theme/tokens';
 import { filterCountries, localeLabel, type CountryEntry } from '../i18n/locales';
 import { useI18n } from '../i18n/I18nContext';
@@ -15,7 +14,15 @@ export function CountryPicker({
   selectedId?: string | null;
   onSelect: (country: CountryEntry) => void;
 }) {
-  const { colors } = useThemeColors();
+  // Affiché uniquement dans l'inscription (fond sombre Mova).
+  const colors = {
+    bg: 'rgba(255,255,255,0.08)',
+    border: 'rgba(255,255,255,0.22)',
+    surface: 'rgba(255,255,255,0.07)',
+    text: '#FFFFFF',
+    textMuted: 'rgba(255,255,255,0.55)',
+    accent: '#3DFF9A',
+  };
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const list = useMemo(() => filterCountries(query), [query]);

@@ -1,6 +1,6 @@
 import type { PlannedWorkout, WorkoutStep, WorkoutStepType } from '../types/domain';
 
-import { formatMinutes } from './core';
+import { formatMinutes } from '../utils/formatMinutes';
 
 
 
