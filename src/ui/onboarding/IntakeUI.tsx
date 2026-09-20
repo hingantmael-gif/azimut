@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Image,
   Platform,
@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { Text } from '../Text';
 import { AppTextInput } from '../AppTextInput';
+import { searchCities, type CitySuggestion } from '../../services/geoCities';
 import { formatRaceClockInput } from '../../utils/dateInput';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../../constants/brand';
 import { COVER_CROP_CENTER, coverCropImageStyle } from '../../constants/sportVisuals';
@@ -19,7 +21,7 @@ import { formatDuration, formatPace } from '../../engines/core';
 import { resolvePaceZones } from '../../engines/paceZones';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
-import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
+import { PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
 import { PressableScale } from '../motion/softMotion';
 
 /** Barre de progression Mova (segments jade). */
@@ -197,6 +199,83 @@ export function IntakeField({
   );
 }
 
+/**
+ * Champ ville avec suggestions : dès la première lettre, jusqu'à 5 villes du pays (détecté par l'adresse IP)
+ * dont le nom commence par ce qui est tapé — moins s'il y en a moins. Choisir une ligne remplit le champ.
+ */
+export function IntakeCityField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+}) {
+  const { colors } = useThemeColors();
+  const [items, setItems] = useState<CitySuggestion[]>([]);
+  const picked = useRef<string | null>(null);
+
+  useEffect(() => {
+    const q = value.trim();
+    if (!q || picked.current === value) {
+      setItems([]);
+      return;
+    }
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      searchCities(q, ctrl?.signal)
+        .then((r) => setItems(r))
+        .catch(() => setItems([]));
+    }, 220);
+    return () => {
+      clearTimeout(timer);
+      ctrl?.abort();
+    };
+  }, [value]);
+
+  return (
+    <View>
+      <IntakeField
+        label={label}
+        value={value}
+        onChangeText={(t) => {
+          picked.current = null;
+          onChangeText(t);
+        }}
+        placeholder={placeholder}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
+      {items.length > 0 ? (
+        <View style={[styles.cityList, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+          {items.map((c, i) => (
+            <Pressable
+              key={c.key}
+              onPress={() => {
+                picked.current = c.label;
+                onChangeText(c.label);
+                setItems([]);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={c.label}
+              style={[styles.cityRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+            >
+              <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+              <Text style={{ color: colors.text, fontSize: 15, flex: 1 }} numberOfLines={1}>
+                {c.name}
+                {c.region ? <Text style={{ color: colors.textMuted }}>{` · ${c.region}`}</Text> : null}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export function IntakeGenderRow({
   value,
   onChange,
@@ -236,14 +315,13 @@ export function RelayHero({
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.relayRoot}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Image
-          source={ONBOARDING_IMAGES.heroRelay}
-          style={[StyleSheet.absoluteFill, coverCropImageStyle(COVER_CROP_CENTER)]}
-          resizeMode="cover"
-          accessibilityIgnoresInvertColors
-        />
-      </View>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[BRAND.ink, '#0B2A2A', '#0E3B33']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.relayScrim} pointerEvents="none" />
       {onBack ? (
         <Pressable
@@ -523,6 +601,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
   fieldInput: { fontSize: 16, paddingVertical: 6 },
+  cityList: { marginTop: 4, borderWidth: 1, borderRadius: radii.lg, overflow: 'hidden' },
+  cityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 12 },
   genderRow: { flexDirection: 'row', marginTop: spacing.sm },
   relayRoot: { flex: 1, minHeight: 560, justifyContent: 'flex-end', backgroundColor: BRAND.ink },
   relayScrim: {

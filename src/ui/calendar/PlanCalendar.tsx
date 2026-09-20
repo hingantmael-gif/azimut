@@ -154,9 +154,10 @@ export function PlanCalendar({
                 isMoveTarget && styles.cellMoveTarget,
                 isMoveSource && styles.cellSelectedSource,
               ]}
+              contentStyle={styles.cellContent}
               onPress={() => onDayPress(cell.date!)}
             >
-              <SoftPulse intensity={pulseIntensity}>
+              <SoftPulse intensity={pulseIntensity} style={styles.cellContent}>
                 <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{cell.day}</Text>
                 <View style={styles.dots}>
                   {sessions.slice(0, 4).map((s) => (
@@ -239,6 +240,9 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 4,
       borderRadius: radii.sm,
     },
+    // Le contenu de PressableScale est pleine largeur : sans centrage, les chiffres se collent à gauche
+    // pendant que les initiales (Lun, Mar…) sont centrées — d'où le décalage.
+    cellContent: { alignItems: 'center', justifyContent: 'center' },
     cellToday: {
       backgroundColor: colors.accentLight,
     },

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { mountCommunityRoutes } from './community.js';
 import { mountBillingRoutes } from './billing.js';
+import { mountContactRoutes } from './contact.js';
 import { purgeUserCommunity } from './community.js';
 import { deleteDoc, flushStorage, initStorage, readDoc, storageMode, userDocName, writeDoc } from './storage.js';
 import { corsOptions, createLimiter, securityHeaders } from './security.js';
@@ -1109,6 +1110,15 @@ app.put('/sync/state', authMiddleware, (req, res) => {
 
 mountCommunityRoutes(app, { authMiddleware, loadUsers });
 mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
+mountContactRoutes(app, {
+  authMiddleware,
+  verifyAuthToken,
+  authSecret,
+  loadUsers,
+  normalizeEmail,
+  isValidEmail,
+  isOwner: isOwnerPremiumEmail,
+});
 
 const port = Number(process.env.PORT || 8787);
 authSecret(); // échoue tout de suite en production si le secret manque

@@ -33,6 +33,7 @@ import {
 } from '../../src/engines/ownerAccess';
 import { isGiftedPremiumEmail } from '../../src/storage/ownerPremiumGifts';
 import { useI18n } from '../../src/i18n/I18nContext';
+import { apiRemoteOnboardingDone } from '../../src/services/cloudApi';
 
 export default function LoginScreen() {
   const { state, dispatch } = useApp();
@@ -56,7 +57,8 @@ export default function LoginScreen() {
   ) => {
     const done =
       !isNewAccount &&
-      (await hasCompletedOnboarding(payload.email, payload.username));
+      ((await hasCompletedOnboarding(payload.email, payload.username)) ||
+        (await apiRemoteOnboardingDone(payload.token)));
     if (!done) {
       await clearOnboardingCompleted(payload.email, payload.username);
     } else {
@@ -162,11 +164,9 @@ export default function LoginScreen() {
           return;
         }
         await clearSession();
-        const done = await hasCompletedOnboarding(
-          res.user.email,
-          res.user.username,
-          id,
-        );
+        const done =
+          (await hasCompletedOnboarding(res.user.email, res.user.username, id)) ||
+          (await apiRemoteOnboardingDone(res.token));
         if (done) {
           await markOnboardingCompleted(res.user.email, res.user.username, id);
         }

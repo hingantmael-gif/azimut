@@ -548,6 +548,19 @@ export function getProgramsForRunIntent(
   }
 }
 
+/**
+ * Ordre naturel d'une liste de programmes : distance croissante (5 km → 10 km → semi → marathon…),
+ * les programmes sans distance (VMA & vitesse…) à la fin. Même ordre dans l'inscription et dans « Nouveau programme ».
+ */
+export function sortProgramsNatural(list: TrainingProgramTemplate[]): TrainingProgramTemplate[] {
+  return [...list].sort((a, b) => {
+    const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
+    const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    return a.title.localeCompare(b.title, 'fr');
+  });
+}
+
 export function searchPrograms(
   query: string,
   sport?: ProgramSportCategory,

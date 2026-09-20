@@ -2,7 +2,9 @@
  * Identité juridique de l'éditeur — UNE seule source pour les Mentions légales, la politique de
  * confidentialité et les CGU. À tenir à jour (obligatoire dès que l'app devient payante/professionnelle).
  */
-export const LEGAL_CONTACT_EMAIL = 'support@endurance-coach.app';
+/** Aucune adresse e-mail publique : le contact passe par le formulaire intégré à l'application. */
+export const LEGAL_CONTACT_CHANNEL = 'le formulaire « Écrire à Mova » de l’application (Paramètres → Aide)';
+export const LEGAL_CONTACT_SHORT = 'Formulaire « Écrire à Mova » (Paramètres → Aide)';
 
 export const PUBLISHER = {
   name: 'Mova',

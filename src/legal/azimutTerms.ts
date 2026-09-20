@@ -462,8 +462,8 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'Pour toute question sur ces Conditions, l’exercice de tes droits ou le ' +
-          'support : utilise Aide / Compte dans l’application, ou écris à ' +
-          'support@endurance-coach.app. Mentions complémentaires éventuelles : page ' +
+          'support : utilise le formulaire « Écrire à Mova » (Paramètres → Aide). ' +
+          'Mentions complémentaires éventuelles : page ' +
           '« À propos » du site.',
       },
     ],

@@ -7,7 +7,6 @@ import {
   SettingsScreen,
   SettingsSection,
 } from '../../src/ui/settings/SettingsList';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../src/constants/support';
 import { AboutBrandMark } from '../../src/ui/brand/AppBrandBlocks';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { useThemeColors } from '../../src/theme/ThemeContext';
@@ -164,9 +163,8 @@ export default function HelpScreen() {
 
         <SettingsSection title="Support">
           <SettingsRow
-            label="Contacter le support"
-            value={SUPPORT_EMAIL}
-            onPress={() => Linking.openURL(SUPPORT_MAILTO)}
+            label="Écrire à Mova"
+            onPress={() => router.push('/settings/contact')}
           />
           <SettingsRow
             label="Conditions d'utilisation"

@@ -50,6 +50,7 @@ import {
 } from '../../src/ui/onboarding/campusIntakeConfig';
 import {
   IntakeChoiceCard,
+  IntakeCityField,
   IntakeField,
   IntakeGenderRow,
   IntakeHeader,
@@ -70,7 +71,8 @@ import { StrengthEquipmentPicker } from '../../src/ui/onboarding/StrengthSetupFi
 import { Body, Chip, Muted, PrimaryButton, Screen } from '../../src/ui/primitives';
 import { WizardDayGrid } from '../../src/ui/program/WizardPickers';
 import { AppScrollView } from '../../src/ui/scrolling';
-import { SportCover } from '../../src/ui/program/SportCover';
+import { sortProgramsNatural } from '../../src/constants/programs';
+import { SportArt, artKindFor } from '../../src/ui/program/SportArt';
 import { PressableScale } from '../../src/ui/motion/softMotion';
 import {
   COVER_CROP_CENTER,
@@ -141,6 +143,7 @@ export default function OnboardingScreen() {
   const [volumeBand, setVolumeBand] = useState<UsualVolumeBand | null>(null);
   const [sessionsTarget, setSessionsTarget] = useState<WeeklySessionsTarget | null>(null);
   const [refDuration, setRefDuration] = useState('');
+  const [openWatchAfter, setOpenWatchAfter] = useState(false);
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [programWeeks, setProgramWeeks] = useState<number | null>(null);
 
@@ -156,28 +159,47 @@ export default function OnboardingScreen() {
   const weeklySwimM = Number(weeklySwimInput.replace(',', '.')) || 0;
   const derivedLevel = weeklyKm > 0 ? levelFromWeeklyKm(weeklyKm) : level;
 
-  const programCatalog = useMemo(() => {
-    if ((sport ?? 'run') === 'run' && runIntent) {
-      return getProgramsForRunIntent(runIntent);
-    }
-    if (sport && sportGoalId) {
-      return getProgramsForSportGoal(sport, sportGoalId);
-    }
-    return getProgramsForSport(sport ?? 'run');
-  }, [sport, runIntent, sportGoalId]);
+  // Même liste, même ordre que « Nouveau programme » (distance croissante) + option sur mesure.
+  const programCatalog = useMemo(() => sortProgramsNatural(getProgramsForSport(sport ?? 'run')), [sport]);
+  const [customDistance, setCustomDistance] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const customKm = (() => {
+    const n = Number(customDistance.replace(',', '.'));
+    return n > 0 ? n : undefined;
+  })();
+  const isCustomProgram = selectedProgramId === 'custom';
 
-  const selectedProgram: TrainingProgramTemplate | undefined = selectedProgramId
-    ? findProgramById(selectedProgramId)
-    : undefined;
+  const selectedProgram: TrainingProgramTemplate | undefined =
+    selectedProgramId && selectedProgramId !== 'custom' ? findProgramById(selectedProgramId) : undefined;
 
   const weekOptions = useMemo(() => {
+    if (isCustomProgram && customKm) {
+      return weekPresetOptions(
+        getDurationGuide({ distanceKm: customKm, sportFamily: sport === 'bike' ? 'bike' : undefined }),
+        derivedLevel,
+      );
+    }
     if (!selectedProgram) return [];
     const guide = getDurationGuide({
       goal: selectedProgram.goal,
       distanceKm: selectedProgram.distanceKm,
     });
     return weekPresetOptions(guide, derivedLevel);
-  }, [selectedProgram, derivedLevel]);
+  }, [selectedProgram, derivedLevel, isCustomProgram, customKm, sport]);
+
+  const pickCustomProgram = () => {
+    setSelectedProgramId('custom');
+    setProgramWeeks(null);
+  };
+  const confirmCustomProgram = () => {
+    if (!customKm) return;
+    const presets = weekPresetOptions(
+      getDurationGuide({ distanceKm: customKm, sportFamily: sport === 'bike' ? 'bike' : undefined }),
+      derivedLevel,
+    );
+    setProgramWeeks(presets[Math.floor(presets.length / 2)] ?? 8);
+    setStepIndex((i) => i + 1);
+  };
 
   const selectProgram = (tpl: TrainingProgramTemplate) => {
     setSelectedProgramId(tpl.id);
@@ -208,20 +230,17 @@ export default function OnboardingScreen() {
   const stepCount = steps.length;
 
   useEffect(() => {
-    if (currentStepId !== 'program_pick') return;
-    if (selectedProgramId && programCatalog.some((p) => p.id === selectedProgramId)) {
-      return;
-    }
-    const first = programCatalog[0];
-    if (first) selectProgram(first);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- préselection unique à l’entrée
-  }, [currentStepId, programCatalog, selectedProgramId]);
-
-  useEffect(() => {
     if (stepIndex >= steps.length) {
       setStepIndex(Math.max(0, steps.length - 1));
     }
   }, [steps.length, stepIndex]);
+
+  // La séance longue tombe TOUJOURS sur un jour d'entraînement retenu (sinon le plan n'aurait pas de séance longue).
+  useEffect(() => {
+    if (trainingDays.length > 0 && !trainingDays.includes(longRunDay)) {
+      setLongRunDay(trainingDays[trainingDays.length - 1]!);
+    }
+  }, [trainingDays, longRunDay]);
 
   const toggleDay = (d: number) => {
     setTrainingDays((prev) =>
@@ -365,7 +384,7 @@ export default function OnboardingScreen() {
       weeklyKmAvg:
         weeklyKm > 0 && resolvedSport !== 'swim' ? weeklyKm : undefined,
       weeklySwimMeters: weeklySwimM > 0 ? Math.round(weeklySwimM) : undefined,
-      targetDistanceKm: selectedProgram?.distanceKm,
+      targetDistanceKm: selectedProgram?.distanceKm ?? (isCustomProgram ? customKm : undefined),
       vmaKmh: vma ? Number(vma) : undefined,
       fcMax: fcMax ? Number(fcMax) : undefined,
       recentDistanceKm: refSec ? 5 : undefined,
@@ -405,6 +424,8 @@ export default function OnboardingScreen() {
           : 20;
       const input: ProgramBuildInput = {
         templateId: selectedProgramId,
+        customDistanceKm: isCustomProgram ? customKm : undefined,
+        customTitle: isCustomProgram ? customTitle.trim() || undefined : undefined,
         customWeeks: programWeeks,
         trainingDays,
         longRunDay,
@@ -424,10 +445,12 @@ export default function OnboardingScreen() {
       };
       dispatch({ type: 'CREATE_PROGRAM', input });
       router.replace('/(tabs)/calendar');
+      if (openWatchAfter) setTimeout(() => router.push('/settings/watch'), 300);
       return;
     }
 
     router.replace('/(tabs)');
+    if (openWatchAfter) setTimeout(() => router.push('/settings/watch'), 300);
   };
 
   const campusCanContinue = (): boolean => {
@@ -463,7 +486,7 @@ export default function OnboardingScreen() {
       case 'plan_preview':
         return true;
       case 'program_pick':
-        return Boolean(selectedProgramId);
+        return isCustomProgram ? Boolean(customKm) : Boolean(selectedProgramId);
       case 'program_weeks':
         return Boolean(programWeeks && programWeeks > 0);
       default:
@@ -554,7 +577,7 @@ export default function OnboardingScreen() {
     currentStepId === 'injury' ||
     currentStepId === 'usual_volume' ||
     currentStepId === 'weekly_rhythm' ||
-    currentStepId === 'program_pick' ||
+    (currentStepId === 'program_pick' && !isCustomProgram) ||
     currentStepId === 'program_weeks';
 
   const showContinueFooter =
@@ -605,11 +628,11 @@ export default function OnboardingScreen() {
               keyboardType="number-pad"
               maxLength={10}
             />
-            <IntakeField
+            <IntakeCityField
               label={IDENTITY_COPY.city}
               value={city}
               onChangeText={setCity}
-              placeholder="Sprint-sur-Mer, France"
+              placeholder="Ta ville — dès la 1re lettre"
             />
           </>
         )}
@@ -624,12 +647,12 @@ export default function OnboardingScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={cat.label}
               >
-                <SportCover
-                  source={SPORT_HERO_IMAGES[cat.id]}
-                  minHeight={168}
+                <SportArt
+                  kind={artKindFor(cat.id)}
+                  seed={cat.id.length}
+                  minHeight={120}
                   borderRadius={radii.lg}
-                  objectPosition={COVER_CROP_CENTER}
-                  scrim="rgba(7, 17, 31, 0.22)"
+                  animated={false}
                   style={styles.sportHero}
                   contentStyle={styles.sportHeroContent}
                 >
@@ -638,7 +661,7 @@ export default function OnboardingScreen() {
                     <Text style={styles.sportHeroDesc}>{cat.desc}</Text>
                   </View>
                   <Text style={styles.sportHeroChevron}>›</Text>
-                </SportCover>
+                </SportArt>
               </PressableScale>
             ))}
           </>
@@ -650,7 +673,6 @@ export default function OnboardingScreen() {
               key={opt.id}
               title={opt.title}
               subtitle={opt.subtitle}
-              image={opt.image}
               selected={runIntent === opt.id}
               onPress={() => selectRunIntent(opt.id)}
             />
@@ -661,7 +683,6 @@ export default function OnboardingScreen() {
             <IntakeChoiceCard
               key={opt.id}
               title={opt.label}
-              image={opt.image}
               selected={terrain === opt.id}
               onPress={() => pickAndAdvance(() => setTerrain(opt.id))}
             />
@@ -760,6 +781,7 @@ export default function OnboardingScreen() {
             <View style={styles.daysRow}>
               <WizardDayGrid
                 selected={[longRunDay]}
+                enabledDays={trainingDays}
                 mode="long"
                 accent="#F59E0B"
                 tone="surface"
@@ -847,12 +869,12 @@ export default function OnboardingScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={tpl.title}
               >
-                <SportCover
-                  source={imageForProgram(tpl.sportCategory, tpl.id)}
-                  minHeight={128}
+                <SportArt
+                  kind={artKindFor(tpl.sportCategory)}
+                  seed={tpl.id.length * 7 + tpl.id.charCodeAt(tpl.id.length - 1)}
+                  minHeight={112}
                   borderRadius={radii.lg}
-                  objectPosition={programImageFocus(tpl.id)}
-                  scrim="rgba(7,17,31,0.28)"
+                  animated={false}
                   style={styles.sportHero}
                   contentStyle={styles.sportHeroContent}
                 >
@@ -861,9 +883,38 @@ export default function OnboardingScreen() {
                     <Text style={styles.sportHeroDesc}>{tpl.subtitle}</Text>
                   </View>
                   <Text style={styles.sportHeroChevron}>›</Text>
-                </SportCover>
+                </SportArt>
               </PressableScale>
             ))}
+            {sport !== 'strength' && sport !== 'other' ? (
+              <>
+                <PressableScale variant="nav" onPress={pickCustomProgram} accessibilityRole="button" accessibilityLabel="Distance sur mesure">
+                  <View style={[styles.customCard, isCustomProgram && styles.customCardOn]}>
+                    <Text style={styles.sportHeroLabel}>Distance sur mesure</Text>
+                    <Text style={styles.sportHeroDesc}>Ton propre objectif, à la distance que tu veux</Text>
+                  </View>
+                </PressableScale>
+                {isCustomProgram ? (
+                  <>
+                    <AppTextInput
+                      style={styles.input}
+                      placeholder={sport === 'swim' ? 'Distance en km (ex. 0,8)' : 'Distance en km (ex. 17)'}
+                      placeholderTextColor={colors.textMuted}
+                      keyboardType="decimal-pad"
+                      value={customDistance}
+                      onChangeText={setCustomDistance}
+                    />
+                    <AppTextInput
+                      style={styles.input}
+                      placeholder="Nom de l’objectif (facultatif)"
+                      placeholderTextColor={colors.textMuted}
+                      value={customTitle}
+                      onChangeText={setCustomTitle}
+                    />
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </>
         )}
 
@@ -918,7 +969,6 @@ export default function OnboardingScreen() {
               key={opt.id}
               title={opt.title}
               subtitle={opt.subtitle}
-              image={opt.image}
               selected={sportGoalId === opt.id}
               onPress={() => selectSportGoal(opt.id)}
             />
@@ -937,7 +987,6 @@ export default function OnboardingScreen() {
               key={opt.id}
               title={opt.title}
               subtitle={opt.subtitle}
-              image={opt.image}
               selected={sportGoalId === opt.id}
               onPress={() => selectSportGoal(opt.id)}
             />
@@ -979,6 +1028,7 @@ export default function OnboardingScreen() {
             <View style={styles.daysRow}>
               <WizardDayGrid
                 selected={[longRunDay]}
+                enabledDays={trainingDays}
                 mode="long"
                 accent="#F59E0B"
                 tone="surface"
@@ -1078,8 +1128,11 @@ export default function OnboardingScreen() {
               obligatoire pour démarrer.
             </Muted>
             <PrimaryButton
-              label="Configurer plus tard"
-              onPress={goNext}
+              label="Connecter ma montre maintenant"
+              onPress={() => {
+                setOpenWatchAfter(true);
+                goNext();
+              }}
             />
             <PressableScale variant="subtle" onPress={goNext}>
               <Text
@@ -1090,7 +1143,7 @@ export default function OnboardingScreen() {
                   fontSize: 15,
                 }}
               >
-                Continuer sans montre
+                Plus tard, dans les paramètres
               </Text>
             </PressableScale>
           </View>
@@ -1098,15 +1151,10 @@ export default function OnboardingScreen() {
       </AppScrollView>
       {showContinueFooter ? (
         <View style={styles.continueFooter}>
-          {!canContinue ? (
-            <Muted style={{ marginBottom: spacing.sm, textAlign: 'center' }}>
-              Complète cette étape pour activer Continuer.
-            </Muted>
-          ) : null}
           <PrimaryButton
             label={continueLabel}
             disabled={!canContinue}
-            onPress={goNext}
+            onPress={currentStepId === 'program_pick' && isCustomProgram ? confirmCustomProgram : goNext}
           />
         </View>
       ) : null}
@@ -1122,13 +1170,21 @@ const styles = StyleSheet.create({
   scrollFlex: {
     flex: 1,
   },
+  // Transparent : plus de pavé blanc rectangulaire derrière le bouton.
   continueFooter: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
-    backgroundColor: colors.bgSecondary,
+    backgroundColor: 'transparent',
   },
+  customCard: {
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.35)',
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  customCardOn: { borderColor: '#5EF2B4', borderStyle: 'solid', backgroundColor: 'rgba(94,242,180,0.10)' },
   row: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.md },
   daysRow: {
     flexDirection: 'row',

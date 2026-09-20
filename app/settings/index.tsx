@@ -23,6 +23,7 @@ import { radii, spacing } from '../../src/theme/tokens';
 import { useI18n } from '../../src/i18n/I18nContext';
 import { localeLabel } from '../../src/i18n/locales';
 import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
+import { apiAdminMessages } from '../../src/services/contactApi';
 import { hasPremiumAccess } from '../../src/premium/entitlement';
 
 /**
@@ -53,10 +54,15 @@ export default function SettingsIndex() {
   }, [query, state.profile.email]);
   const searching = query.trim().length > 0;
 
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const ownerToken = isOwnerPremiumEmail(state.profile.email) ? state.authToken : null;
+
   useFocusEffect(
     useCallback(() => {
       setQuery(getSettingsSearchDraft());
-    }, []),
+      // Compte propriétaire : nombre de messages non lus.
+      if (ownerToken) void apiAdminMessages(ownerToken).then((r) => setUnreadMessages(r.unread));
+    }, [ownerToken]),
   );
 
   const onChangeQuery = (text: string) => {
@@ -115,6 +121,13 @@ export default function SettingsIndex() {
         ) : (
           <>
             <SettingsSection title="Compte">
+              {isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
+                  label="Messages"
+                  value={unreadMessages > 0 ? `${unreadMessages} non lu${unreadMessages > 1 ? 's' : ''}` : 'Boîte de réception'}
+                  onPress={() => router.push('/settings/messages')}
+                />
+              ) : null}
               {isOwnerPremiumEmail(state.profile.email) ? (
                 <SettingsRow
                   label="Gestion compte premium"

@@ -15,6 +15,7 @@ import {
   POPULAR_SPORT_CATEGORIES,
   findProgramById,
   searchPrograms,
+  sortProgramsNatural,
   type ProgramSportCategory,
   type TrainingProgramTemplate,
 } from '../../src/constants/programs';
@@ -31,7 +32,7 @@ import {
 } from '../../src/constants/sportVisuals';
 import { NewProgramLabel } from '../../src/ui/brand/NewProgramLabel';
 import { ProgramCreatedCelebration } from '../../src/ui/program/ProgramCreatedCelebration';
-import { SportArt, artKindFor, distanceLabelFromTitle } from '../../src/ui/program/SportArt';
+import { SportArt, artKindFor } from '../../src/ui/program/SportArt';
 import { WeekSilhouettePreview } from '../../src/ui/program/WeekSilhouettePreview';
 import {
   WizardDayGrid,
@@ -347,12 +348,8 @@ export default function NewProgramScreen() {
     const list = sport
       ? searchPrograms(search, sport, sport === 'swim' ? swimVenue ?? undefined : undefined)
       : [];
-    return [...list].sort((a, b) => {
-      const ca = usageCountForTemplate(a.id, countedIds);
-      const cb = usageCountForTemplate(b.id, countedIds);
-      return cb - ca || a.title.localeCompare(b.title, 'fr');
-    });
-  }, [search, sport, swimVenue, countedIds]);
+    return sortProgramsNatural(list);
+  }, [search, sport, swimVenue]);
   const visiblePrograms = filteredPrograms.slice(0, VISIBLE_PROGRAM_COUNT);
 
   useEffect(() => {
@@ -1432,6 +1429,7 @@ export default function NewProgramScreen() {
             </WizardSectionLabel>
             <WizardDayGrid
               selected={[longRunDay]}
+              enabledDays={trainingDays}
               mode="long"
               accent="#F59E0B"
               tone="hero"
@@ -1789,7 +1787,6 @@ function ProgramCard({
       >
         <SportArt
           kind={artKindFor(prog.sportCategory)}
-          label={distanceLabelFromTitle(prog.title)}
           seed={prog.id.length * 7 + prog.id.charCodeAt(prog.id.length - 1)}
           height={128}
           minHeight={128}

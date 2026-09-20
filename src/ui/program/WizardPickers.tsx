@@ -46,12 +46,15 @@ export function WizardDayGrid({
   accent = BRAND.accent,
   mode = 'train',
   tone = 'hero',
+  enabledDays,
 }: {
   selected: number[];
   onToggle: (day: number) => void;
   accent?: string;
   mode?: 'train' | 'long';
   tone?: WizardTone;
+  /** Jours cliquables (les autres sont grisés). Sert au choix de la séance longue : uniquement parmi les jours retenus. */
+  enabledDays?: number[];
 }) {
   const p = palette(tone);
   return (
@@ -59,14 +62,18 @@ export function WizardDayGrid({
       {WEEKDAY_DISPLAY_ORDER.map((dow, displayIndex) => {
         const label = weekdayShortLabel(dow);
         const on = mode === 'long' ? selected[0] === dow : selected.includes(dow);
+        const disabled = enabledDays != null && !enabledDays.includes(dow);
         return (
           <StaggerIn key={`${mode}-${tone}-${dow}`} index={displayIndex} step={35} duration={420} style={styles.dayCell}>
             <PressableScale
               variant="pop"
-              onPress={() => onToggle(dow)}
-              accessibilityLabel={`${label}${on ? ', sélectionné' : ''}`}
+              onPress={() => {
+                if (!disabled) onToggle(dow);
+              }}
+              accessibilityLabel={`${label}${on ? ', sélectionné' : ''}${disabled ? ', indisponible' : ''}`}
               contentStyle={[
                 styles.dayTile,
+                disabled ? { opacity: 0.32 } : null,
                 { backgroundColor: on ? 'transparent' : p.bg, borderColor: on ? accent : p.border },
               ]}
             >

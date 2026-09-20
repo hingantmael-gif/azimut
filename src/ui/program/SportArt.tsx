@@ -187,7 +187,6 @@ export function SportArt({
   contentStyle,
   children,
   animated = true,
-  label,
   // Props historiques de SportCover : acceptées et ignorées (plus de photo).
   source: _source,
   minHeight,
@@ -202,7 +201,7 @@ export function SportArt({
   contentStyle?: StyleProp<ViewStyle>;
   children?: ReactNode;
   animated?: boolean;
-  /** Grand repère en filigrane (ex. « 10K »). */
+  /** Ignoré : plus aucun chiffre en filigrane (illisible) — seul le symbole du sport reste. */
   label?: string | null;
   source?: unknown;
   minHeight?: number;
@@ -211,7 +210,6 @@ export function SportArt({
 }) {
   const look = ART_LOOKS[kind];
   const drift = useRef(new Animated.Value(0)).current;
-  const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!animated) return;
@@ -221,14 +219,9 @@ export function SportArt({
         Animated.timing(drift, { toValue: 0, duration: 7000 + (seed % 5) * 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
-    const b = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 60000, easing: Easing.linear, useNativeDriver: true }));
     a.start();
-    b.start();
-    return () => {
-      a.stop();
-      b.stop();
-    };
-  }, [drift, spin, seed, animated]);
+    return () => a.stop();
+  }, [drift, seed, animated]);
 
   const motif = useMemo(() => <Motif kind={kind} accent={look.accent} seed={seed} />, [kind, look.accent, seed]);
 
@@ -261,35 +254,13 @@ export function SportArt({
           {motif}
         </Svg>
       </Animated.View>
-      <Animated.View
+      {/* Symbole du sport (coureur, vélo, goutte, trophée…) : net, à droite, sans chiffre ni rotation. */}
+      <View
         pointerEvents="none"
-        style={{
-          position: 'absolute',
-          right: -height * 0.12,
-          top: -height * 0.05,
-          opacity: 0.13,
-          transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['-8deg', '352deg'] }) }],
-        }}
+        style={{ position: 'absolute', right: 18, top: 0, bottom: 0, justifyContent: 'center', opacity: 0.55 }}
       >
-        <Ionicons name={look.icon} size={height * 1.1} color="#FFFFFF" />
-      </Animated.View>
-      {label ? (
-        <Text
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            right: 16,
-            top: height * 0.08,
-            fontSize: height * 0.62,
-            lineHeight: height * 0.7,
-            fontWeight: '800',
-            letterSpacing: -2,
-            color: 'rgba(255,255,255,0.17)',
-          }}
-        >
-          {label}
-        </Text>
-      ) : null}
+        <Ionicons name={look.icon} size={Math.round(Math.max(height, minHeight ?? 0) * 0.42)} color={look.accent} />
+      </View>
       {/* Voile sombre en bas : le texte blanc reste lisible sur toutes les teintes. */}
       <LinearGradient
         pointerEvents="none"

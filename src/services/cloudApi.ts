@@ -42,3 +42,13 @@ export async function apiDeleteAccount(token: string) {
   const r = await call<Record<string, never>>('DELETE', '/account', token);
   return { ok: r.status === 200, status: r.status };
 }
+
+/**
+ * Le compte a-t-il déjà terminé son inscription (sur n'importe quel appareil) ? Lu dans la sauvegarde cloud :
+ * évite de rejouer l'introduction et les questions à chaque connexion sur un nouvel appareil ou navigateur.
+ */
+export async function apiRemoteOnboardingDone(token: string): Promise<boolean> {
+  if (!token || token.startsWith('local_') || token.startsWith('google_')) return false;
+  const r = await apiSyncGet(token);
+  return r.snapshot?.state?.profile?.onboardingCompleted === true;
+}

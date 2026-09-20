@@ -10,7 +10,6 @@ import { PressableScale } from '../motion/softMotion';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import {
-  LEGAL_CONTACT_EMAIL,
   LEGAL_UPDATED,
   LEGAL_VERSION,
   readingMinutes,
@@ -313,51 +312,30 @@ export function LegalDocView({ doc }: { doc: LegalDoc }) {
   );
 }
 
-/** Bloc contact commun : une question sur ce document ? */
+/** Bloc contact commun : une question sur ce document ? Le message s'écrit dans l'app (aucune adresse affichée). */
 export function ContactCard({ accent }: { accent: string }) {
   const { colors } = useThemeColors();
-  const [copied, setCopied] = useState(false);
-
-  // Ouvre l'appli e-mail de l'appareil avec un message pré-rempli. Le message part de TA
-  // boîte mail vers l'adresse de contact de Mova ; rien n'est envoyé automatiquement.
-  const open = () => {
-    const subject = encodeURIComponent('Mova — question');
-    void Linking.openURL(`mailto:${LEGAL_CONTACT_EMAIL}?subject=${subject}`).catch(() => copy());
-  };
-
-  // Aucune appli e-mail configurée (ordinateur, navigateur) : on copie l'adresse.
-  const copy = () => {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.clipboard) return;
-    void navigator.clipboard.writeText(LEGAL_CONTACT_EMAIL).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
-    });
-  };
-
+  const router = useRouter();
   return (
     <View style={[styles.card, { backgroundColor: colors.bgCard, borderColor: colors.border, gap: 10 }]}>
       <View style={styles.contact}>
-        <Ionicons name="mail" size={22} color={accent} />
+        <Ionicons name="chatbubble-ellipses" size={22} color={accent} />
         <View style={styles.flex1}>
           <Text style={[styles.dataTitle, { color: colors.text }]}>Une question ?</Text>
-          <Text selectable style={[styles.sectionSummary, { color: colors.textMuted }]}>
-            {LEGAL_CONTACT_EMAIL}
+          <Text style={[styles.sectionSummary, { color: colors.textSecondary }]}>
+            Écris à l’équipe Mova directement depuis l’application, en quelques lignes.
           </Text>
         </View>
       </View>
-      <Text style={[styles.sectionSummary, { color: colors.textSecondary }]}>
-        « Écrire » ouvre ton application e-mail avec un message prêt à envoyer : il part de ta boîte
-        vers l’adresse ci-dessus et n’est lu que par l’équipe Mova.
-      </Text>
       <View style={styles.contact}>
-        <PressableScale variant="subtle" onPress={open} accessibilityLabel="Écrire à Mova" style={[styles.contactBtn, { backgroundColor: accent }]}>
+        <PressableScale
+          variant="subtle"
+          onPress={() => router.push('/settings/contact')}
+          accessibilityLabel="Écrire à Mova"
+          style={[styles.contactBtn, { backgroundColor: accent }]}
+        >
           <Text style={styles.contactBtnText}>Écrire</Text>
         </PressableScale>
-        {Platform.OS === 'web' ? (
-          <PressableScale variant="subtle" onPress={copy} accessibilityLabel="Copier l’adresse e-mail" style={[styles.contactBtn, { borderWidth: 1.5, borderColor: accent }]}>
-            <Text style={[styles.contactBtnText, { color: accent }]}>{copied ? 'Copié ✓' : 'Copier l’adresse'}</Text>
-          </PressableScale>
-        ) : null}
       </View>
     </View>
   );

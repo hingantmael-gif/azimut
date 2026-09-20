@@ -5,7 +5,7 @@ import {
   TERMS_VERSION,
   type TermsBlock,
 } from './azimutTerms';
-import { CNIL, HOSTS, LEGAL_CONTACT_EMAIL, PUBLISHER } from './publisher';
+import { CNIL, HOSTS, LEGAL_CONTACT_CHANNEL, LEGAL_CONTACT_SHORT, PUBLISHER } from './publisher';
 
 /**
  * Centre légal Mova : CGU, confidentialité (RGPD), santé & sécurité, permissions, mentions légales.
@@ -44,7 +44,7 @@ export type LegalDoc = {
 
 export const LEGAL_VERSION = TERMS_VERSION;
 export const LEGAL_UPDATED = TERMS_LAST_UPDATED;
-export { LEGAL_CONTACT_EMAIL };
+export { LEGAL_CONTACT_CHANNEL, LEGAL_CONTACT_SHORT };
 
 /** Résumé en une phrase de chaque article des CGU. */
 const TERMS_SUMMARY: Record<string, string> = {
@@ -72,8 +72,7 @@ const TERMS_SUMMARY: Record<string, string> = {
 
 const termsSections: LegalSection[] = TERMS_SECTIONS.map((s) => {
   const blocks: LegalBlock[] = s.blocks.map((b) =>
-    // Le mail de contact est centralisé dans publisher.ts.
-    b.type === 'p' ? { ...b, text: b.text.replace('support@endurance-coach.app', LEGAL_CONTACT_EMAIL) } : b,
+    b,
   );
   if (s.id === 'health') {
     blocks.push({ type: 'link', label: 'Ouvrir le guide Santé & sécurité', doc: 'health' });
@@ -125,7 +124,7 @@ const privacy: LegalDoc = {
           type: 'p',
           text:
             `Le responsable du traitement est ${PUBLISHER.name} (${PUBLISHER.status.toLowerCase()}). ` +
-            `Pour toute question sur tes données ou pour exercer tes droits : ${LEGAL_CONTACT_EMAIL}.`,
+            `Pour toute question sur tes données ou pour exercer tes droits : utilise ${LEGAL_CONTACT_CHANNEL}.`,
         },
       ],
     },
@@ -347,7 +346,7 @@ const privacy: LegalDoc = {
             { title: 'Rectification', lines: [{ label: 'Tu peux', value: 'Corriger des informations inexactes' }, { label: 'Comment', value: 'Modifier le profil' }] },
             { title: 'Effacement', lines: [{ label: 'Tu peux', value: 'Supprimer ton compte et tes données' }, { label: 'Comment', value: 'Compte et sécurité → Supprimer mon compte' }] },
             { title: 'Portabilité', lines: [{ label: 'Tu peux', value: 'Récupérer tes données dans un format lisible' }, { label: 'Comment', value: 'Compte et sécurité → Exporter mes données' }] },
-            { title: 'Opposition et limitation', lines: [{ label: 'Tu peux', value: 'T’opposer à un traitement ou demander sa limitation' }, { label: 'Comment', value: `Par e-mail : ${LEGAL_CONTACT_EMAIL}` }] },
+            { title: 'Opposition et limitation', lines: [{ label: 'Tu peux', value: 'T’opposer à un traitement ou demander sa limitation' }, { label: 'Comment', value: LEGAL_CONTACT_SHORT }] },
             { title: 'Retrait du consentement', lines: [{ label: 'Tu peux', value: 'Retirer un consentement (santé, position, notifications)' }, { label: 'Comment', value: 'Paramètres → Autorisations / Notifications' }] },
           ],
         },
@@ -609,7 +608,7 @@ const notice: LegalDoc = {
               lines: [
                 { label: 'Statut', value: PUBLISHER.status },
                 { label: 'Directeur de la publication', value: PUBLISHER.director },
-                { label: 'Contact', value: LEGAL_CONTACT_EMAIL },
+                { label: 'Contact', value: LEGAL_CONTACT_SHORT },
               ],
             },
           ],
@@ -653,7 +652,7 @@ const notice: LegalDoc = {
       blocks: [
         {
           type: 'p',
-          text: `Pour signaler un contenu illicite ou abusif : ${LEGAL_CONTACT_EMAIL}. Précise le contenu concerné (lien ou nom d’utilisateur) et le motif.`,
+          text: `Pour signaler un contenu illicite ou abusif : utilise ${LEGAL_CONTACT_CHANNEL}. Précise le contenu concerné (lien ou nom d’utilisateur) et le motif.`,
         },
       ],
     },

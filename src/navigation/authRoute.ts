@@ -25,6 +25,7 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   const isPublicLegal =
     pathKey === 'settings/privacy-policy' ||
     pathKey === 'settings/terms' ||
+    pathKey === 'settings/contact' ||
     pathKey.startsWith('settings/legal/') ||
     pathKey === 'apropos';
 
