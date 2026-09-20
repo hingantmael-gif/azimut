@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Text } from '../Text';
 import { usePathname } from 'expo-router';
+import { LoopView } from '../atmosphere/LoopView';
 
 /** Respiration lente (échelle) — hypnotique, discret */
 export function useBreathingScale(opts?: {
@@ -223,12 +224,13 @@ export function BreathingDot({
   color: string;
   size?: number;
 }) {
-  const scale = useBreathingScale({ min: 0.88, max: 1.18, durationMs: 1600 });
-  const glow = useBreathingOpacity({ min: 0.2, max: 0.55, durationMs: 1600 });
-
+  // Animation CSS sur le web (aucun coût JavaScript) : la liste des muscles compte des dizaines de points.
   return (
     <View style={{ width: size + 8, height: size + 8, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View
+      <LoopView
+        from={{ scale: 0.88, opacity: 0.2 }}
+        to={{ scale: 1.18, opacity: 0.55 }}
+        ms={1600}
         style={[
           styles.glow,
           {
@@ -236,19 +238,19 @@ export function BreathingDot({
             height: size + 10,
             borderRadius: (size + 10) / 2,
             backgroundColor: color,
-            opacity: glow,
-            transform: [{ scale }],
           },
         ]}
       />
-      <Animated.View
+      <LoopView
+        from={{ scale: 0.88 }}
+        to={{ scale: 1.18 }}
+        ms={1600}
         style={{
           position: 'absolute',
           width: size,
           height: size,
           borderRadius: size / 2,
           backgroundColor: color,
-          transform: [{ scale }],
         }}
       />
     </View>
@@ -265,13 +267,10 @@ export function SoftPulse({
   style?: StyleProp<ViewStyle>;
   intensity?: number;
 }) {
-  const scale = useBreathingScale({
-    min: 1,
-    max: 1 + intensity,
-    durationMs: 2600,
-  });
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>{children}</Animated.View>
+    <LoopView from={{ scale: 1 }} to={{ scale: 1 + intensity }} ms={2600} style={style}>
+      {children}
+    </LoopView>
   );
 }
 

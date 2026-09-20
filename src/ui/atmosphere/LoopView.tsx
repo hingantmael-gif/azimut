@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Animated, Easing, Platform, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /**
  * Vue animée en boucle, pensée pour les fonds.
@@ -54,11 +54,42 @@ export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear =
   const resolved = useMemo(() => resolveStops({ from, to, stops }), [from, to, stops]);
 
   if (Platform.OS === 'web') {
+    return (
+      <WebLoop resolved={resolved} ms={ms} delay={delay} yoyo={yoyo} linear={linear} paused={paused} origin={origin} style={style}>
+        {children}
+      </WebLoop>
+    );
+  }
+
+  return (
+    <NativeLoop resolved={resolved} ms={ms} delay={delay} yoyo={yoyo} linear={linear} paused={paused} style={[style, origin ? ({ transformOrigin: origin } as object) : null]}>
+      {children}
+    </NativeLoop>
+  );
+}
+
+/**
+ * Web : react-native-web ne compile `animationKeyframes` qu'à travers `StyleSheet.create`
+ * (un style « en ligne » l'ignore). On crée donc la classe CSS une fois par combinaison de paramètres.
+ */
+function WebLoop({
+  resolved,
+  ms,
+  delay,
+  yoyo,
+  linear,
+  paused,
+  origin,
+  style,
+  children,
+}: Omit<Props, 'from' | 'to' | 'stops'> & { resolved: Stop[]; delay: number; yoyo: boolean; linear: boolean; paused: boolean }) {
+  const key = JSON.stringify([resolved, ms, delay, yoyo, linear, paused, origin]);
+  const cssStyle = useMemo(() => {
     const keyframes: Record<string, Record<string, string | number>> = {};
-    for (const s of resolved) {
-      const frame: Record<string, string | number> = { transform: cssTransform(s.pose) };
-      if (s.pose.opacity != null) frame.opacity = s.pose.opacity;
-      keyframes[`${s.at}%`] = frame;
+    for (const st of resolved) {
+      const frame: Record<string, string | number> = { transform: cssTransform(st.pose) };
+      if (st.pose.opacity != null) frame.opacity = st.pose.opacity;
+      keyframes[`${st.at}%`] = frame;
     }
     const css = {
       animationKeyframes: [keyframes],
@@ -71,18 +102,14 @@ export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear =
       animationFillMode: 'backwards',
       willChange: 'transform, opacity',
       ...(origin ? { transformOrigin: origin } : null),
-    } as unknown as ViewStyle;
-    return (
-      <View pointerEvents="none" style={[style, css]}>
-        {children}
-      </View>
-    );
-  }
-
+    };
+    return StyleSheet.create({ loop: css as unknown as ViewStyle }).loop;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return (
-    <NativeLoop resolved={resolved} ms={ms} delay={delay} yoyo={yoyo} linear={linear} paused={paused} style={[style, origin ? ({ transformOrigin: origin } as object) : null]}>
+    <View pointerEvents="none" style={[style, cssStyle]}>
       {children}
-    </NativeLoop>
+    </View>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useIsFocused } from 'expo-router';
 import { Text } from '../Text';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Polygon } from 'react-native-svg';
 import { LinearGradient as FinishGradient } from 'expo-linear-gradient';
@@ -121,10 +122,13 @@ export function ProfileCover({ coverId, height = H, personalBestKm }: Props) {
     }).start();
   }, [coverId, opacity]);
 
+  // Écran non affiché (onglet en arrière-plan) : on ne fait pas tourner les effets du fond.
+  const focused = useIsFocused();
+
   return (
     <View style={[styles.root, { height }]}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
-        <Scene cover={cover} height={height} personalBestKm={personalBestKm} />
+        {focused ? <Scene cover={cover} height={height} personalBestKm={personalBestKm} /> : null}
       </Animated.View>
       {/* Motif animé propre à chaque fond (courbes, traînées, vagues, hexagones…) ;
           jamais sur les fonds de rang (le logo de rang reste net). */}
