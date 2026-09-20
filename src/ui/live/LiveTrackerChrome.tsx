@@ -655,7 +655,8 @@ export function LiveRecordControls({
 
 export function liveTrackerStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#0B1220' },
+    // userSelect none : en tirant la feuille à la souris, le texte de la barre du haut ne se sélectionne plus.
+    root: { flex: 1, backgroundColor: '#0B1220', ...(Platform.OS === 'web' ? ({ userSelect: 'none' } as object) : null) },
     mapFill: {
       ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
       // Contient les z-index Leaflet (sinon les panes volent les clics UI)

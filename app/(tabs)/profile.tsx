@@ -84,7 +84,7 @@ export default function ProfileScreen() {
   const rankLabel = formatRankLabel(tier, division);
 
   const activePrograms = resolveActivePrograms(p);
-  const history = p.programHistory ?? [];
+  const history = (p.programHistory ?? []).filter((x) => !x.abandoned);
   const activityCount = state.activities.length;
   const programCount = activePrograms.length + history.length;
   const sportsFill = useMemo(

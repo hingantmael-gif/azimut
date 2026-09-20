@@ -339,7 +339,7 @@ export default function RankedScreen() {
       following: (state.profile.followingUsernames ?? []).length,
       followers: (state.profile.followerUsernames ?? []).length,
       hasActiveProgram: Boolean(state.profile.activeProgram),
-      programHistoryCount: (state.profile.programHistory ?? []).length,
+      programHistoryCount: (state.profile.programHistory ?? []).filter((p) => !p.abandoned).length,
       sleepNights: sleepHistory?.length ?? 0,
       sleepStreak: computeSleepStreak(sleepHistory),
     });

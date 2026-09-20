@@ -24,7 +24,8 @@ export default function ProgramsScreen() {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const activePrograms = resolveActivePrograms(state.profile);
-  const history = state.profile.programHistory ?? [];
+  // Un programme supprimé / arrêté n'est PAS « terminé » : on ne montre que ceux menés à leur terme.
+  const history = (state.profile.programHistory ?? []).filter((p) => !p.abandoned);
 
   return (
     <AppScrollView style={styles.root} contentContainerStyle={{ paddingBottom: 48 }}>

@@ -1,7 +1,9 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
+  Animated,
   Modal,
   PanResponder,
+  ScrollView,
   Platform,
   Pressable,
   StyleSheet,
@@ -564,6 +566,148 @@ export function useVerticalSwipe(handlers: { onUp?: () => void; onDown?: () => v
   );
 }
 
+/** Dernière hauteur choisie (0 = carte grande, 1 = données plein écran) : gardée d'une séance à l'autre. */
+let rememberedSheetRatio: number | null = null;
+function rememberSheetRatio(v: number) {
+  rememberedSheetRatio = v;
+}
+
+/**
+ * Feuille réglable à la main : on la tire avec la poignée, elle reste EXACTEMENT où on la lâche
+ * (un peu de carte + un peu de données, ou tout l'un / tout l'autre). Un simple appui sur la poignée
+ * bascule entre carte et données. Repliée : métriques compactes ; agrandie : tableau de bord complet.
+ */
+export function LiveResizableSheet({
+  collapsed,
+  expanded,
+  footer,
+  maxHeight,
+  initialRatio = 0,
+  bottomInset = 0,
+}: {
+  /** Vue compacte (chrono · allure · distance). */
+  collapsed: ReactNode;
+  /** Vue détaillée, affichée quand la feuille est agrandie. */
+  expanded: ReactNode;
+  /** Boutons de contrôle, toujours visibles en bas. */
+  footer: ReactNode;
+  maxHeight: number;
+  initialRatio?: number;
+  bottomInset?: number;
+}) {
+  const GRAB = 30;
+  const [capH, setCapH] = useState(0);
+  const [footH, setFootH] = useState(0);
+  const [big, setBig] = useState(false);
+  const height = useRef(new Animated.Value(0)).current;
+  const cur = useRef(0);
+  const startH = useRef(0);
+  const inited = useRef(false);
+  const min = capH > 0 && footH > 0 ? GRAB + capH + footH : 0;
+  const max = Math.max(min + 80, maxHeight);
+  const limits = useRef({ min, max });
+  limits.current = { min, max };
+
+  useEffect(() => {
+    const id = height.addListener(({ value }) => {
+      cur.current = value;
+      const isBig = value > limits.current.min + 150;
+      setBig((prev) => (prev === isBig ? prev : isBig));
+    });
+    return () => height.removeListener(id);
+  }, [height]);
+
+  useEffect(() => {
+    if (min <= 0) return;
+    if (!inited.current) {
+      inited.current = true;
+      height.setValue(min + (rememberedSheetRatio ?? initialRatio) * (max - min));
+    } else if (cur.current < min) {
+      height.setValue(min);
+    } else if (cur.current > max) {
+      height.setValue(max);
+    }
+  }, [min, max, height, initialRatio]);
+
+  const animateTo = (to: number) =>
+    Animated.spring(height, { toValue: to, useNativeDriver: false, bounciness: 4, speed: 16 }).start();
+
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          height.stopAnimation();
+          startH.current = cur.current;
+        },
+        onPanResponderMove: (_e, g) => {
+          const { min: lo, max: hi } = limits.current;
+          height.setValue(Math.min(hi, Math.max(lo, startH.current - g.dy)));
+        },
+        onPanResponderRelease: (_e, g) => {
+          const { min: lo, max: hi } = limits.current;
+          if (Math.abs(g.dy) < 6 && Math.abs(g.dx) < 6) {
+            // Simple appui : carte ⇄ données.
+            const to = cur.current > (lo + hi) / 2 ? lo : hi;
+            rememberSheetRatio(to === lo ? 0 : 1);
+            animateTo(to);
+            return;
+          }
+          let final = Math.min(hi, Math.max(lo, startH.current - g.dy));
+          if (final < lo + 24) final = lo;
+          else if (final > hi - 24) final = hi;
+          rememberSheetRatio(hi > lo ? (final - lo) / (hi - lo) : 0);
+          animateTo(final);
+        },
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [height],
+  );
+
+  return (
+    <Animated.View style={[preDock.sheet, sheetStyles.sheet, { height, paddingBottom: 0 }]}>
+      <View style={sheetStyles.grab} {...pan.panHandlers} accessibilityRole="adjustable" accessibilityLabel="Régler la taille des données">
+        <View style={preDock.grabBar} />
+      </View>
+      <View style={sheetStyles.middle}>
+        {big ? (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+            {expanded}
+          </ScrollView>
+        ) : (
+          <View onLayout={(e) => setCapH(Math.ceil(e.nativeEvent.layout.height))}>{collapsed}</View>
+        )}
+      </View>
+      <View
+        style={{ paddingBottom: Math.max(bottomInset, 12), paddingTop: 4 }}
+        onLayout={(e) => setFootH(Math.ceil(e.nativeEvent.layout.height))}
+      >
+        {footer}
+      </View>
+    </Animated.View>
+  );
+}
+
+const sheetStyles = StyleSheet.create({
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 30,
+    overflow: 'hidden',
+    paddingTop: 0,
+  },
+  grab: {
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web' ? ({ touchAction: 'none', cursor: 'grab' } as object) : null),
+  },
+  middle: { flex: 1, overflow: 'hidden' },
+});
+
 export function LivePreStartDock({
   children,
   style,
@@ -1104,6 +1248,7 @@ const sportPick = StyleSheet.create({
 
 const preDock = StyleSheet.create({
   grab: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.28)', marginTop: -8, marginBottom: 10 },
+  grabBar: { width: 44, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
   sheet: {
     backgroundColor: 'rgba(7,17,31,0.97)',
     borderTopLeftRadius: 28,

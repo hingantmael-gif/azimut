@@ -283,7 +283,7 @@ export default function LoginScreen() {
         autoComplete="email"
         keyboardType="email-address"
         textContentType="emailAddress"
-        placeholder="toi@orange.fr"
+        placeholder="prenom@exemple.com"
       />
       <StravaInput
         label={t('auth.password')}

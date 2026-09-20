@@ -16,7 +16,7 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { ActivityRouteMap } from '../../src/ui/ActivityRouteMap';
 import { useLiveGpsTrack } from '../../src/hooks/useLiveGpsTrack';
-import { FlowBadge, FlowField } from '../../src/ui/live/FlowField';
+import { FlowBadge } from '../../src/ui/live/FlowField';
 import { LiveIdleBackdrop } from '../../src/ui/live/LiveIdleBackdrop';
 import {
   buildLiveActivity,
@@ -75,11 +75,10 @@ import {
   LiveConfirmSheet,
   LiveFocusBoard,
   LiveMetricsCapsule,
-  LivePreStartDock,
+  LiveResizableSheet,
   LiveGpsSlot,
   LiveSportPickButton,
   type FreeRecordSport,
-  useVerticalSwipe,
 } from '../../src/ui/live/AzimutTrackerHud';
 import { BRAND } from '../../src/constants/brand';
 type Phase = 'ready' | 'running' | 'paused' | 'saving';
@@ -154,8 +153,6 @@ export default function LiveSessionScreen() {
   const [celebrating, setCelebrating] = useState(false);
   const [autoPauseCue, setAutoPauseCue] = useState(false);
   /** Focus métriques plein écran (≠ carte compacte). */
-  const [focusOpen, setFocusOpen] = useState(false);
-  const focusSwipe = useVerticalSwipe({ onDown: () => setFocusOpen(false) });
   const [finishConfirmOpen, setFinishConfirmOpen] = useState(false);
   const startIsoRef = useRef<string | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -268,7 +265,6 @@ export default function LiveSessionScreen() {
       setPhase('paused');
       setRestored(true);
       setPendingDraft(null);
-      setFocusOpen(true);
     },
     [gps, planned],
   );
@@ -413,7 +409,6 @@ export default function LiveSessionScreen() {
     setAutoPauseCue(false);
     setPhase('running');
     setPendingDraft(null);
-    setFocusOpen(true);
   };
 
   const onPause = () => {
@@ -422,7 +417,6 @@ export default function LiveSessionScreen() {
     wallPauseAtRef.current = Date.now();
     setAutoPauseCue(false);
     setPhase('paused');
-    setFocusOpen(true);
     const draft = buildDraftPayload();
     if (draft) void saveLiveDraft(draft);
   };
@@ -433,7 +427,6 @@ export default function LiveSessionScreen() {
     wallPauseAtRef.current = Date.now();
     setPhase('paused');
     setAutoPauseCue(true);
-    setFocusOpen(true);
     const draft = buildDraftPayload();
     if (draft) void saveLiveDraft(draft);
   };
@@ -447,7 +440,6 @@ export default function LiveSessionScreen() {
     setAutoPauseCue(false);
     gps.resume();
     setPhase('running');
-    setFocusOpen(true);
   };
 
   const autoGoRef = useRef(false);
@@ -625,7 +617,6 @@ export default function LiveSessionScreen() {
     if (paceSt === 'in_zone') f.zoneSec += dt;
     setFlowPct(flowPercent(f.zoneSec, f.measuredSec));
   }, [movingSec, phase, paceSt]);
-  const [flowSize, setFlowSize] = useState({ w: 0, h: 0 });
   const anomaly = useMemo(
     () =>
       detectPaceAnomaly({
@@ -955,93 +946,6 @@ export default function LiveSessionScreen() {
     );
   }
 
-  // showFocus with map peek when running+collapsed
-  if (phase === 'paused' || phase === 'saving' || (phase === 'running' && focusOpen)) {
-    return (
-      <View
-        style={[
-          styles.root,
-          {
-            backgroundColor: LIVE_INK,
-            paddingTop: insets.top + 4,
-          },
-        ]}
-        onLayout={(e) =>
-          setFlowSize({ w: Math.round(e.nativeEvent.layout.width), h: Math.round(e.nativeEvent.layout.height) })
-        }
-        {...(phase === 'running' ? focusSwipe : {})}
-      >
-        <FlowField status={phase === 'running' ? paceSt : 'none'} size={flowSize} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginBottom: 4 }}>
-          <PressableScale
-            variant="pop"
-            onPress={leave}
-            accessibilityLabel="Fermer"
-            contentStyle={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-            }}
-          >
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', marginTop: -2 }}>
-              ⌄
-            </Text>
-          </PressableScale>
-          <View style={{ flex: 1, alignItems: 'center' }} pointerEvents="none">
-            <FlowBadge percent={flowPct} status={paceSt} />
-          </View>
-          <View style={{ width: 40 }} />
-        </View>
-        <LiveFocusBoard
-          phase={
-            phase === 'running'
-              ? 'running'
-              : phase === 'saving'
-                ? 'saving'
-                : 'paused'
-          }
-          clock={clockLong}
-          distanceKm={distKm}
-          paceAvg={paceAvg}
-          paceNow={paceNow}
-          splits={splits}
-          progressToNextKm={progressToNextKm}
-          cue={
-            autoPauseCue
-              ? 'Immobilité détectée — reprends quand tu es prêt'
-              : coachingCue
-          }
-          autoPause={autoPauseCue}
-          onCollapse={
-            phase === 'running' ? () => setFocusOpen(false) : undefined
-          }
-        />
-        <View style={{ flex: 1 }} />
-        <View
-          style={{
-            paddingHorizontal: 20,
-            paddingBottom: Math.max(insets.bottom, 16),
-          }}
-        >
-          {freeControls}
-        </View>
-        <LiveFinishCelebration visible={celebrating} />
-        <LiveConfirmSheet
-          visible={finishConfirmOpen}
-          title="Terminer la séance ?"
-          body="Enregistrer l’activité GPS dans Mova."
-          confirmLabel="Enregistrer"
-          cancelLabel="Continuer"
-          onConfirm={runFinishSave}
-          onCancel={() => setFinishConfirmOpen(false)}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.root}>
       {phase === 'ready' && !gps.lastPoint ? (
@@ -1076,29 +980,38 @@ export default function LiveSessionScreen() {
 
       {topBar}
 
-      <LivePreStartDock
-        onSwipeUp={phase === 'running' ? () => setFocusOpen(true) : undefined}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 30,
-          paddingBottom: Math.max(insets.bottom, 16),
-        }}
-      >
-        <LiveMetricsCapsule
-          time={phase === 'ready' ? '00:00' : formatLiveClock(elapsedSec)}
-          pace={phase === 'ready' ? '—' : paceNow}
-          distance={phase === 'ready' ? '0,00' : distKm}
-          gpsLabel={gpsLabel}
-          gpsOk={gpsOk}
-          onExpand={
-            phase === 'running' ? () => setFocusOpen(true) : undefined
-          }
-        />
-        <View style={{ marginTop: 12 }}>{freeControls}</View>
-      </LivePreStartDock>
+      {/* Feuille réglable : on la tire jusqu'où on veut — carte, données, ou un mélange des deux. */}
+      <LiveResizableSheet
+        maxHeight={screenH - insets.top - 72}
+        bottomInset={insets.bottom}
+        collapsed={
+          <LiveMetricsCapsule
+            time={phase === 'ready' ? '00:00' : formatLiveClock(elapsedSec)}
+            pace={phase === 'ready' ? '—' : paceNow}
+            distance={phase === 'ready' ? '0,00' : distKm}
+            gpsLabel={gpsLabel}
+            gpsOk={gpsOk}
+          />
+        }
+        expanded={
+          phase === 'ready' ? (
+            <LiveMetricsCapsule time="00:00" pace="—" distance="0,00" gpsLabel={gpsLabel} gpsOk={gpsOk} />
+          ) : (
+            <LiveFocusBoard
+              phase={phase === 'running' ? 'running' : phase === 'saving' ? 'saving' : 'paused'}
+              clock={clockLong}
+              distanceKm={distKm}
+              paceAvg={paceAvg}
+              paceNow={paceNow}
+              splits={splits}
+              progressToNextKm={progressToNextKm}
+              cue={autoPauseCue ? 'Immobilité détectée — reprends quand tu es prêt' : coachingCue}
+              autoPause={autoPauseCue}
+            />
+          )
+        }
+        footer={freeControls}
+      />
       <LiveFinishCelebration visible={celebrating} />
       <LiveConfirmSheet
         visible={finishConfirmOpen}

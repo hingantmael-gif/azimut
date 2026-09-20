@@ -74,7 +74,7 @@ export function validateRegistrationEmail(
 ): { ok: true; email: string } | { ok: false; error: string } {
   const value = normalizeEmailInput(raw);
   if (!value) {
-    return { ok: false, error: 'Entrez une adresse e-mail (ex. toi@orange.fr).' };
+    return { ok: false, error: 'Entrez une adresse e-mail (ex. prenom@exemple.com).' };
   }
   if (value === TRIAL_EMAIL_INPUT || value === TRIAL_ACCOUNT_EMAIL) {
     return { ok: false, error: 'Cet e-mail est déjà utilisé.' };
