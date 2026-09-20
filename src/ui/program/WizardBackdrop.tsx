@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import {
-  Animated,
-  Easing,
   ImageBackground,
   StyleSheet,
   View,
@@ -14,12 +12,13 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
 import { AuroraPattern, patternForSport } from '../atmosphere/AuroraPatterns';
+import { LoopView } from '../atmosphere/LoopView';
 
 import { SPORT_TINTS, tintForSport } from '../../theme/sportTints';
 
 export { SPORT_TINTS, tintForSport };
 
-/** Halo qui dérive lentement dans un aller-retour (amplitude visible à l'œil). */
+/** Halo qui dérive lentement dans un aller-retour (animation CSS sur le web : aucun coût JavaScript). */
 export function DriftBlob({
   size,
   color,
@@ -42,33 +41,15 @@ export function DriftBlob({
   /** Écran en arrière-plan : on fige l'animation (économie de batterie). */
   paused?: boolean;
 }) {
-  const v = useRef(new Animated.Value(0)).current;
   const id = useMemo(() => `wb${Math.random().toString(36).slice(2, 8)}`, []);
-  useEffect(() => {
-    if (paused) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(v, { toValue: 1, duration: ms, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [v, ms, delay, paused]);
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        { position: 'absolute', width: size, height: size },
-        style,
-        {
-          transform: [
-            { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-dx, dx] }) },
-            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dy, -dy] }) },
-            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.1] }) },
-          ],
-        },
-      ]}
+    <LoopView
+      from={{ x: -dx, y: dy, scale: 0.94 }}
+      to={{ x: dx, y: -dy, scale: 1.1 }}
+      ms={ms}
+      delay={delay}
+      paused={paused}
+      style={[{ position: 'absolute', width: size, height: size }, style]}
     >
       <Svg width={size} height={size}>
         <Defs>
@@ -79,7 +60,7 @@ export function DriftBlob({
         </Defs>
         <Circle cx={size / 2} cy={size / 2} r={size / 2} fill={`url(#${id})`} />
       </Svg>
-    </Animated.View>
+    </LoopView>
   );
 }
 

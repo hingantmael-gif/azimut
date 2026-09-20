@@ -16,6 +16,9 @@ const PROD_API = process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onr
 const sh = (cmd, cwd = root, env = {}) =>
   execSync(cmd, { cwd, stdio: 'inherit', shell: true, env: { ...process.env, ...env } });
 
+/** Identifiant unique de ce déploiement : l'app installée le compare à /version.json pour se mettre à jour seule. */
+const BUILD_ID = Date.now().toString(36);
+
 sh('node scripts/generate-install-qr.mjs');
 sh('npx --yes tsx scripts/generate-terms-html.mjs');
 
@@ -35,6 +38,7 @@ if (fs.existsSync(envPath)) {
 try {
   sh('npx expo export --platform web --clear', root, {
     EXPO_PUBLIC_API_URL: PROD_API,
+    EXPO_PUBLIC_BUILD_ID: BUILD_ID,
   });
 } finally {
   if (envBackup != null) fs.writeFileSync(envPath, envBackup);
@@ -59,6 +63,23 @@ for (const f of [
 ]) {
   const src = path.join(root, 'public', f);
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
+}
+
+// Version publiée + service worker estampillé (chaque déploiement change les octets de sw.js,
+// donc le navigateur installe la nouvelle version au prochain lancement).
+fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ build: BUILD_ID }));
+fs.appendFileSync(path.join(dist, 'sw.js'), `\n// build: ${BUILD_ID}\n`);
+// Pages (chunks) à précharger en arrière-plan : un appui sur un onglet est instantané.
+{
+  const jsDir = path.join(dist, '_expo', 'static', 'js', 'web');
+  const skip = /^(entry|__common|__expo-metro-runtime)-/;
+  const chunks = fs.existsSync(jsDir)
+    ? fs
+        .readdirSync(jsDir)
+        .filter((f) => f.endsWith('.js') && !skip.test(f) && !f.includes('[') && !f.includes(']'))
+        .map((f) => ({ url: '/_expo/static/js/web/' + f, size: fs.statSync(path.join(jsDir, f)).size }))
+    : [];
+  fs.writeFileSync(path.join(dist, 'chunks.json'), JSON.stringify(chunks));
 }
 
 if (fs.existsSync(path.join(dist, 'index.html'))) {

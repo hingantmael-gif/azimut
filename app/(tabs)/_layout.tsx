@@ -1,5 +1,4 @@
 /** Accueil · Plan · Enregistrer · Progrès · Vous — FAB + remplace Nouveau */
-import { useEffect, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
@@ -45,14 +44,6 @@ export default function TabsLayout() {
   const headerColor = useHeaderColor();
   const router = useRouter();
   const { t } = useI18n();
-
-  // Préchargement : une fois l'accueil affiché, les onglets principaux (Plan, Progrès, Vous)
-  // se chargent en arrière-plan — un appui sur l'onglet est alors instantané.
-  const [eager, setEager] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setEager(true), 1500);
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <Tabs
@@ -101,7 +92,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          lazy: !eager,
           title: t('tabs.plan'),
           tabBarIcon: ({ focused, color }) => (
             <TabIcon name="plan" focused={focused} color={color} />
@@ -159,7 +149,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="body"
         options={{
-          lazy: !eager,
           title: t('tabs.progress'),
           tabBarIcon: ({ focused, color }) => (
             <TabIcon name="corps" focused={focused} color={color} />
@@ -177,7 +166,6 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          lazy: !eager,
           title: t('tabs.you'),
           headerRight: () => <TabHeaderActions showSettings />,
           tabBarIcon: ({ focused, color }) => (

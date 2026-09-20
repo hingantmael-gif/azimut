@@ -1,5 +1,5 @@
 /* Service worker Azimut — mises à jour auto à chaque réouverture. */
-const CACHE = 'azimut-static-v93';
+const CACHE = 'azimut-static-v94';
 const IMMUTABLE = 'azimut-immutable-v1';
 /** Nom de fichier avec empreinte (…-<hash 32 hex>.ext ou entry-<hash>.js) : jamais modifié après publication. */
 const HASHED = /[.-][0-9a-f]{32}\.[a-z0-9]+$/i;
@@ -67,6 +67,9 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Contrôle de version et liste des pages à précharger : toujours frais (jamais en cache).
+  if (url.pathname === '/version.json' || url.pathname === '/chunks.json') return;
 
   // Fichiers hachés (bundles, images, polices) : cache d'abord — le nom change à chaque
   // modification, donc jamais périmé ; les visites suivantes sont quasi instantanées.

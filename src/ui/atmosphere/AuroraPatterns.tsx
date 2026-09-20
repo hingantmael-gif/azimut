@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { TopoLines } from '../profile/TopoLines';
+import { LoopView } from './LoopView';
 
 /**
  * Familles de motifs animés pour les fonds : chaque discipline a sa propre « matière ».
  * Tous restent DERRIÈRE le contenu (pointerEvents none) et discrets (opacité faible).
+ * Animations en CSS sur le web (voir LoopView) : aucun coût JavaScript par image.
  */
 export type PatternKind = 'topo' | 'speed' | 'waves' | 'orbits' | 'embers' | 'hex' | 'bars' | 'dots';
 
@@ -40,28 +42,6 @@ function rng(seed: number) {
   };
 }
 
-/** Valeur qui boucle de 0 à 1 (aller-retour si `yoyo`). Figée si `paused`. */
-function useLoop(ms: number, paused: boolean, yoyo = false, delay = 0) {
-  const v = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (paused) return;
-    const up = Animated.timing(v, {
-      toValue: 1,
-      duration: ms,
-      delay,
-      easing: yoyo ? Easing.inOut(Easing.sin) : Easing.linear,
-      useNativeDriver: true,
-    });
-    const anim = yoyo
-      ? Animated.sequence([up, Animated.timing(v, { toValue: 0, duration: ms, easing: Easing.inOut(Easing.sin), useNativeDriver: true })])
-      : Animated.sequence([up, Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true })]);
-    const loop = Animated.loop(anim);
-    loop.start();
-    return () => loop.stop();
-  }, [v, ms, paused, yoyo, delay]);
-  return v;
-}
-
 type P = { w: number; h: number; color: string; color2: string; seed: number; opacity: number; paused: boolean };
 
 /** Traînées de vitesse : trait en biais qui glissent à deux vitesses (parallaxe). */
@@ -79,33 +59,29 @@ function Speed({ w, h, color, color2, seed, opacity, paused }: P) {
       }));
     return [mk(11), mk(8)];
   }, [seed, w, h, color, color2]);
-  const a = useLoop(8200, paused, true);
-  const b = useLoop(4600, paused, true, 400);
   const size = { width: w * 1.5, height: h * 1.5, left: -w * 0.25, top: -h * 0.25 };
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
-      {layers.map((ls, i) => {
-        const v = i === 0 ? a : b;
-        return (
-          <Animated.View
+      {/* Le cadre est incliné une fois pour toutes ; les traînées glissent le long de l'inclinaison. */}
+      <View style={{ position: 'absolute', ...size, transform: [{ rotate: '-17deg' }] }}>
+        {layers.map((ls, i) => (
+          <LoopView
             key={i}
-            style={{
-              position: 'absolute',
-              ...size,
-              transform: [
-                { rotate: '-17deg' },
-                { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-70 * (i + 1), 70 * (i + 1)] }) },
-              ],
-            }}
+            from={{ x: -70 * (i + 1) }}
+            to={{ x: 70 * (i + 1) }}
+            ms={i === 0 ? 8200 : 4600}
+            delay={i === 0 ? 0 : 400}
+            paused={paused}
+            style={StyleSheet.absoluteFill}
           >
             <Svg width={size.width} height={size.height}>
-              {ls.map((s, k) => (
-                <Line key={k} x1={s.x} y1={s.y} x2={s.x + s.len} y2={s.y} stroke={s.c} strokeOpacity={s.a} strokeWidth={s.th} strokeLinecap="round" />
+              {ls.map((st, k) => (
+                <Line key={k} x1={st.x} y1={st.y} x2={st.x + st.len} y2={st.y} stroke={st.c} strokeOpacity={st.a} strokeWidth={st.th} strokeLinecap="round" />
               ))}
             </Svg>
-          </Animated.View>
-        );
-      })}
+          </LoopView>
+        ))}
+      </View>
     </View>
   );
 }
@@ -128,31 +104,24 @@ function Waves({ w, h, color, color2, seed, opacity, paused }: P) {
       return d;
     });
   }, [seed, w, h, L]);
-  const drivers = [
-    useLoop(16000, paused),
-    useLoop(21000, paused),
-    useLoop(13000, paused),
-    useLoop(25000, paused),
-    useLoop(18000, paused),
-  ];
+  const speeds = [16000, 21000, 13000, 25000, 18000];
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, overflow: 'hidden' }]}>
       {paths.map((d, i) => (
-        <Animated.View
+        <LoopView
           key={i}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: w + L + 12,
-            height: h,
-            transform: [{ translateX: drivers[i]!.interpolate({ inputRange: [0, 1], outputRange: i % 2 ? [-L, 0] : [0, -L] }) }],
-          }}
+          from={{ x: i % 2 ? -L : 0 }}
+          to={{ x: i % 2 ? 0 : -L }}
+          ms={speeds[i]!}
+          yoyo={false}
+          linear
+          paused={paused}
+          style={{ position: 'absolute', left: 0, top: 0, width: w + L + 12, height: h }}
         >
           <Svg width={w + L + 12} height={h}>
             <Path d={d} fill={i % 2 ? color2 : color} fillOpacity={0.09 + i * 0.012} stroke={i % 2 ? color2 : color} strokeOpacity={0.4} strokeWidth={1.4} />
           </Svg>
-        </Animated.View>
+        </LoopView>
       ))}
     </View>
   );
@@ -163,38 +132,48 @@ function Orbits({ w, h, color, color2, opacity, paused }: P) {
   const cx = w * 0.82;
   const cy = h * 0.26;
   const radii = [70, 125, 185, 250, 325];
-  const spins = [useLoop(30000, paused), useLoop(42000, paused), useLoop(56000, paused), useLoop(38000, paused), useLoop(70000, paused)];
+  const speeds = [30000, 42000, 56000, 38000, 70000];
   const third = '#A78BFA';
   const cols = [color, color2, third, color, color2];
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, overflow: 'hidden' }]}>
       {radii.map((r, i) => (
-        <Animated.View
+        <LoopView
           key={r}
-          style={{
-            position: 'absolute',
-            left: cx - r,
-            top: cy - r,
-            width: r * 2,
-            height: r * 2,
-            transform: [{ rotate: spins[i]!.interpolate({ inputRange: [0, 1], outputRange: i % 2 ? ['360deg', '0deg'] : ['0deg', '360deg'] }) }],
-          }}
+          from={{ rotate: i % 2 ? 360 : 0 }}
+          to={{ rotate: i % 2 ? 0 : 360 }}
+          ms={speeds[i]!}
+          yoyo={false}
+          linear
+          paused={paused}
+          style={{ position: 'absolute', left: cx - r, top: cy - r, width: r * 2, height: r * 2 }}
         >
           <Svg width={r * 2} height={r * 2}>
             <Circle cx={r} cy={r} r={r - 2} stroke={cols[i]} strokeOpacity={0.5} strokeWidth={1.4} fill="none" strokeDasharray={i % 2 ? '2 10' : '46 18'} />
             <Circle cx={r} cy={2} r={4.5} fill={cols[i]} fillOpacity={0.9} />
           </Svg>
-        </Animated.View>
+        </LoopView>
       ))}
     </View>
   );
 }
 
-/** Braises qui montent : Ironman. */
+/** Braise qui monte (montée + fondu) : Ironman. */
 function Ember({ x, size, color, ms, delay, h, paused }: { x: number; size: number; color: string; ms: number; delay: number; h: number; paused: boolean }) {
-  const v = useLoop(ms, paused, false, delay);
+  const up = -h * 0.95;
   return (
-    <Animated.View
+    <LoopView
+      stops={[
+        { at: 0, pose: { x: 0, y: 0, opacity: 0 } },
+        { at: 15, pose: { x: 3, y: up * 0.15, opacity: 1 } },
+        { at: 70, pose: { x: 16, y: up * 0.7, opacity: 0.7 } },
+        { at: 100, pose: { x: -10, y: up, opacity: 0 } },
+      ]}
+      ms={ms}
+      delay={delay}
+      yoyo={false}
+      linear
+      paused={paused}
       style={{
         position: 'absolute',
         left: x,
@@ -203,12 +182,8 @@ function Ember({ x, size, color, ms, delay, h, paused }: { x: number; size: numb
         height: size,
         borderRadius: size / 2,
         backgroundColor: color,
+        opacity: 0,
         boxShadow: `0px 0px ${size * 3}px ${size}px ${color}`,
-        opacity: v.interpolate({ inputRange: [0, 0.15, 0.7, 1], outputRange: [0, 1, 0.7, 0] }),
-        transform: [
-          { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -h * 0.95] }) },
-          { translateX: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 16, -10] }) },
-        ],
       }}
     />
   );
@@ -228,7 +203,7 @@ function Embers({ w, h, color, color2, seed, opacity, paused }: P) {
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, overflow: 'hidden' }]}>
       {items.map((e, i) => (
-        <Ember key={i} {...e} color={e.c} h={h} paused={paused} />
+        <Ember key={i} x={e.x} size={e.size} color={e.c} ms={e.ms} delay={e.delay} h={h} paused={paused} />
       ))}
     </View>
   );
@@ -254,38 +229,14 @@ function Hex({ w, h, color, opacity, paused }: P) {
     }
     return parts.join(' ');
   }, [w, h]);
-  const pulse = useLoop(5200, paused, true);
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { opacity: Animated.multiply(pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }), opacity) }]}
-    >
-      <Svg width={w} height={h}>
-        <Path d={d} stroke={color} strokeOpacity={0.55} strokeWidth={1} fill="none" />
-      </Svg>
-    </Animated.View>
-  );
-}
-
-function Bar({ x, bw, bh, color, ms, delay, paused }: { x: number; bw: number; bh: number; color: string; ms: number; delay: number; paused: boolean }) {
-  const v = useLoop(ms, paused, true, delay);
-  return (
-    <Animated.View
-      style={
-        {
-          position: 'absolute',
-          left: x,
-          bottom: 0,
-          width: bw,
-          height: bh,
-          borderTopLeftRadius: bw / 2,
-          borderTopRightRadius: bw / 2,
-          backgroundColor: color,
-          transformOrigin: 'center bottom',
-          transform: [{ scaleY: v.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
-        } as object
-      }
-    />
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
+      <LoopView from={{ opacity: 0.45 }} to={{ opacity: 1 }} ms={5200} paused={paused} style={StyleSheet.absoluteFill}>
+        <Svg width={w} height={h}>
+          <Path d={d} stroke={color} strokeOpacity={0.55} strokeWidth={1} fill="none" />
+        </Svg>
+      </LoopView>
+    </View>
   );
 }
 
@@ -308,7 +259,25 @@ function Bars({ w, h, color, color2, seed, opacity, paused }: P) {
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: opacity * 0.5 }]}>
       {bars.map((b, i) => (
-        <Bar key={i} {...b} paused={paused} />
+        <LoopView
+          key={i}
+          from={{ scaleY: 0.5 }}
+          to={{ scaleY: 1 }}
+          ms={b.ms}
+          delay={b.delay}
+          origin="center bottom"
+          paused={paused}
+          style={{
+            position: 'absolute',
+            left: b.x,
+            bottom: 0,
+            width: b.bw,
+            height: b.bh,
+            borderTopLeftRadius: b.bw / 2,
+            borderTopRightRadius: b.bw / 2,
+            backgroundColor: b.color,
+          }}
+        />
       ))}
     </View>
   );
@@ -322,24 +291,16 @@ function Dots({ w, h, color, opacity, paused }: P) {
     for (let x = gap / 2; x < w + gap; x += gap) for (let y = gap / 2; y < h + gap; y += gap) out.push({ x, y });
     return out;
   }, [w, h]);
-  const pulse = useLoop(4800, paused, true);
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        StyleSheet.absoluteFill,
-        {
-          opacity: Animated.multiply(pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }), opacity),
-          transform: [{ translateY: pulse.interpolate({ inputRange: [0, 1], outputRange: [-6, 6] }) }],
-        },
-      ]}
-    >
-      <Svg width={w} height={h + gap}>
-        {cells.map((c, i) => (
-          <Rect key={i} x={c.x - 1.4} y={c.y - 1.4} width={2.8} height={2.8} rx={1.4} fill={color} fillOpacity={0.7} />
-        ))}
-      </Svg>
-    </Animated.View>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity }]}>
+      <LoopView from={{ opacity: 0.4, y: -6 }} to={{ opacity: 1, y: 6 }} ms={4800} paused={paused} style={StyleSheet.absoluteFill}>
+        <Svg width={w} height={h + gap}>
+          {cells.map((c, i) => (
+            <Rect key={i} x={c.x - 1.4} y={c.y - 1.4} width={2.8} height={2.8} rx={1.4} fill={color} fillOpacity={0.7} />
+          ))}
+        </Svg>
+      </LoopView>
+    </View>
   );
 }
 
