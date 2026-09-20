@@ -360,9 +360,6 @@ function makeStyles(colors: ColorPalette) {
     root: { flex: 1, backgroundColor: 'transparent' },
     header: {
       padding: spacing.md,
-      backgroundColor: colors.bg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
     },
     title: { fontSize: 22, fontWeight: '800', color: colors.text },
     sub: { color: colors.textMuted, marginTop: 4, fontSize: 13, lineHeight: 18 },

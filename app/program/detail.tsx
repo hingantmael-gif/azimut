@@ -1,3 +1,4 @@
+import { useAmbientSport } from '../../src/theme/AmbientSport';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
@@ -61,6 +62,7 @@ export default function ProgramDetailScreen() {
     state.profile.programHistory,
   ]);
 
+  useAmbientSport(program?.sportCategory);
   const isActive = params.scope === 'active';
   const [cancelOpen, setCancelOpen] = useState(false);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
@@ -491,7 +493,7 @@ function groupByMonth(planned: PlannedWorkout[]): MonthBucket[] {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary, padding: spacing.md },
+    root: { flex: 1, backgroundColor: 'transparent', padding: spacing.md },
     hero: {
       borderRadius: radii.xl,
       overflow: 'hidden',

@@ -14,6 +14,7 @@ export function TopoLines({
   lines = 12,
   opacity = 0.32,
   drift: driftScale = 1,
+  paused = false,
 }: {
   color: string;
   height: number;
@@ -22,12 +23,15 @@ export function TopoLines({
   opacity?: number;
   /** Amplitude de la dérive : 1 = discret (fonds de profil), 2+ = nettement visible. */
   drift?: number;
+  /** Fige le mouvement (écran en arrière-plan). */
+  paused?: boolean;
 }) {
   const OVERSCAN = Math.round(30 * Math.max(1, driftScale));
   const paths = useMemo(() => buildTopoPaths({ seed, lines, h: height, overscan: OVERSCAN }), [seed, lines, height]);
   const drift = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (paused) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(drift, { toValue: 1, duration: 9000 + (seed % 3000), easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -36,7 +40,7 @@ export function TopoLines({
     );
     loop.start();
     return () => loop.stop();
-  }, [drift, seed]);
+  }, [drift, seed, paused]);
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

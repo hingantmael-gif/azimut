@@ -96,7 +96,7 @@ export default function BadgesScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     bannerPad: {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,

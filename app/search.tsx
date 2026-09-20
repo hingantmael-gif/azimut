@@ -131,7 +131,7 @@ export default function SearchScreen() {
   const following = new Set(state.profile.followingUsernames ?? []);
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bgSecondary }]}>
+    <View style={styles.root}>
       <View style={[styles.searchBox, { backgroundColor: colors.bg }]}>
         <Text style={[styles.loupe, { color: colors.textMuted }]}>⌕</Text>
         <AppTextInput

@@ -53,7 +53,7 @@ export default function ConnectionsScreen() {
   }, [load]);
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bgSecondary }]}>
+    <View style={styles.root}>
       <View style={[styles.tabs, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
         <Pressable
           style={[styles.tab, tab === 'followers' && { borderBottomColor: colors.accent }]}

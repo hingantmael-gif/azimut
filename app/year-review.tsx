@@ -97,7 +97,7 @@ export default function YearReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgSecondary },
+  root: { flex: 1, backgroundColor: 'transparent' },
   hero: { fontSize: 48, fontWeight: '900', color: colors.accent, lineHeight: 52 },
   title: { fontSize: 24, fontWeight: '800', color: colors.text },
   sub: { color: colors.textSecondary, marginTop: 4, lineHeight: 22, marginBottom: spacing.lg },

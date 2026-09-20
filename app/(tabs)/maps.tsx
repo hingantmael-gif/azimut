@@ -125,7 +125,7 @@ export default function MapsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary, padding: spacing.md },
+    root: { flex: 1, backgroundColor: 'transparent', padding: spacing.md },
     title: {
       fontSize: 22,
       fontWeight: '800',

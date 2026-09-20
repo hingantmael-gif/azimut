@@ -10,6 +10,7 @@ import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { fonts, rgba } from '../../src/theme/tokens';
 import { useI18n } from '../../src/i18n/I18nContext';
+import { AtmosphereLayer, useHeaderColor } from '../../src/ui/atmosphere/ScreenAtmosphere';
 
 function TabLabel({
   label,
@@ -40,13 +41,15 @@ function TabLabel({
 
 export default function TabsLayout() {
   const { colors, isDark } = useThemeColors();
+  const headerColor = useHeaderColor();
   const router = useRouter();
   const { t } = useI18n();
 
   return (
     <Tabs
+      screenLayout={({ children }) => <AtmosphereLayer>{children}</AtmosphereLayer>}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
+        headerStyle: { backgroundColor: headerColor },
         headerTintColor: colors.text,
         headerTitleStyle: { fontFamily: fonts.extrabold, fontSize: 22, letterSpacing: -0.3, writingDirection: 'ltr' },
         headerShadowVisible: false,

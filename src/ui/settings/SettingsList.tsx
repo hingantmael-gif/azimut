@@ -170,7 +170,7 @@ function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: 'transparent',
     },
     section: { marginTop: spacing.lg },
     sectionTitle: {

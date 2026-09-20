@@ -285,7 +285,7 @@ function makeStyles(colors: ColorPalette, isDark: boolean) {
   return StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: 'transparent',
       paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
       paddingBottom: spacing.lg,

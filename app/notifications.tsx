@@ -240,7 +240,7 @@ export default function NotificationsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     empty: {
       textAlign: 'center',
       marginTop: spacing.xl,

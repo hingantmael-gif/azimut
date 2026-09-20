@@ -627,7 +627,7 @@ export default function HomeDashboard() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bg },
+    root: { flex: 1, backgroundColor: 'transparent' },
     scroll: { flex: 1, paddingHorizontal: spacing.lg },
     helloBlock: { paddingTop: spacing.md, marginBottom: spacing.sm },
     homeChipRow: {

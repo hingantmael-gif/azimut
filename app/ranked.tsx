@@ -1284,7 +1284,7 @@ export default function RankedScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     scroll: { flex: 1, backgroundColor: 'transparent' },
     sectionTabs: {
       flexDirection: 'row',

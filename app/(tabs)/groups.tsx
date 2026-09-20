@@ -262,7 +262,7 @@ export default function GroupsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     header: {
       fontSize: 22,
       fontWeight: '800',

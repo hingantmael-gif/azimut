@@ -159,7 +159,7 @@ export default function UserEvolutionScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     hero: {
       marginTop: spacing.lg,
       marginHorizontal: spacing.md,

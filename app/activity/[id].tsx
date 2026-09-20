@@ -1,3 +1,4 @@
+import { useAmbientSport } from '../../src/theme/AmbientSport';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
@@ -38,6 +39,7 @@ export default function ActivityDetailScreen() {
     (a) => a.id === activityId || a.id === id,
   );
   const analysis = state.analyses.find((x) => x.activityId === activity?.id);
+  useAmbientSport(activity?.sport ?? 'run');
   const coachingInsight = useMemo(
     () =>
       activity
@@ -252,7 +254,7 @@ export default function ActivityDetailScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     gpsHint: {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,

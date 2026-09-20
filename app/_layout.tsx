@@ -17,6 +17,8 @@ import { I18nProvider } from '../src/i18n/I18nContext';
 import { PhoneShell } from '../src/ui/PhoneShell';
 import { DialogHost } from '../src/ui/dialog/DialogHost';
 import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
+import { AmbientSportProvider } from '../src/theme/AmbientSport';
+import { AtmosphereLayer, useHeaderColor } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
 import { SocialInboxBootstrap } from '../src/ui/notifications/SocialInboxBootstrap';
 import { PendingProgramReviewModal } from '../src/ui/program/PendingProgramReviewModal';
@@ -78,8 +80,12 @@ function AuthGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** Écrans qui dessinent déjà leur propre fond (auth, tracker, navigateurs imbriqués). */
+const ownBackdrop = { layout: ({ children }: { children: React.ReactElement }) => children } as object;
+
 function AppShell() {
   const { colors, isDark } = useThemeColors();
+  const headerColor = useHeaderColor();
 
   return (
     <>
@@ -95,8 +101,9 @@ function AppShell() {
           <SettingsSearchSession />
           <DialogHost />
           <Stack
+            screenLayout={({ children }) => <AtmosphereLayer>{children}</AtmosphereLayer>}
             screenOptions={{
-              headerStyle: { backgroundColor: colors.bg },
+              headerStyle: { backgroundColor: headerColor },
               headerTintColor: colors.text,
               headerTitleStyle: { fontFamily: fonts.extrabold, fontSize: 19 },
               contentStyle: { backgroundColor: colors.bgSecondary },
@@ -108,19 +115,21 @@ function AppShell() {
               headerLeft: () => <AlwaysBackButton tintColor={colors.text} />,
             }}
           >
-            <Stack.Screen name="program" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="install" options={{ headerShown: false, title: 'Installer Mova' }} />
+            <Stack.Screen name="program" {...ownBackdrop} options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" {...ownBackdrop} options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" {...ownBackdrop} options={{ headerShown: false }} />
+            <Stack.Screen name="install" {...ownBackdrop} options={{ headerShown: false, title: 'Installer Mova' }} />
             <Stack.Screen name="import-activity" options={{ title: 'Importer Strava' }} />
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen
               name="session/guided"
+              {...ownBackdrop}
               options={{ title: 'Séance guidée', headerShown: false }}
             />
             <Stack.Screen
               name="session/live"
+              {...ownBackdrop}
               options={{ title: 'Séance live', headerShown: false }}
             />
             <Stack.Screen name="session/rpe" options={{ title: 'Effort ressenti' }} />
@@ -204,7 +213,9 @@ export default function RootLayout() {
     <AppProvider>
       <ThemeProvider>
         <I18nProvider>
-          <AppShell />
+          <AmbientSportProvider>
+            <AppShell />
+          </AmbientSportProvider>
         </I18nProvider>
       </ThemeProvider>
     </AppProvider>

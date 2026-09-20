@@ -15,24 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { seedFromString } from '../../engines/topoLines';
 import { TopoLines } from '../profile/TopoLines';
 
-/** Teinte de l'ambiance par sport / discipline (couleur principale, couleur secondaire). */
-export const SPORT_TINTS: Record<string, readonly [string, string]> = {
-  run: ['#3DFF9A', '#22D3EE'],
-  bike: ['#FBBF24', '#F97316'],
-  swim: ['#38BDF8', '#6366F1'],
-  triathlon: ['#A78BFA', '#22D3EE'],
-  ironman: ['#FB923C', '#F43F5E'],
-  strength: ['#C084FC', '#F472B6'],
-  calisthenics: ['#F472B6', '#FBBF24'],
-  other: ['#94A3B8', '#3DFF9A'],
-};
+import { SPORT_TINTS, tintForSport } from '../../theme/sportTints';
 
-export function tintForSport(sport?: string | null): readonly [string, string] {
-  return (sport && SPORT_TINTS[sport]) || SPORT_TINTS.run!;
-}
+export { SPORT_TINTS, tintForSport };
 
 /** Halo qui dérive lentement dans un aller-retour (amplitude visible à l'œil). */
-function DriftBlob({
+export function DriftBlob({
   size,
   color,
   opacity,
@@ -41,6 +29,7 @@ function DriftBlob({
   dy,
   ms,
   delay = 0,
+  paused = false,
 }: {
   size: number;
   color: string;
@@ -50,10 +39,13 @@ function DriftBlob({
   dy: number;
   ms: number;
   delay?: number;
+  /** Écran en arrière-plan : on fige l'animation (économie de batterie). */
+  paused?: boolean;
 }) {
   const v = useRef(new Animated.Value(0)).current;
   const id = useMemo(() => `wb${Math.random().toString(36).slice(2, 8)}`, []);
   useEffect(() => {
+    if (paused) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(v, { toValue: 1, duration: ms, delay, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -62,7 +54,7 @@ function DriftBlob({
     );
     loop.start();
     return () => loop.stop();
-  }, [v, ms, delay]);
+  }, [v, ms, delay, paused]);
   return (
     <Animated.View
       pointerEvents="none"

@@ -710,7 +710,7 @@ export default function UserProfileScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     requestBanner: {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,
@@ -756,9 +756,6 @@ function makeStyles(colors: ColorPalette) {
     header: {
       alignItems: 'center',
       padding: spacing.lg,
-      backgroundColor: colors.bg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
     },
     avatar: {
       width: 72,

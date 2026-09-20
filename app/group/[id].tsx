@@ -320,7 +320,7 @@ export default function GroupDetailScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary, padding: spacing.md },
+    root: { flex: 1, backgroundColor: 'transparent', padding: spacing.md },
     missing: { color: colors.text, marginBottom: spacing.md, fontWeight: '600' },
     hero: {
       backgroundColor: colors.bg,

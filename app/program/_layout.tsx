@@ -1,13 +1,19 @@
 import { Stack } from 'expo-router';
 import { useThemeColors } from '../../src/theme/ThemeContext';
+import { AtmosphereLayer, useHeaderColor } from '../../src/ui/atmosphere/ScreenAtmosphere';
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
+
+/** `new` dessine son propre fond (assistant). */
+const ownBackdrop = { layout: ({ children }: { children: React.ReactElement }) => children } as object;
 
 export default function ProgramLayout() {
   const { colors } = useThemeColors();
+  const headerColor = useHeaderColor();
   return (
     <Stack
+      screenLayout={({ children }) => <AtmosphereLayer>{children}</AtmosphereLayer>}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
+        headerStyle: { backgroundColor: headerColor },
         headerTintColor: colors.text,
         headerShadowVisible: false,
         headerBackTitle: 'Retour',
@@ -16,7 +22,7 @@ export default function ProgramLayout() {
         animationDuration: 400,
       }}
     >
-      <Stack.Screen name="new" options={{ headerShown: false }} />
+      <Stack.Screen name="new" {...ownBackdrop} options={{ headerShown: false }} />
       <Stack.Screen name="progress" options={{ title: 'Évolution' }} />
       <Stack.Screen name="detail" options={{ title: 'Programme' }} />
       <Stack.Screen name="adjust" options={{ title: 'Ajuster' }} />

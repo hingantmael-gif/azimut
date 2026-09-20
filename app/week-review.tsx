@@ -133,7 +133,7 @@ export default function WeekReviewScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     kicker: {
       fontSize: 12,
       fontWeight: '800',

@@ -669,7 +669,7 @@ function makeStyles(colors: ColorPalette, isDark: boolean) {
   const glassBorder = isDark ? 'rgba(61,255,154,0.14)' : 'rgba(14,143,111,0.18)';
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     scroll: { flex: 1, backgroundColor: 'transparent' },
     segmentRow: {
       flexDirection: 'row',

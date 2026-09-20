@@ -1,3 +1,4 @@
+import { useAmbientSport } from '../../src/theme/AmbientSport';
 import { useMemo } from 'react';
 import { StyleSheet, View, Image } from 'react-native';
 import { Text } from '../../src/ui/Text';
@@ -53,6 +54,7 @@ export default function SessionDetailScreen() {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const workout = state.plan.find((w) => w.id === id);
+  useAmbientSport(workout?.discipline);
   const {
     exporting,
     sendWorkout,

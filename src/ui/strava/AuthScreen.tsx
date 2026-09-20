@@ -18,8 +18,8 @@ const A = {
   borderStrong: 'rgba(255,255,255,0.4)',
   /** Surfaces OPAQUES (≈ 90 %) : le fond animé ne doit jamais transparaître sous le texte. */
   glass: 'rgba(6,14,28,0.88)',
-  /** Halo sombre autour des boutons : sépare nettement le bouton du fond animé. */
-  halo: '0px 0px 0px 5px rgba(3,8,16,0.55), 0px 10px 28px rgba(0,0,0,0.55)',
+  /** Simple ombre portée douce (pas de contour épais) : détache le bouton du fond animé. */
+  halo: '0px 8px 22px rgba(0,0,0,0.42)',
   accent: '#3DFF9A',
   onAccent: '#04140D',
   gradient: ['#12B87A', '#22D3EE'] as const,

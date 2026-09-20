@@ -429,7 +429,7 @@ export default function SleepScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     content: { padding: spacing.lg, paddingBottom: 48 },
     hero: { fontSize: 28, fontWeight: '800', color: colors.text },
     heroSub: { fontSize: 14, color: colors.textMuted, marginTop: 4, marginBottom: spacing.lg },
