@@ -784,7 +784,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
             {
               id: `product-calis-${Date.now()}`,
               kind: 'product',
-              fromUsername: 'azimut',
+              fromUsername: 'mova',
               fromDisplayName: 'Mova',
               createdAt: new Date().toISOString(),
               read: false,

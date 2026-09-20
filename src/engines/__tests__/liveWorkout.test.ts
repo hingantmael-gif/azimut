@@ -293,12 +293,13 @@ describe('paceStatus / paceGaugeLayout', () => {
     target: { type: 'pace', minSecPerKm: 270, maxSecPerKm: 290 },
   });
 
-  it('trop rapide / dans la zone / trop lent (tolérance ±3 s)', () => {
+  it('trop rapide / dans la zone / trop lent (zone élargie à ±10 s)', () => {
+    // cible 4:30–4:50 (270–290) : zone verte = 270–290 (déjà ≥ ±10 s autour de 280)
     expect(paceStatus(250, s)).toBe('too_fast');
-    expect(paceStatus(268, s)).toBe('in_zone');
-    expect(paceStatus(280, s)).toBe('in_zone');
-    expect(paceStatus(292, s)).toBe('in_zone');
-    expect(paceStatus(300, s)).toBe('too_slow');
+    expect(paceStatus(268, s)).toBe('too_fast');
+    expect(paceStatus(270, s)).toBe('in_zone');
+    expect(paceStatus(290, s)).toBe('in_zone');
+    expect(paceStatus(292, s)).toBe('too_slow');
   });
 
   it('sans cible d’allure ou sans allure courante ⇒ none', () => {

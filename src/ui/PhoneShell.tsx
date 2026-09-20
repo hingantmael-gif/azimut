@@ -21,7 +21,10 @@ export function PhoneShell({ children, style, ...props }: ViewProps) {
     );
   }
 
-  const framed = width > FRAME_BREAKPOINT;
+  // Le cadre « téléphone » est réservé aux écrans à souris. Sur un vrai téléphone tourné en paysage la largeur
+  // dépasse 520 px : encadrer démonterait toute l'app (séance en cours remise à zéro).
+  const touch = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+  const framed = width > FRAME_BREAKPOINT && !touch;
 
   if (!framed) {
     return (

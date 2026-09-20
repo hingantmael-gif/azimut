@@ -434,7 +434,7 @@ export function buildStravaUploadFile(activity: StravaActivity): StravaUploadFil
     .toISOString()
     .slice(0, 19)
     .replace(/[:T]/g, '');
-  const base = `azimut_${slugFileBase(activity.name)}_${stamp}`;
+  const base = `mova_${slugFileBase(activity.name)}_${stamp}`;
 
   if (gps >= 2) {
     return {

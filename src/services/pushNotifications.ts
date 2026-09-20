@@ -6,7 +6,7 @@ import { BRAND } from '../constants/brand';
 
 let handlerReady = false;
 
-/** PWA / web : alertes uniquement dans l’app (évite « hingantmael-gif.github.io » sur le téléphone). */
+/** PWA / web : alertes uniquement dans l’app (évite un nom de domaine technique sur le téléphone). */
 export function usesInAppNotificationsOnly(): boolean {
   return Platform.OS === 'web';
 }
@@ -221,7 +221,7 @@ export function socialPushCopy(n: SocialNotification): { title: string; body: st
 
 /**
  * Push OS (natif, app en arrière-plan seulement).
- * Sur web / PWA : jamais — évite le badge « hingantmael-gif.github.io ».
+ * Sur web / PWA : jamais — évite un badge affichant le domaine technique.
  */
 export async function presentSocialPush(n: SocialNotification): Promise<void> {
   const copy = socialPushCopy(n);

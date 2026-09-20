@@ -11,7 +11,7 @@
     <meta name="description" content="Installe Mova sur ton téléphone en 10 secondes : coaching multi-sport, tracker GPS, plans d'entraînement." />
     <meta property="og:title" content="Installer Mova" />
     <meta property="og:description" content="Ton coach multi-sport, directement sur ton écran d'accueil." />
-    <meta property="og:image" content="https://hingantmael-gif.github.io/icon-512.png" />
+    <meta property="og:image" content="/icon-512.png" />
     <link rel="icon" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -186,7 +186,7 @@
         var isMobile = isIos || isAndroid;
         var inApp = /FBAN|FBAV|Instagram|Snapchat|TikTok|MicroMessenger|Line\/|Twitter|LinkedInApp|GSA\/|; wv\)/i.test(ua);
         var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-        var LINK = 'https://hingantmael-gif.github.io/telecharger.html';
+        var LINK = location.origin + '/telecharger.html';
 
         var btn = $('install-btn');
         var status = $('status');

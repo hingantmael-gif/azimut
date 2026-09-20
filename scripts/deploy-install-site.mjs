@@ -1,5 +1,5 @@
 /**
- * Déploie Azimut à la RACINE HTTPS (comme BTP Pro sur Render).
+ * Déploie Mova à la RACINE HTTPS (comme BTP Pro sur Render).
  * Cible : https://hingantmael-gif.github.io/  (repo user pages)
  * + miroir redirect depuis l’ancien /azimut/
  */
@@ -10,7 +10,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const LIVE = 'https://hingantmael-gif.github.io';
+/** Adresse publique du site. Pour un domaine propre : MOVA_SITE_URL=https://mova.app (+ CNAME DNS chez le registrar). */
+const LIVE = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
+const CUSTOM_DOMAIN = /github\.io$/.test(new URL(LIVE).hostname) ? null : new URL(LIVE).hostname;
 /** API auth partagée (Render) — tous les e-mails, comptes cross-device */
 const PROD_API = process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onrender.com';
 const sh = (cmd, cwd = root, env = {}) =>
@@ -88,6 +90,7 @@ if (fs.existsSync(path.join(dist, 'index.html'))) {
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'app.html'));
 }
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
+if (CUSTOM_DOMAIN) fs.writeFileSync(path.join(dist, 'CNAME'), `${CUSTOM_DOMAIN}\n`);
 
 // Garde-fou OAuth : si Google renvoie encore sur /apropos.html, renvoyer vers /welcome
 const aproposPath = path.join(dist, 'apropos.html');
@@ -117,7 +120,7 @@ sh('git init', rootTmp);
 sh('git checkout -b main', rootTmp);
 sh('git add -A', rootTmp);
 sh(
-  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: Azimut PWA racine (comme BTP Pro)"',
+  'git -c user.email=noreply@github.com -c user.name="Mova Deploy" commit -m "deploy: Mova PWA racine (comme BTP Pro)"',
   rootTmp,
 );
 try {
@@ -141,11 +144,11 @@ const redirectHtml = `<!doctype html>
   <meta charset="UTF-8" />
   <meta http-equiv="refresh" content="0;url=${LIVE}/telecharger.html" />
   <link rel="canonical" href="${LIVE}/telecharger.html" />
-  <title>Redirection Azimut…</title>
+  <title>Redirection Mova…</title>
   <script>location.replace(${JSON.stringify(LIVE + '/telecharger.html')} + location.search + location.hash);</script>
 </head>
 <body style="background:#07111f;color:#fff;font-family:system-ui;padding:24px;text-align:center">
-  <p>Redirection vers Azimut…</p>
+  <p>Redirection vers Mova…</p>
   <p><a style="color:#3dff9a" href="${LIVE}/telecharger.html">Ouvrir l’installateur</a></p>
 </body>
 </html>`;
@@ -159,7 +162,7 @@ sh('git init', legacyTmp);
 sh('git checkout -b gh-pages', legacyTmp);
 sh('git add -A', legacyTmp);
 sh(
-  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "redirect: /azimut → site racine PWA"',
+  'git -c user.email=noreply@github.com -c user.name="Mova Deploy" commit -m "redirect: /azimut → site racine PWA"',
   legacyTmp,
 );
 sh('git remote add origin https://github.com/hingantmael-gif/azimut.git', legacyTmp);

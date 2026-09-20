@@ -1,6 +1,6 @@
-/* Service worker Azimut — mises à jour auto à chaque réouverture. */
-const CACHE = 'azimut-static-v94';
-const IMMUTABLE = 'azimut-immutable-v1';
+/* Service worker Mova — mises à jour auto à chaque réouverture. */
+const CACHE = 'mova-static-v95';
+const IMMUTABLE = 'mova-immutable-v1';
 /** Nom de fichier avec empreinte (…-<hash 32 hex>.ext ou entry-<hash>.js) : jamais modifié après publication. */
 const HASHED = /[.-][0-9a-f]{32}\.[a-z0-9]+$/i;
 const PRECACHE = [

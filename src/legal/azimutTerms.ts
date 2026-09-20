@@ -63,7 +63,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'outils de récupération, sommeil saisi, nutrition indicative, prédiction de performances ;',
           'profil utilisateur, paramètres de confidentialité, éventuelle dimension sociale (groupes, abonnements) ;',
           'installation en PWA, synchronisation compte (appareil / serveur), connexions optionnelles (ex. Google) ;',
-          'pages d’information et d’installation du site hingantmael-gif.github.io.',
+          'pages d’information et d’installation du site Mova.',
         ],
       },
       {

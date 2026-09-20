@@ -16,8 +16,8 @@ export const FREE_QUOTAS = {
 } as const;
 
 export const BILLING_PRODUCTS = {
-  monthly: 'azimut_premium_monthly',
-  annual: 'azimut_premium_annual',
+  monthly: 'mova_premium_monthly',
+  annual: 'mova_premium_annual',
   /** Entitlement RevenueCat unique */
   entitlement: 'premium',
 } as const;

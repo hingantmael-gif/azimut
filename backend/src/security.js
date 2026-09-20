@@ -26,7 +26,7 @@ export function createLimiter({ windowMs, max, key, message = 'Trop de tentative
 }
 
 const DEFAULT_ORIGINS = [
-  'https://hingantmael-gif.github.io',
+  'https://hingantmael-gif.github.io', // domaine technique actuel — remplacé par CORS_ORIGINS avec un domaine Mova
   'http://localhost:8081',
   'http://localhost:8082',
   'http://localhost:19006',

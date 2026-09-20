@@ -119,3 +119,40 @@ export function computeAdaptiveWindowPace(pts: GpsSample[]): number | null {
   }
   return null;
 }
+
+/**
+ * Allure INSTANTANÉE (s/km), pensée pour coller à une montre : fenêtre de ~10 s seulement, et vitesse
+ * « Doppler » du GPS quand elle est fournie (la plus réactive). Renvoie null si pas assez de données.
+ */
+export function computeInstantPace(pts: GpsSample[], nativeSpeedMps?: number | null): number | null {
+  const last = pts[pts.length - 1];
+  if (!last) return null;
+  const lastAcc = last.accuracy ?? 999;
+  if (nativeSpeedMps != null && nativeSpeedMps >= 0.8 && nativeSpeedMps <= MAX_SPEED_MPS && lastAcc <= 20) {
+    return 1000 / nativeSpeedMps;
+  }
+  let dist = 0;
+  let t = 0;
+  for (let i = pts.length - 1; i > 0; i--) {
+    const a = pts[i - 1]!;
+    const b = pts[i]!;
+    if ((a.accuracy ?? 999) > PACE_BAD_ACCURACY_M || (b.accuracy ?? 999) > PACE_BAD_ACCURACY_M) continue;
+    const dt = (b.timestamp - a.timestamp) / 1000;
+    if (dt <= 0) continue;
+    dist += haversineM({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
+    t += dt;
+    if (t >= 10) break;
+  }
+  if (t >= 3 && dist >= 6) return t / (dist / 1000);
+  return computeAdaptiveWindowPace(pts);
+}
+
+/**
+ * Lissage exponentiel à constante de temps ~3 s : une accélération se voit en 4–6 s (une montre en 3–5 s),
+ * au lieu de 30–60 s avec l'ancien lissage sur 12 échantillons.
+ */
+export function smoothPace(prev: number | null, next: number, dtSec: number): number {
+  if (prev == null) return next;
+  const alpha = 1 - Math.exp(-Math.max(dtSec, 0.5) / 3);
+  return prev + alpha * (next - prev);
+}

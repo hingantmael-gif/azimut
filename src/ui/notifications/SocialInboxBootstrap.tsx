@@ -24,7 +24,7 @@ function mapCloudNotif(n: {
   fromUsername?: string;
   createdAt?: string;
 }): SocialNotification | null {
-  const from = (n.fromUsername || 'azimut').toLowerCase();
+  const from = (n.fromUsername || 'mova').toLowerCase();
   const kind =
     n.type === 'follow_request'
       ? 'follow_request'

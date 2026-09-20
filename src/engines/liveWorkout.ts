@@ -180,24 +180,39 @@ export function stepGoalSec(step: WorkoutStep): number | null {
   return null;
 }
 
+/** Demi-largeur minimale de la zone verte : ±10 s/km autour de l'allure visée (comme une montre). */
+export const PACE_ZONE_MIN_HALF_WIDTH_SEC = 10;
+
+/**
+ * Zone d'allure « verte » d'une étape : la bande prévue, élargie si besoin à ±10 s/km autour de son centre
+ * (une zone de 2-3 s est impossible à tenir). Null si l'étape n'a pas d'allure cible.
+ */
+export function paceZone(step: WorkoutStep | null): { min: number; max: number } | null {
+  if (!step?.target || step.target.type !== 'pace') return null;
+  const lo = Math.min(step.target.minSecPerKm, step.target.maxSecPerKm);
+  const hi = Math.max(step.target.minSecPerKm, step.target.maxSecPerKm);
+  const mid = (lo + hi) / 2;
+  const half = Math.max(PACE_ZONE_MIN_HALF_WIDTH_SEC, (hi - lo) / 2);
+  return { min: mid - half, max: mid + half };
+}
+
 export function paceStatus(
   currentSecPerKm: number | null,
   step: WorkoutStep | null,
 ): LivePaceStatus {
-  if (!step?.target || step.target.type !== 'pace' || currentSecPerKm == null) {
-    return 'none';
-  }
-  const { minSecPerKm, maxSecPerKm } = step.target;
+  const zone = paceZone(step);
+  if (!zone || currentSecPerKm == null) return 'none';
   // Allure : plus petit = plus rapide
-  if (currentSecPerKm < minSecPerKm - 3) return 'too_fast';
-  if (currentSecPerKm > maxSecPerKm + 3) return 'too_slow';
+  if (currentSecPerKm < zone.min) return 'too_fast';
+  if (currentSecPerKm > zone.max) return 'too_slow';
   return 'in_zone';
 }
 
 export function formatPaceBand(step: WorkoutStep | null): string | null {
   if (!step?.target || step.target.type !== 'pace') return null;
-  // Affichage « entre X et Y » : plus lent → plus rapide (ex. 6'00" – 5'00"/km)
-  return `${formatPace(step.target.maxSecPerKm)} – ${formatPace(step.target.minSecPerKm)}/km`;
+  // Affichage « entre X et Y » : plus lent → plus rapide (ex. 6'00" – 5'00"/km), sur la zone ±10 s
+  const zone = paceZone(step)!;
+  return `${formatPace(zone.max)} – ${formatPace(zone.min)}/km`;
 }
 
 export function formatLiveClock(totalSec: number): string {

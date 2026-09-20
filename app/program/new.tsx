@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { LoadCurvePreview } from '../../src/ui/program/LoadCurvePreview';
 import { WizardBackdrop } from '../../src/ui/program/WizardBackdrop';
 import { WizardGlassCard, WizardSessionGrid } from '../../src/ui/program/WizardPickers';
 import {
@@ -244,20 +243,14 @@ export default function NewProgramScreen() {
   const [strengthEquipment, setStrengthEquipment] = useState<StrengthEquipment[]>(
     () => savedEquipment,
   );
+  // Aucun choix pré-sélectionné : le bouton « Continuer » s'active au premier clic.
   const [strengthGoal, setStrengthGoal] = useState<string | null>(
-    () => onboarding?.strengthGoal ?? null,
+    () => null,
   );
   const [strengthSetupPhase, setStrengthSetupPhase] = useState<
     'equipment' | 'goal' | 'focus'
   >(() => (hasProfileEquipment ? 'goal' : 'equipment'));
-  const [strengthBodyFocus, setStrengthBodyFocus] = useState<StrengthBodyFocus | null>(
-    () =>
-      onboarding?.strengthBodyFocus === 'upper' ||
-      onboarding?.strengthBodyFocus === 'lower' ||
-      onboarding?.strengthBodyFocus === 'full'
-        ? onboarding.strengthBodyFocus
-        : null,
-  );
+  const [strengthBodyFocus, setStrengthBodyFocus] = useState<StrengthBodyFocus | null>(null);
   const [strengthLevel, setStrengthLevel] = useState<'debutant' | 'intermediaire' | 'confirme'>(
     () => onboarding?.level ?? 'intermediaire',
   );
@@ -705,11 +698,15 @@ export default function NewProgramScreen() {
         if (overload.level === 'strong') {
           const ok = await appConfirm(
             'Risque de blessure',
-            `${overload.message}\n\nTrop de séances ou de sports en parallèle augmente le risque de surcharge.`,
+            overload.message,
             'Créer quand même',
             'Annuler',
           );
-          if (!ok) return;
+          // « Annuler » = simple retour à l'étape précédente, sans rien perdre des choix faits.
+          if (!ok) {
+            goBackStep();
+            return;
+          }
         } else if (overload.level === 'caution') {
           const ok = await appConfirm(
             'Attention à la charge',
@@ -717,7 +714,10 @@ export default function NewProgramScreen() {
             'Continuer',
             'Revoir',
           );
-          if (!ok) return;
+          if (!ok) {
+            goBackStep();
+            return;
+          }
         }
         await commitWithMode(scheduleMode);
       };
@@ -940,6 +940,8 @@ export default function NewProgramScreen() {
     step === S.ppg ||
     (step === S.program && selectedTemplate === 'custom') ||
     (isBodyProgram && step === S.level) ||
+    (isBodyProgram && step === S.setup && isCalis) ||
+    (isBodyProgram && step === S.setup && isStrength && (strengthSetupPhase === 'goal' || strengthSetupPhase === 'focus')) ||
     (isBodyProgram &&
       step === S.setup &&
       isStrength &&
@@ -948,7 +950,13 @@ export default function NewProgramScreen() {
   const showGenerate = step === S.duration;
 
   const canContinue =
-    step === S.setup && isStrength && strengthSetupPhase === 'equipment'
+    step === S.setup && isCalis
+      ? strengthGoal != null
+      : step === S.setup && isStrength && strengthSetupPhase === 'goal'
+        ? strengthGoal === 'fitness' || strengthGoal === 'hypertrophy' || strengthGoal === 'power'
+        : step === S.setup && isStrength && strengthSetupPhase === 'focus'
+          ? strengthBodyFocus != null
+          : step === S.setup && isStrength && strengthSetupPhase === 'equipment'
       ? strengthEquipment.length >= 1
       : step === S.sessions
         ? weeklySessionsTarget >= 1
@@ -1074,7 +1082,6 @@ export default function NewProgramScreen() {
       </WizardHint>
     );
   })()}
-  <LoadCurvePreview plan={previewPlan} />
     </>
   );
 
@@ -1324,7 +1331,7 @@ export default function NewProgramScreen() {
         {step === S.setup && isCalis && (
           <WizardStepShell resetKey="calis-goal">
             <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
-              Touchez un objectif — passage automatique à l&apos;étape suivante.
+              Choisis un objectif, puis touche « Continuer ».
             </Body>
             {CALISTHENICS_GOAL_OPTIONS.map((opt) => (
               <WizardOptionCard
@@ -1332,10 +1339,7 @@ export default function NewProgramScreen() {
                 title={opt.label}
                 subtitle={opt.desc}
                 selected={strengthGoal === opt.id}
-                onPress={() => {
-                  setStrengthGoal(opt.id);
-                  setStep((s) => s + 1);
-                }}
+                onPress={() => setStrengthGoal(opt.id)}
                 accent={colors.accent}
                 tone="hero"
               />
@@ -1361,10 +1365,7 @@ export default function NewProgramScreen() {
                 ? strengthGoal
                 : null
             }
-            onSelect={(id) => {
-              setStrengthGoal(id);
-              setStrengthSetupPhase('focus');
-            }}
+            onSelect={(id) => setStrengthGoal(id)}
             accent={colors.accent}
             tone="hero"
           />
@@ -1373,10 +1374,7 @@ export default function NewProgramScreen() {
         {step === S.setup && isStrength && strengthSetupPhase === 'focus' && (
           <StrengthBodyFocusPicker
             selected={strengthBodyFocus}
-            onSelect={(id) => {
-              setStrengthBodyFocus(id);
-              setStep((s) => s + 1);
-            }}
+            onSelect={(id) => setStrengthBodyFocus(id)}
             accent={colors.accent}
             tone="hero"
           />

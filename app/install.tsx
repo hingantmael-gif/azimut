@@ -4,7 +4,7 @@ import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { BRAND } from '../src/constants/brand';
 
-const INSTALL_PAGE = 'https://hingantmael-gif.github.io/telecharger.html';
+const INSTALL_PAGE = '/telecharger.html';
 
 /** Redirige vers la page Installer isolée (PWA), style BTP Pro. */
 export default function InstallLandingScreen() {

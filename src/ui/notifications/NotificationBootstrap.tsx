@@ -4,6 +4,7 @@ import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { useApp, todayWorkout } from '../../store/AppContext';
+import { DismissibleBanner } from './DismissibleBanner';
 import { NotificationPermissionModal } from './NotificationPermissionModal';
 import {
   askSystemPermission,
@@ -325,7 +326,7 @@ export function NotificationBootstrap() {
       {showBanner && preCopy ? (
         <View pointerEvents="box-none" style={styles.bannerHost}>
           <SoftPulse intensity={0.03}>
-            <Pressable
+            <DismissibleBanner
               style={[
                 styles.banner,
                 {
@@ -336,7 +337,8 @@ export function NotificationBootstrap() {
               onPress={() => {
                 if (today) router.push(`/session/${today.id}`);
               }}
-              accessibilityRole="button"
+              onDismiss={() => setBannerDismissed(true)}
+              closeColor={colors.textMuted}
               accessibilityLabel={preCopy.title}
             >
               <View style={{ flex: 1 }}>
@@ -353,14 +355,7 @@ export function NotificationBootstrap() {
                   {preCopy.body}
                 </Text>
               </View>
-              <Pressable
-                onPress={() => setBannerDismissed(true)}
-                hitSlop={10}
-                accessibilityLabel="Fermer le rappel"
-              >
-                <Text style={[styles.bannerClose, { color: colors.textMuted }]}>✕</Text>
-              </Pressable>
-            </Pressable>
+            </DismissibleBanner>
           </SoftPulse>
         </View>
       ) : null}

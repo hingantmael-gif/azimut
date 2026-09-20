@@ -57,7 +57,7 @@ function fromRevenueCatEvent(body) {
   const event = body?.event || body;
   const type = String(event?.type || '').toUpperCase();
   const productId =
-    event?.product_id || event?.productId || 'azimut_premium_annual';
+    event?.product_id || event?.productId || 'mova_premium_annual';
   const expiration =
     event?.expiration_at_ms != null
       ? new Date(Number(event.expiration_at_ms)).toISOString()
@@ -104,8 +104,8 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
   app.get('/billing/config', (_req, res) => {
     res.json({
       products: {
-        monthly: 'azimut_premium_monthly',
-        annual: 'azimut_premium_annual',
+        monthly: 'mova_premium_monthly',
+        annual: 'mova_premium_annual',
         entitlement: 'premium',
       },
       trialDays: 7,

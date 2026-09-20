@@ -218,7 +218,7 @@ export function buildAppleWorkoutKitJson(workout: PlannedWorkout): string {
 
   const payload = {
     kind: 'custom',
-    source: 'azimut',
+    source: 'mova',
     displayName: workout.title,
     activity: appleActivity(workout.discipline),
     scheduledDate: workout.date,
@@ -253,7 +253,7 @@ export function buildSamsungWorkoutJson(workout: PlannedWorkout): string {
   const summary = summarizeWorkout(workout);
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'samsung_health',
       title: workout.title,
       date: workout.date,
@@ -282,7 +282,7 @@ export function buildSamsungWorkoutJson(workout: PlannedWorkout): string {
 export function buildFitbitWorkoutJson(workout: PlannedWorkout): string {
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'fitbit',
       name: workout.title,
       date: workout.date,
@@ -310,7 +310,7 @@ export function buildFitbitWorkoutJson(workout: PlannedWorkout): string {
 export function buildHuaweiWorkoutJson(workout: PlannedWorkout): string {
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'huawei_health',
       title: workout.title,
       date: workout.date,
@@ -337,7 +337,7 @@ export function buildGarminTrainingJson(workout: PlannedWorkout): string {
   const { workout: payload, scheduleDate, summary } = buildGarminWorkoutExport(workout);
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'garmin_connect',
       scheduleDate,
       summary,

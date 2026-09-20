@@ -183,7 +183,7 @@ async function sendOtpEmail(to, code) {
     return { sent: true, provider: 'brevo' };
   }
 
-  console.log(`[azimut-auth] OTP ${to} → ${code} (aucun fournisseur e-mail configuré)`);
+  console.log(`[mova-auth] OTP ${to} → ${code} (aucun fournisseur e-mail configuré)`);
   return { sent: false, provider: 'console' };
 }
 
@@ -279,7 +279,7 @@ function validatePasswordPolicy(password) {
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    app: 'azimut-api',
+    app: 'mova-api',
     mailConfigured: Boolean(process.env.RESEND_API_KEY || process.env.BREVO_API_KEY),
     storage: storageMode(),
   });

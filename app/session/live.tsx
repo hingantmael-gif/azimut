@@ -40,9 +40,12 @@ import {
   haversineM,
   liveCueLabel,
   paceStatus,
+  paceZone,
   stepPhaseTitle,
 } from '../../src/engines/liveWorkout';
 import { findPlannedForFreeActivity } from '../../src/engines/programSessions';
+import { initialPaceCoach, nextPaceCue } from '../../src/engines/paceCoach';
+import { isVoiceCoachOn, speak } from '../../src/services/voiceCoach';
 import type { PlannedWorkout } from '../../src/types/domain';
 import { PressableScale } from '../../src/ui/motion/softMotion';
 import { safeGoBack } from '../../src/ui/navigation/AlwaysBackButton';
@@ -101,6 +104,22 @@ export default function LiveSessionScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  // Écran du tracker : portrait uniquement (une rotation ne doit jamais perturber la séance).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const o = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
+      | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+      | undefined;
+    void o?.lock?.('portrait').catch(() => undefined);
+    return () => {
+      try {
+        o?.unlock?.();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
   const { colors } = useThemeColors();
   const styles = useMemo(() => liveTrackerStyles(colors), [colors]);
   const screenH = Dimensions.get('window').height;
@@ -551,6 +570,15 @@ export default function LiveSessionScreen() {
   const paceSt = paceStatus(gps.currentPaceSecPerKm, currentStep);
   const paceBand = formatPaceBand(currentStep);
 
+  // Coach vocal : « Accélère » / « Ralentis » / « Très bien, garde l'allure » selon l'aiguille.
+  const paceCoachRef = useRef(initialPaceCoach(Date.now()));
+  useEffect(() => {
+    if (phase !== 'running' || !isVoiceCoachOn()) return;
+    const r = nextPaceCue(paceCoachRef.current, paceSt, Date.now());
+    paceCoachRef.current = r.state;
+    if (r.say) speak(r.say);
+  }, [phase, paceSt, movingSec]);
+
   // « Flow » : part du temps passé dans la zone d'allure cible (étapes avec cible d'allure).
   /** Bouton « Activer » : ouvre la demande d'autorisation du navigateur / du téléphone. */
   const onEnableLocation = useCallback(async () => {
@@ -735,8 +763,8 @@ export default function LiveSessionScreen() {
               currentSecPerKm={
                 phase === 'ready' ? null : gps.currentPaceSecPerKm
               }
-              minSecPerKm={paceTarget.minSecPerKm}
-              maxSecPerKm={paceTarget.maxSecPerKm}
+              minSecPerKm={paceZone(currentStep)?.min ?? paceTarget.minSecPerKm}
+              maxSecPerKm={paceZone(currentStep)?.max ?? paceTarget.maxSecPerKm}
               status={phase === 'ready' ? 'none' : paceSt}
               currentLabel={formatLivePace(
                 phase === 'ready' ? null : gps.currentPaceSecPerKm,

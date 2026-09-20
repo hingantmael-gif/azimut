@@ -5,9 +5,9 @@ import * as Location from 'expo-location';
 import { haversineM } from '../engines/liveWorkout';
 import {
   PACE_BAD_ACCURACY_M,
-  computeAdaptiveWindowPace,
+  computeInstantPace,
   shouldCountGpsSegment,
-  weightedRecentPace,
+  smoothPace,
 } from '../engines/gpsPace';
 
 export type GpsPoint = {
@@ -152,6 +152,8 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
 
   const subRef = useRef<{ remove: () => void } | null>(null);
   const pausedRef = useRef(false);
+  const paceSmoothRef = useRef<number | null>(null);
+  const paceLastAtRef = useRef(0);
   const recordingRef = useRef(false);
   const pointsRef = useRef<GpsPoint[]>([]);
   const distanceRef = useRef(0);
@@ -266,32 +268,20 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
 
     pointsRef.current = [...pointsRef.current, next];
 
-    // Skip agressif accuracy > 25 m pour l’échantillon d’allure
-    let currentPace: number | null = null;
+    // Allure instantanée (fenêtre ~10 s + vitesse GPS) lissée sur ~3 s : colle à une montre.
+    // (L'ancien mélange avec 12 échantillons de 8 s ajoutait 30 à 60 s de retard.)
+    let currentPace: number | null = paceSmoothRef.current;
     if (acc <= PACE_BAD_ACCURACY_M) {
-      currentPace = computeAdaptiveWindowPace(pointsRef.current);
-      if (
-        currentPace != null &&
-        next.timestamp - lastPaceSampleAtRef.current >= 8000
-      ) {
-        lastPaceSampleAtRef.current = next.timestamp;
-        recentPacesRef.current = [
-          ...recentPacesRef.current,
-          currentPace,
-        ].slice(-12);
+      const inst = computeInstantPace(pointsRef.current, speed);
+      if (inst != null) {
+        const dt = paceLastAtRef.current ? (next.timestamp - paceLastAtRef.current) / 1000 : 0;
+        currentPace = smoothPace(paceSmoothRef.current, inst, dt);
+        paceSmoothRef.current = currentPace;
+        paceLastAtRef.current = next.timestamp;
       }
-    }
-
-    // Si on a un historique, pondérer le plus récent (surtout signal bon)
-    if (recentPacesRef.current.length >= 2) {
-      const smoothed = weightedRecentPace(recentPacesRef.current);
-      if (smoothed != null) {
-        const blend =
-          acc < 12 ? 0.72 : acc < 25 ? 0.55 : 0.35;
-        currentPace =
-          currentPace != null
-            ? currentPace * (1 - blend) + smoothed * blend
-            : smoothed;
+      if (currentPace != null && next.timestamp - lastPaceSampleAtRef.current >= 8000) {
+        lastPaceSampleAtRef.current = next.timestamp;
+        recentPacesRef.current = [...recentPacesRef.current, currentPace].slice(-12);
       }
     }
 
@@ -396,6 +386,8 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     lastMoveAtRef.current = Date.now();
     lastDistanceRef.current = 0;
     recentPacesRef.current = [];
+    paceSmoothRef.current = null;
+    paceLastAtRef.current = 0;
     lastPaceSampleAtRef.current = 0;
     autoPauseFiredRef.current = false;
     stillSecRef.current = 0;

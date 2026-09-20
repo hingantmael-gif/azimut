@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#07111F" />
-    <meta name="description" content="Installer Azimut — application Android native (logo Azimut)." />
+    <meta name="description" content="Installer Mova — application Android native (logo Mova)." />
     <link rel="icon" href="./icon.png" />
-    <title>Azimut — Installer l’application</title>
+    <title>Mova — Installer l’application</title>
     <style>
       :root {
         --ink: #07111f;
@@ -164,7 +164,7 @@
         <h1>Azimut</h1>
         <p class="tag">Application Android native</p>
         <p class="pitch" id="pitch">
-          Une vraie app (icône logo Azimut sur l’écran d’accueil) — pas un site web.
+          Une vraie app (icône logo Mova sur l’écran d’accueil) — pas un site web.
         </p>
 
         <div class="alert" id="pcAlert" role="status">
@@ -182,7 +182,7 @@
           <li data-n="1">Appuie sur <strong>Installer l’application</strong> (ci-dessous).</li>
           <li data-n="2">Quand le téléchargement est fini, ouvre la notification ou le dossier Téléchargements → <strong>azimut.apk</strong>.</li>
           <li data-n="3">Si Android demande, autorise l’installation (sources inconnues / Chrome).</li>
-          <li data-n="4">Appuie sur <strong>Installer</strong> — l’icône <strong>logo Azimut</strong> apparaît sur l’écran d’accueil.</li>
+          <li data-n="4">Appuie sur <strong>Installer</strong> — l’icône <strong>logo Mova</strong> apparaît sur l’écran d’accueil.</li>
         </ol>
 
         <button type="button" id="btn">Installer l’application</button>
@@ -234,7 +234,7 @@
         } else if (isAndroid) {
           steps.style.display = 'block';
           pitch.textContent =
-            'Sur ce téléphone : télécharge, puis installe. L’icône logo Azimut arrive sur l’écran d’accueil.';
+            'Sur ce téléphone : télécharge, puis installe. L’icône logo Mova arrive sur l’écran d’accueil.';
           hint.textContent =
             'Après Installer, cherche « Azimut » dans tes applications — ce n’est plus un site.';
         }
@@ -270,7 +270,7 @@
             btn.removeAttribute('aria-busy');
             btn.textContent = 'Installer l’application';
             hint.textContent =
-              'Fichier reçu ? Ouvre azimut.apk → Installer. L’icône logo Azimut apparaît ensuite.';
+              'Fichier reçu ? Ouvre azimut.apk → Installer. L’icône logo Mova apparaît ensuite.';
           }, 2500);
         });
       })();

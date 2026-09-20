@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const url = 'https://hingantmael-gif.github.io/telecharger.html';
+const site = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
+const url = `${site}/telecharger.html`;
 const out = path.join(root, 'public', 'qr-install.png');
 
 await QRCode.toFile(out, url, {

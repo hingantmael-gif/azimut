@@ -157,7 +157,7 @@ export function catalogClubToClub(
     sportLabel: catalog.sportLabel,
     visibility: catalog.visibility,
     createdAt: catalog.createdAt,
-    createdByUsername: catalog.sampleMembers[0]?.username ?? 'azimut',
+    createdByUsername: catalog.sampleMembers[0]?.username ?? 'mova',
     members,
     posts,
   };
