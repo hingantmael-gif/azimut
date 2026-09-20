@@ -947,6 +947,8 @@ export function liveTrackerStyles(colors: ColorPalette) {
       fontWeight: '800',
       color: '#0F172A',
     },
+    skipStep: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999, backgroundColor: 'rgba(15,23,42,0.06)' },
+    skipStepText: { color: '#334155', fontSize: 13, fontWeight: '700' },
     stepRemaining: {
       textAlign: 'center',
       fontSize: 13,

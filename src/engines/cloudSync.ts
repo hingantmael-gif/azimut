@@ -31,7 +31,14 @@ export function compactActivity(a: StravaActivity): StravaActivity {
   const latlng = downsampleTrack(a.streams.latlng);
   return {
     ...a,
-    streams: latlng ? { time: (downsampleTrack(a.streams.time) ?? []) as number[], latlng } : undefined,
+    streams: latlng
+      ? {
+          time: (downsampleTrack(a.streams.time) ?? []) as number[],
+          latlng,
+          altitude: a.streams.altitude?.length === a.streams.latlng?.length ? downsampleTrack(a.streams.altitude) : undefined,
+          heartrate: a.streams.heartrate?.length === a.streams.latlng?.length ? downsampleTrack(a.streams.heartrate) : undefined,
+        }
+      : undefined,
   };
 }
 

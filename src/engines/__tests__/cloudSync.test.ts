@@ -26,7 +26,7 @@ describe('cloudSync', () => {
     expect(downsampleTrack([1, 2, 3], 600)).toEqual([1, 2, 3]);
   });
 
-  it('compacte une activité : tracé réduit, flux détaillés retirés', () => {
+  it('compacte une activité : tracé, altitude et FC réduits à 600 points, autres flux retirés', () => {
     const latlng = Array.from({ length: 2000 }, (_, i) => [i, i] as [number, number]);
     const c = compactActivity(
       act('a', '2026-09-01T08:00:00Z', {
@@ -34,7 +34,8 @@ describe('cloudSync', () => {
       }),
     );
     expect(c.streams?.latlng).toHaveLength(600);
-    expect(c.streams?.heartrate).toBeUndefined();
+    expect(c.streams?.heartrate).toHaveLength(600);
+    expect(c.streams?.velocitySmooth).toBeUndefined();
   });
 
   it('détecte un compte local neuf', () => {

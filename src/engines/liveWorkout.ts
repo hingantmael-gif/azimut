@@ -346,6 +346,22 @@ export function advanceLiveStepCursor(
 }
 
 /**
+ * « Passer l'étape » : l'étape suivante démarre MAINTENANT (temps et distance actuels), la suite
+ * du plan est décalée d'autant — le temps restant se recalcule tout seul depuis le nouveau départ.
+ * Sans effet sur la dernière étape (fin de séance manuelle).
+ */
+export function skipLiveStep(
+  cursor: LiveStepCursor,
+  flat: FlatLiveStep[],
+  movingSec: number,
+  distanceM: number,
+): LiveStepCursor {
+  const c = advanceLiveStepCursor(cursor, flat, movingSec, distanceM);
+  if (c.index >= flat.length - 1) return c;
+  return { index: c.index + 1, startSec: movingSec, startM: distanceM };
+}
+
+/**
  * Calcule la progression dans les étapes à partir du temps / distance écoulés
  * (moving). Passer le curseur conservé entre deux appels (voir
  * {@link advanceLiveStepCursor}) pour un suivi exact des séances mixtes durée/distance.
@@ -415,6 +431,7 @@ export function buildLiveActivity(opts: {
   latlng: [number, number][];
   timeStream: number[];
   velocitySmooth: number[];
+  altitude?: number[];
 }): StravaActivity {
   const moving = Math.max(1, opts.movingSec);
   const dist = Math.max(0, opts.distanceM);
@@ -436,6 +453,7 @@ export function buildLiveActivity(opts: {
               ? opts.timeStream
               : opts.latlng.map((_, i) => i),
             latlng: opts.latlng,
+            altitude: opts.altitude?.length === opts.latlng.length ? opts.altitude.map((v) => Math.round(v * 10) / 10) : undefined,
             velocitySmooth:
               opts.velocitySmooth.length === opts.latlng.length
                 ? opts.velocitySmooth

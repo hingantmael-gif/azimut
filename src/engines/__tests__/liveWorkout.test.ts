@@ -11,6 +11,7 @@ import {
   haversineM,
   paceGaugeLayout,
   paceStatus,
+  skipLiveStep,
   type LiveStepCursor,
 } from '../liveWorkout';
 import { formatPace } from '../core';
@@ -375,5 +376,27 @@ describe('detectPaceAnomaly', () => {
       movingSec: 300,
     });
     expect(a?.kind).toBe('zone_collapse');
+  });
+});
+
+describe('skipLiveStep (Passer l’étape)', () => {
+  const plan = flattenWorkoutSteps([
+    step({ id: 'a', type: 'warmup', durationSec: 600 }),
+    step({ id: 'b', type: 'active', durationSec: 300 }),
+    step({ id: 'c', type: 'cooldown', durationSec: 300 }),
+  ]);
+
+  it('passe à l’étape suivante et repart de zéro à cet instant', () => {
+    const c = skipLiveStep(INITIAL_LIVE_CURSOR, plan, 120, 400);
+    expect(c).toEqual({ index: 1, startSec: 120, startM: 400 });
+    const p = computeLiveStepProgress(plan, 120, 400, c);
+    expect(p.stepIndex).toBe(1);
+    expect(p.ratio).toBe(0);
+  });
+
+  it('ne dépasse jamais la dernière étape', () => {
+    let c: LiveStepCursor = INITIAL_LIVE_CURSOR;
+    for (let i = 0; i < 6; i++) c = skipLiveStep(c, plan, 100 + i, 0);
+    expect(c.index).toBe(2);
   });
 });

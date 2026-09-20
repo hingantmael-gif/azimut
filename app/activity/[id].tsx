@@ -16,7 +16,8 @@ import {
   exportActivityToStrava,
   shareActivityRecap,
 } from '../../src/engines/stravaExport';
-import { buildSessionCoachingInsight } from '../../src/engines/socialCoachingInsight';
+import { buildCoachLines } from '../../src/engines/activityAnalysis';
+import { ActivityCharts } from '../../src/ui/ActivityCharts';
 import { findSimilarPaceCompare } from '../../src/engines/paceCompare';
 import { compareSessionVsPlan } from '../../src/engines/progressiveLearning';
 import { useThemeColors } from '../../src/theme/ThemeContext';
@@ -40,12 +41,9 @@ export default function ActivityDetailScreen() {
   );
   const analysis = state.analyses.find((x) => x.activityId === activity?.id);
   useAmbientSport(activity?.sport ?? 'run');
-  const coachingInsight = useMemo(
-    () =>
-      activity
-        ? buildSessionCoachingInsight(activity, state.analyses)
-        : null,
-    [activity, state.analyses],
+  const coachLines = useMemo(
+    () => (activity ? buildCoachLines(activity, analysis) : []),
+    [activity, analysis],
   );
 
   if (!activity) {
@@ -170,27 +168,18 @@ export default function ActivityDetailScreen() {
           </View>
         </View>
 
-        {analysis ? (
+        {coachLines.length > 0 ? (
           <View style={styles.complianceBox}>
-            <Text style={styles.complianceTitle}>{PLAN_MATCH_TITLE}</Text>
-            <Text style={styles.complianceHeadline}>
-              {analysis.compliance.total}% — {planMatchHeadline(analysis.compliance.total)}
-            </Text>
-            <Text style={styles.complianceExplain}>
-              {planMatchExplanation(analysis.compliance)}
-            </Text>
-            {planMatchDetailLines(analysis.compliance).map((line) => (
-              <View key={line.label} style={styles.complianceRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.complianceRowLabel}>
-                    {line.label} · {line.pct}%
-                  </Text>
-                  <Text style={styles.complianceRowHint}>{line.hint}</Text>
-                </View>
-              </View>
+            <Text style={styles.complianceTitle}>Analyse du coach</Text>
+            {coachLines.map((line) => (
+              <Text key={line} style={styles.coachLine}>
+                {line}
+              </Text>
             ))}
           </View>
         ) : null}
+
+        <ActivityCharts activity={activity} sport={activity.sport} />
 
         {paceCompare || vsPlanLearn ? (
           <View style={styles.complianceBox}>
@@ -246,11 +235,6 @@ export default function ActivityDetailScreen() {
             label="Voir toutes mes activités"
             onPress={() => router.push('/activities')}
           />
-          {coachingInsight ? (
-            <Text style={styles.insightMuted}>
-              Insight coach : {coachingInsight}
-            </Text>
-          ) : null}
         </View>
       </View>
     </AppScrollView>
@@ -336,6 +320,7 @@ function makeStyles(colors: ColorPalette) {
       lineHeight: 19,
       marginBottom: spacing.sm,
     },
+    coachLine: { color: colors.text, fontSize: 15, fontWeight: '700', marginTop: 4 },
     complianceRow: {
       marginTop: 8,
       paddingTop: 8,

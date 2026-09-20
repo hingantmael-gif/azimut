@@ -23,6 +23,7 @@ import {
   canStartLiveWorkout,
   computeLiveKmSplits,
   advanceLiveStepCursor,
+  skipLiveStep,
   flowPercent,
   INITIAL_LIVE_CURSOR,
   type LiveStepCursor,
@@ -481,6 +482,7 @@ export default function LiveSessionScreen() {
       const pts = gps.points;
       const track: [number, number][] = pts.map((p) => [p.lat, p.lng]);
       const timeStream: number[] = [];
+      const altStream: number[] = pts.map((p) => p.alt ?? Number.NaN);
       const velocity: number[] = [];
       const startTs = pts[0]?.timestamp ?? Date.now();
       for (let i = 0; i < pts.length; i++) {
@@ -510,6 +512,7 @@ export default function LiveSessionScreen() {
         latlng: track,
         timeStream,
         velocitySmooth: velocity,
+        altitude: altStream.every((v) => Number.isFinite(v)) ? altStream : undefined,
       });
       // Sortie libre : si une séance du plan (même jour, même sport) reste à faire, elle compte
       // pour cette séance — donc pour le programme, la conformité et la progression.
@@ -553,6 +556,8 @@ export default function LiveSessionScreen() {
   // Curseur d'étape : mémorise temps ET distance au départ de chaque étape (séances mixtes).
   const stepCursorRef = useRef<LiveStepCursor>(INITIAL_LIVE_CURSOR);
   const stepCursorStepsRef = useRef(flatSteps);
+  const [skipTick, setSkipTick] = useState(0);
+  const pendingSkipRef = useRef(0);
   const stepProgress = useMemo(() => {
     if (stepCursorStepsRef.current !== flatSteps) {
       stepCursorStepsRef.current = flatSteps;
@@ -564,8 +569,18 @@ export default function LiveSessionScreen() {
       movingSec,
       gps.distanceM,
     );
+    if (pendingSkipRef.current > 0) {
+      pendingSkipRef.current = 0;
+      stepCursorRef.current = skipLiveStep(stepCursorRef.current, flatSteps, movingSec, gps.distanceM);
+    }
     return computeLiveStepProgress(flatSteps, movingSec, gps.distanceM, stepCursorRef.current);
-  }, [flatSteps, movingSec, gps.distanceM]);
+    // skipTick : demande manuelle « Passer l'étape »
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flatSteps, movingSec, gps.distanceM, skipTick]);
+  const onSkipStep = useCallback(() => {
+    pendingSkipRef.current = 1;
+    setSkipTick((n) => n + 1);
+  }, []);
   const currentStep = stepProgress.step;
   const paceSt = paceStatus(gps.currentPaceSecPerKm, currentStep);
   const paceBand = formatPaceBand(currentStep);
@@ -757,6 +772,11 @@ export default function LiveSessionScreen() {
                 : formatStepRemaining(stepProgress)}
           </Text>
           <LiveStepProgressBar ratio={stepProgress.ratio} color={discColor} />
+          {phase === 'running' && !stepProgress.done && stepProgress.stepIndex < stepProgress.totalSteps - 1 ? (
+            <Pressable onPress={onSkipStep} style={styles.skipStep} accessibilityRole="button" accessibilityLabel="Passer l’étape">
+              <Text style={styles.skipStepText}>Passer l’étape ›</Text>
+            </Pressable>
+          ) : null}
 
           {paceTarget ? (
             <LivePaceGauge
