@@ -83,7 +83,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 /** Écrans qui dessinent déjà leur propre fond (auth, tracker, navigateurs imbriqués). */
-const ownBackdrop = { layout: ({ children }: { children: React.ReactElement }) => children } as object;
+const OWN_BACKDROP = new Set(['program', '(auth)', '(tabs)', 'install', 'session/guided', 'session/live']);
 
 function AppShell() {
   const { colors, isDark } = useThemeColors();
@@ -104,7 +104,7 @@ function AppShell() {
           <SettingsSearchSession />
           <DialogHost />
           <Stack
-            screenLayout={({ children }) => <AtmosphereLayer>{children}</AtmosphereLayer>}
+            screenLayout={({ route, children }) => (OWN_BACKDROP.has(route.name) ? children : <AtmosphereLayer>{children}</AtmosphereLayer>)}
             screenOptions={{
               headerStyle: { backgroundColor: headerColor },
               headerTintColor: colors.text,
@@ -118,21 +118,21 @@ function AppShell() {
               headerLeft: () => <AlwaysBackButton tintColor={colors.text} />,
             }}
           >
-            <Stack.Screen name="program" {...ownBackdrop} options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" {...ownBackdrop} options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" {...ownBackdrop} options={{ headerShown: false }} />
-            <Stack.Screen name="install" {...ownBackdrop} options={{ headerShown: false, title: 'Installer Mova' }} />
+            <Stack.Screen name="program" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="install" options={{ headerShown: false, title: 'Installer Mova' }} />
             <Stack.Screen name="import-activity" options={{ title: 'Importer Strava' }} />
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen
               name="session/guided"
-              {...ownBackdrop}
+             
               options={{ title: 'Séance guidée', headerShown: false }}
             />
             <Stack.Screen
               name="session/live"
-              {...ownBackdrop}
+             
               options={{ title: 'Séance live', headerShown: false }}
             />
             <Stack.Screen name="session/rpe" options={{ title: 'Effort ressenti' }} />
@@ -167,6 +167,7 @@ function AppShell() {
             <Stack.Screen name="settings/performance" options={{ title: 'Ma forme' }} />
             <Stack.Screen name="settings/subscription" options={{ title: 'Abonnement Premium' }} />
             <Stack.Screen name="settings/watch" options={{ title: 'Montre' }} />
+            <Stack.Screen name="settings/training-schedule" options={{ title: 'Disponibilités' }} />
             <Stack.Screen name="settings/devices" options={{ title: 'Appareils & sync' }} />
             {/* integrations / partners : redirects legacy → devices (pas dans le hub) */}
             <Stack.Screen name="settings/privacy" options={{ title: 'Qui peut me voir' }} />

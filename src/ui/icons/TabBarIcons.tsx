@@ -1,5 +1,4 @@
 import type { ColorValue } from 'react-native';
-import { SoftPulse } from '../motion/softMotion';
 import {
   IconAdd,
   IconBody,
@@ -41,9 +40,7 @@ export function TabIcon({ name, focused, color, size = 24 }: TabIconProps) {
     default:
       icon = null;
   }
-  return (
-    <SoftPulse intensity={focused ? 0.08 : 0.02}>{icon}</SoftPulse>
-  );
+  return <>{icon}</>;
 }
 
 export const TAB_ICON_NAMES = {

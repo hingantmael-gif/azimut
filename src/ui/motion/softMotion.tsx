@@ -267,6 +267,7 @@ export function SoftPulse({
   style?: StyleProp<ViewStyle>;
   intensity?: number;
 }) {
+  if (intensity <= 0) return <View style={style}>{children}</View>;
   return (
     <LoopView from={{ scale: 1 }} to={{ scale: 1 + intensity }} ms={2600} style={style}>
       {children}
