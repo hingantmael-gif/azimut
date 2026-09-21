@@ -247,7 +247,7 @@ export default function SettingsIndex() {
                 value="Sur le site Mova"
                 icon={{ name: 'star', color: '#F59E0B' }}
                 onPress={() => {
-                  const site = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : process.env.EXPO_PUBLIC_SITE_URL || 'https://hingantmael-gif.github.io';
+                  const site = process.env.EXPO_PUBLIC_SITE_URL || 'https://hingantmael-gif.github.io/mova-site';
                   void Linking.openURL(`${site}/avis.html`);
                 }}
               />

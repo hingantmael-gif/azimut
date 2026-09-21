@@ -8,11 +8,43 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { minify as terserMinify } from 'terser';
 
-const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const srcDir = path.join(rootDir, 'public', 'site', 'src');
-const outDir = path.join(rootDir, 'public', 'site', 'a');
+const siteDir = path.dirname(fileURLToPath(import.meta.url));
+const srcDir = path.join(siteDir, 'src');
+/** Dossier généré (jamais versionné) : c'est lui qui est publié, seul, sur son propre dépôt. */
+export const OUT = path.join(siteDir, '..', 'dist-site');
+const outDir = path.join(OUT, 'assets');
 
-export const SITE = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
+/** Adresse publique DU SITE (dépôt et adresse propres, indépendants de l'application). Domaine propre : MOVA_SITE_URL=https://mova.fr */
+export const SITE = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io/mova-site').replace(/\/$/, '');
+/** Adresse de l'APPLICATION (« Ouvrir l'app », installation et pages légales y renvoient). */
+export const APP_URL = (process.env.MOVA_APP_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
+const BASE = new URL(SITE).pathname.replace(/\/$/, '');
+export const HOME = `${SITE}/`;
+/** Chemins qui appartiennent à l'application, pas au site. */
+const APP_PATHS = new Set(['/', '/settings/subscription', '/telecharger.html', '/privacy.html', '/terms.html', '/install']);
+
+/** Réécrit un lien du contenu : application → adresse de l'app ; site → adresse du site (sous-dossier compris). */
+function mapUrl(u) {
+  if (!u.startsWith('/') || u.startsWith('//')) return u;
+  const i = u.search(/[#?]/);
+  const p = i < 0 ? u : u.slice(0, i);
+  const tail = i < 0 ? '' : u.slice(i);
+  if (APP_PATHS.has(p)) return APP_URL + p + tail;
+  if (p === '/apropos.html') return BASE + '/' + tail;
+  return BASE + p + tail;
+}
+export function rebase(html) {
+  return html.replace(/\b(href|src|srcset|imagesrcset)="([^"]*)"/g, (m, attr, val) => {
+    if (attr.endsWith('srcset')) {
+      return attr + '="' + val.split(',').map((part) => {
+        const t = part.trim().split(/\s+/);
+        t[0] = mapUrl(t[0]);
+        return t.join(' ');
+      }).join(', ') + '"';
+    }
+    return attr + '="' + mapUrl(val) + '"';
+  });
+}
 export const API = (process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onrender.com').replace(/\/$/, '');
 export const GOOGLE_VERIFY = '6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw';
 
@@ -30,12 +62,14 @@ function minifyCss(css) {
 }
 
 export async function buildAssets() {
-  fs.rmSync(outDir, { recursive: true, force: true });
+  fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
+  // Icônes propres au site (aucun fichier partagé avec l'application)
+  for (const f of fs.readdirSync(path.join(siteDir, 'static'))) fs.copyFileSync(path.join(siteDir, 'static', f), path.join(OUT, f));
   const put = (key, base, ext, data) => {
     const file = `${base}.${hash(data)}.${ext}`;
     fs.writeFileSync(path.join(outDir, file), data);
-    assets.set(key, `/site/a/${file}`);
+    assets.set(key, `/assets/${file}`);
   };
   put('site.css', 'site', 'css', minifyCss(fs.readFileSync(path.join(srcDir, 'site.css'), 'utf8')));
   const js = await terserMinify(fs.readFileSync(path.join(srcDir, 'site.js'), 'utf8'), { compress: true, mangle: true });
@@ -245,11 +279,11 @@ function shorten(t, max = 158) {
 }
 
 export function page({ slug, title, description, keywords = [], ogImage = null, body, ld = [], noindex = false, type = 'website', preload = null, reviews = false, sticky = true }) {
-  const url = `${SITE}/${slug}`;
+  const url = slug === 'index.html' ? HOME : `${SITE}/${slug}`;
   description = shorten(description);
   const img = `${SITE}${asset('og.jpg')}`;
   void ogImage;
-  const all = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'Mova', url: `${SITE}/apropos.html`, inLanguage: 'fr-FR' }, ...ld];
+  const all = [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'Mova', url: HOME, inLanguage: 'fr-FR' }, ...ld];
   const html = `<!doctype html>
 <html lang="fr">
 <head>
@@ -264,7 +298,6 @@ ${keywords.length ? `<meta name="keywords" content="${esc(keywords.join(', '))}"
 <link rel="canonical" href="${url}">
 <link rel="icon" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
 <meta property="og:type" content="${type}">
 <meta property="og:site_name" content="Mova">
 <meta property="og:locale" content="fr_FR">
@@ -296,11 +329,11 @@ ${sticky ? '<a class="sticky-cta" href="/" aria-label="Commencer gratuitement av
 </body>
 </html>
 `;
-  return squeeze(html) + '\n';
+  return rebase(squeeze(html)) + '\n';
 }
 
 export function crumbs(items) {
   const html = `<div class="wrap"><nav class="crumbs" aria-label="Fil d’Ariane">${items.map(([l, h], i) => (i === items.length - 1 ? `<span>${l}</span>` : `<a href="${h}">${l}</a>`)).join(' › ')}</nav></div>`;
-  const ld = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map(([l, h], i) => ({ '@type': 'ListItem', position: i + 1, name: l, item: `${SITE}${h}` })) };
+  const ld = { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map(([l, h], i) => ({ '@type': 'ListItem', position: i + 1, name: l, item: h === '/apropos.html' ? HOME : `${SITE}${h}` })) };
   return { html, ld };
 }

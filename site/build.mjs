@@ -10,16 +10,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { API, SITE, asset, buildAssets, crumbs, ctaBanner, faqBlock, faqLd, icon, installBlock, page, phone, rawIcon, reviewsBlock, squeeze } from './site/lib.mjs';
-import { FAQ_HOME, GUIDES, SPORT_PAGES } from './site/content.mjs';
-import { BACKGROUNDS, GLOSSARY, MORE_GUIDES, NEWS, THEMES } from './site/content2.mjs';
+import { API, HOME, OUT, SITE, asset, buildAssets, crumbs, ctaBanner, faqBlock, faqLd, icon, installBlock, page, phone, rawIcon, reviewsBlock, squeeze } from './lib.mjs';
+import { FAQ_HOME, GUIDES, SPORT_PAGES } from './content.mjs';
+import { BACKGROUNDS, GLOSSARY, MORE_GUIDES, NEWS, THEMES } from './content2.mjs';
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const OUTDIR = OUT;
 const out = (name, html) => {
   // Le serveur de développement peut verrouiller un fichier quelques instants (Windows) : on réessaie.
   for (let i = 0; i < 8; i++) {
     try {
-      fs.writeFileSync(path.join(root, 'public', name), html);
+      fs.writeFileSync(path.join(OUTDIR, name), html);
       return;
     } catch (e) {
       if (i === 7) throw e;
@@ -29,7 +29,7 @@ const out = (name, html) => {
 };
 const today = new Date().toISOString().slice(0, 10);
 const urls = [];
-const reg = (slug, priority = '0.7', freq = 'monthly') => urls.push({ loc: `${SITE}/${slug}`, priority, freq });
+const reg = (slug, priority = '0.7', freq = 'monthly') => urls.push({ loc: slug === 'index.html' ? HOME : `${SITE}/${slug}`, priority, freq });
 const ALL_GUIDES = [...GUIDES, ...MORE_GUIDES];
 
 await buildAssets();
@@ -39,7 +39,7 @@ const APP_LD = {
   '@type': 'SoftwareApplication',
   name: 'Mova',
   alternateName: 'Mova — coaching multi-sport',
-  url: `${SITE}/apropos.html`,
+  url: HOME,
   applicationCategory: 'HealthApplication',
   applicationSubCategory: 'Application de course à pied, vélo, natation, triathlon, musculation',
   operatingSystem: 'Android, iOS, Web',
@@ -49,7 +49,7 @@ const APP_LD = {
   screenshot: ['accueil', 'jauge-allure', 'plan-entrainement', 'seance-rapide-intensite', 'theme-aurore'].map((s) => `${SITE}${asset(`img:${s}`)}`),
   featureList: ['Plans d’entraînement personnalisés', 'Tracker GPS avec jauge d’allure en temps réel', 'Séance rapide : type, durée, intensité', 'Export des séances au format FIT pour montre Garmin', 'Suivi de la récupération et de la charge', 'Prédiction de chrono', 'Classement et badges', 'Personnalisation complète (Premium)'],
 };
-const ORG_LD = { '@context': 'https://schema.org', '@type': 'Organization', name: 'Mova', url: `${SITE}/apropos.html`, logo: `${SITE}/icon-512.png` };
+const ORG_LD = { '@context': 'https://schema.org', '@type': 'Organization', name: 'Mova', url: HOME, logo: `${SITE}/icon-512.png` };
 
 const ALT = {
   accueil: 'Écran d’accueil de Mova avec la séance du jour',
@@ -248,9 +248,9 @@ ${installBlock()}
 `;
 
 out(
-  'apropos.html',
+  'index.html',
   page({
-    slug: 'apropos.html',
+    slug: 'index.html',
     title: 'Mova : application de coaching multi-sport (course, vélo, natation)',
     description: 'Mova génère ton plan d’entraînement personnalisé (5 km, 10 km, semi, marathon, triathlon, musculation), règle tes allures, te guide avec un tracker GPS et suit ta récupération. Gratuit, sur iPhone et Android.',
     keywords: ['application course à pied', 'plan d’entraînement running', 'coach sportif application', 'application triathlon', 'entraînement vélo watts', 'application natation', 'plan marathon', 'plan 10 km', 'calcul VMA', 'tracker GPS running', 'séance de sport rapide', 'musculation callisthénie', 'coaching multi-sport', 'application sport gratuite', 'Mova'],
@@ -260,7 +260,7 @@ out(
     ld: [APP_LD, ORG_LD, faqLd(FAQ_HOME)],
   }),
 );
-reg('apropos.html', '1.0', 'weekly');
+reg('index.html', '1.0', 'weekly');
 
 // ————————————————————— Fonctionnalités —————————————————————
 {
@@ -530,13 +530,12 @@ ${installBlock()}`;
 }
 
 // ————————————————————— sitemap / robots —————————————————————
-reg('telecharger.html', '0.6');
-reg('privacy.html', '0.3', 'yearly');
-reg('terms.html', '0.3', 'yearly');
 fs.writeFileSync(
-  path.join(root, 'public', 'sitemap.xml'),
+  path.join(OUTDIR, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${u.loc}</loc><lastmod>${today}</lastmod><changefreq>${u.freq}</changefreq><priority>${u.priority}</priority></url>`).join('\n')}\n</urlset>\n`,
 );
-fs.writeFileSync(path.join(root, 'public', 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /settings/\nDisallow: /session/\nDisallow: /user/\n\nSitemap: ${SITE}/sitemap.xml\n`);
+fs.writeFileSync(path.join(OUTDIR, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
+fs.writeFileSync(path.join(OUTDIR, '.nojekyll'), '');
+out('404.html', page({ slug: '404.html', title: 'Page introuvable | Mova', description: 'Cette page n’existe pas. Retrouve Mova, l’application de coaching multi-sport : plans, tracker GPS, séance rapide.', noindex: true, sticky: false, body: '<section class="wrap" style="padding:90px 20px;text-align:center"><h1>Page introuvable</h1><p style="margin:14px 0 26px">Le lien est peut-être ancien. Retourne à l’accueil ou ouvre l’application.</p><div class="cta-row" style="justify-content:center"><a class="btn primary" href="/apropos.html">Accueil du site</a><a class="btn ghost" href="/">Ouvrir l’application</a></div></section>' }));
 console.log(`Site vitrine : ${urls.length} pages générées (${SITE}) — API avis : ${API}`);
 void squeeze;

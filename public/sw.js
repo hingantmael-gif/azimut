@@ -1,5 +1,5 @@
 /* Service worker Mova — mises à jour auto à chaque réouverture. */
-const CACHE = 'mova-static-v95';
+const CACHE = 'mova-static-v96';
 const IMMUTABLE = 'mova-immutable-v1';
 /** Nom de fichier avec empreinte (…-<hash 32 hex>.ext ou entry-<hash>.js) : jamais modifié après publication. */
 const HASHED = /[.-][0-9a-f]{32}\.[a-z0-9]+$/i;
@@ -67,6 +67,9 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Le site vitrine est indépendant de l'application : on ne l'intercepte jamais.
+  if (url.pathname.startsWith('/mova-site/')) return;
 
   // Contrôle de version et liste des pages à précharger : toujours frais (jamais en cache).
   if (url.pathname === '/version.json' || url.pathname === '/chunks.json') return;
