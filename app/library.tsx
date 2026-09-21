@@ -4,12 +4,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text } from '../src/ui/Text';
 import { AppScrollView } from '../src/ui/scrolling';
-import { Chip, PrimaryButton, Screen } from '../src/ui/primitives';
+import { Chip, PrimaryButton, Screen, SecondaryButton } from '../src/ui/primitives';
+import { AppTextInput } from '../src/ui/AppTextInput';
 import { PressableScale } from '../src/ui/motion/softMotion';
 import { useApp } from '../src/store/AppContext';
 import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
-import type { PlannedWorkout } from '../src/types/domain';
+import type { OnboardingAnswers, PlannedWorkout } from '../src/types/domain';
+import { swimPaceSecPer100FromOnboarding } from '../src/engines/athleteProfile';
+import {
+  checkQuickCoherence,
+  INTENSITIES,
+  missingQuickData,
+  QUICK_KINDS,
+  quickKind,
+  sliderMax,
+  type Intensity,
+  type QuickKindId,
+  type QuickKindOption,
+  type QuickSport,
+} from '../src/engines/quickSession';
 import { resolveAthletePaceZones, summarizeWorkout } from '../src/engines/workoutPresentation';
 import { resolvePaceZones } from '../src/engines/paceZones';
 import { normalizeStrengthEquipment, type StrengthBodyFocus, type StrengthTarget } from '../src/engines/strengthProgramming';
@@ -32,16 +46,15 @@ import {
 import { canStartGuidedStrengthSession } from '../src/engines/guidedStrengthSession';
 import { canStartLiveWorkout } from '../src/engines/liveWorkout';
 
-type Step = 'sport' | 'time' | 'area' | 'browse';
+type Step = 'sport' | 'kind' | 'time' | 'intensity' | 'complete' | 'browse';
 
 const MIN = 10;
-const MAX = 90;
 const SNAP = 5;
 
 const SPORT_TILES: Array<{ id: LibSport; label: string; sub: string; icon: keyof typeof Ionicons.glyphMap }> = [
-  { id: 'run', label: 'Course', sub: 'Footing, allure, fractionné', icon: 'walk' },
-  { id: 'bike', label: 'Vélo', sub: 'Sortie à ton rythme', icon: 'bicycle' },
-  { id: 'swim', label: 'Natation', sub: 'Piscine ou eau libre', icon: 'water' },
+  { id: 'run', label: 'Course', sub: 'Footing, sortie longue, fractionné…', icon: 'walk' },
+  { id: 'bike', label: 'Vélo', sub: 'Endurance, sortie longue, intervalles', icon: 'bicycle' },
+  { id: 'swim', label: 'Natation', sub: 'Endurance ou séries', icon: 'water' },
   { id: 'strength', label: 'Musculation', sub: 'Salle ou maison', icon: 'barbell' },
   { id: 'calisthenics', label: 'Callisthénie', sub: 'Poids du corps', icon: 'body' },
 ];
@@ -53,9 +66,21 @@ const AREA_TILES: Array<{ id: CalisScope; label: string }> = [
   { id: 'lower', label: 'Bas du corps' },
 ];
 
+const INTENSITY_COLORS = ['#22C55E', '#F59E0B', '#EF4444'];
+
+/** « 4:30 », « 4'30 », « 4m30 » ou « 270 » → secondes (null si illisible). */
+function parseClock(v: string): number | null {
+  const t = v.trim().replace(',', '.');
+  const m = /^(\d{1,2})\s*(?::|'|m|min)\s*(\d{1,2})?/.exec(t);
+  if (m) return Number(m[1]) * 60 + Number(m[2] ?? 0);
+  const n = Number(t);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /**
- * Séance rapide GUIDÉE en 2–3 étapes : 1) le sport → 2) le temps dont tu disposes → (3) la zone du corps pour
- * la muscu / callisthénie → lancement. La bibliothèque complète reste accessible, à part.
+ * Séance rapide GUIDÉE : 1) le sport → 2) le type de séance (ou la zone du corps) → 3) la durée (avec contrôle de
+ * cohérence) → 4) l'intensité (tranquille / modérée / intense) → (5) compléter tes données, facultatif.
+ * Les allures sont celles de l'algorithme du plan (chrono / VMA / volume) ; la bibliothèque complète reste à part.
  */
 export default function LibraryScreen() {
   const { state, dispatch } = useApp();
@@ -66,26 +91,59 @@ export default function LibraryScreen() {
 
   const ob = state.profile.onboarding;
   const level = ob?.level ?? 'intermediaire';
-  const ctx = useMemo(() => {
-    const zones = resolveAthletePaceZones(ob, state.activities) ?? resolvePaceZones({ level });
-    return defaultLibContext(level, zones, {
-      ftp: ob?.ftpWatts && ob.ftpWatts >= 80 ? ob.ftpWatts : undefined,
-      equipment: normalizeStrengthEquipment(ob?.strengthEquipment),
+  const buildCtx = (o: typeof ob) => {
+    const zones = resolveAthletePaceZones(o, state.activities) ?? resolvePaceZones({ level: o?.level ?? 'intermediaire' });
+    return defaultLibContext(o?.level ?? 'intermediaire', zones, {
+      ftp: o?.ftpWatts && o.ftpWatts >= 80 ? o.ftpWatts : undefined,
+      swimPace100: swimPaceSecPer100FromOnboarding(o) ?? undefined,
+      equipment: normalizeStrengthEquipment(o?.strengthEquipment),
     });
-  }, [ob, level, state.activities]);
+  };
+  const ctx = useMemo(() => buildCtx(ob), [ob, state.activities]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const presetSport = LIB_SPORTS.some((s) => s.id === params.sport) ? (params.sport as LibSport) : null;
-  const [step, setStep] = useState<Step>(presetSport ? 'time' : 'sport');
+  const [step, setStep] = useState<Step>(presetSport ? 'kind' : 'sport');
   const [sport, setSport] = useState<LibSport>(presetSport ?? 'run');
+  const [kind, setKind] = useState<QuickKindId>('easy');
   const [minutes, setMinutes] = useState(30);
+  const [intensity, setIntensity] = useState<Intensity>('moderate');
   const [scope, setScope] = useState<CalisScope>('full');
   const [targets, setTargets] = useState<CalisTarget[]>([]);
   const [calisGoal, setCalisGoal] = useState<CalisthenicsGoalFocus>('hypertrophy');
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // Champs de l'étape « Compléter »
+  const [vmaText, setVmaText] = useState('');
+  const [raceText, setRaceText] = useState('');
+  const [ftpText, setFtpText] = useState('');
+  const [swimText, setSwimText] = useState('');
 
   const todayIso = toLocalDateIso(new Date());
   const isBody = sport === 'strength' || sport === 'calisthenics';
+  const quickSport: QuickSport | null = isBody ? null : (sport as QuickSport);
   const sportLabel = SPORT_TILES.find((s) => s.id === sport)?.label ?? '';
+  const kindOption = quickSport ? quickKind(quickSport, kind) : null;
+  const coherence = quickSport ? checkQuickCoherence(quickSport, kind, minutes, level) : ({ ok: true } as const);
+  const missing = quickSport ? missingQuickData(quickSport, ob) : [];
+  const maxMinutes = sliderMax(sport);
+
+  const chooseSport = (id: LibSport) => {
+    setSport(id);
+    setTargets([]);
+    if (id === 'run' || id === 'bike' || id === 'swim') {
+      const first = QUICK_KINDS[id][0]!;
+      setKind(first.id);
+      setMinutes(first.ideal);
+    } else {
+      setMinutes(30);
+    }
+    setStep('kind');
+  };
+
+  const chooseKind = (k: QuickKindOption) => {
+    setKind(k.id);
+    setMinutes(k.ideal);
+    setStep('time');
+  };
 
   /** Ajoute la séance au plan puis l'ouvre dans le bon lecteur (GPS, guidé ou détail). */
   const launch = (w: PlannedWorkout, when: 'now' | 'tomorrow') => {
@@ -102,15 +160,16 @@ export default function LibraryScreen() {
     else router.push(`/session/${workout.id}`);
   };
 
-  const startQuick = () => {
+  const startQuick = (over?: typeof ctx) => {
     const strengthFocus: StrengthBodyFocus = scope === 'upper' ? 'upper' : scope === 'lower' ? 'lower' : 'full';
     launch(
-      buildQuickSession(ctx, todayIso, {
+      buildQuickSession(over ?? ctx, todayIso, {
         sport,
         minutes,
+        kind,
+        intensity,
         scope: targets.length === 0 ? scope : undefined,
         targets,
-        calisGoal,
         strengthFocus,
         strengthTargets: sport === 'strength' ? (targets as StrengthTarget[]) : undefined,
       }),
@@ -118,20 +177,55 @@ export default function LibraryScreen() {
     );
   };
 
+  /** Enregistre ce que l'utilisateur vient de compléter (comme dans ses données sportives) puis lance. */
+  const saveAndStart = () => {
+    const patch: Partial<OnboardingAnswers> = {};
+    if (missing.includes('run-pace')) {
+      const vma = Number(vmaText.replace(',', '.'));
+      const race = parseClock(raceText);
+      if (vma >= 8 && vma <= 28) patch.vmaKmh = Math.round(vma * 10) / 10;
+      else if (race && race >= 600 && race <= 4 * 3600) patch.raceTimesSec = { ...(ob?.raceTimesSec ?? {}), '5k': race };
+    }
+    if (missing.includes('bike-ftp')) {
+      const ftp = Math.round(Number(ftpText.replace(',', '.')));
+      if (ftp >= 80 && ftp <= 500) patch.ftpWatts = ftp;
+    }
+    if (missing.includes('swim-pace')) {
+      const sec = parseClock(swimText);
+      if (sec && sec >= 45 && sec <= 300) patch.sportTimesSec = { ...(ob?.sportTimesSec ?? {}), swim: { ...(ob?.sportTimesSec?.swim ?? {}), '100m': sec } };
+    }
+    if (Object.keys(patch).length > 0) {
+      dispatch({ type: 'UPDATE_ONBOARDING', patch });
+      startQuick(buildCtx({ ...(ob ?? { level, goal: '10k', trainingDays: [1, 3, 5], longRunDay: 6 }), ...patch }));
+    } else {
+      startQuick();
+    }
+  };
+
+  const afterIntensity = () => {
+    if (missing.length > 0) setStep('complete');
+    else startQuick();
+  };
+
   const back = () => {
-    if (step === 'area') setStep('time');
-    else if (step === 'time') setStep('sport');
+    if (step === 'complete') setStep('intensity');
+    else if (step === 'intensity') setStep('time');
+    else if (step === 'time') setStep('kind');
+    else if (step === 'kind') setStep('sport');
     else if (step === 'browse') setStep('sport');
     else router.back();
   };
 
-  const stepIndex = step === 'sport' ? 1 : step === 'time' ? 2 : step === 'area' ? 3 : 0;
-  const totalSteps = isBody ? 3 : 2;
+  const stepIndex = step === 'sport' ? 1 : step === 'kind' ? 2 : step === 'time' ? 3 : step === 'intensity' || step === 'complete' ? 4 : 0;
+  const totalSteps = 4;
 
   const areaSummary =
     targets.length > 0
       ? targets.map((t) => CALIS_TARGET_OPTIONS.find((o) => o.id === t)!.label.toLowerCase()).join(' + ')
       : AREA_TILES.find((a) => a.id === scope)!.label.toLowerCase();
+  const intensityIdx = INTENSITIES.findIndex((i) => i.id === intensity);
+  const intensityInfo = INTENSITIES[intensityIdx]!;
+  const kindLabel = isBody ? areaSummary : (kindOption?.label.toLowerCase() ?? '');
 
   return (
     <Screen>
@@ -165,11 +259,7 @@ export default function LibraryScreen() {
                   key={s.id}
                   variant="nav"
                   accessibilityLabel={s.label}
-                  onPress={() => {
-                    setSport(s.id);
-                    setTargets([]);
-                    setStep('time');
-                  }}
+                  onPress={() => chooseSport(s.id)}
                   contentStyle={[styles.sportTile, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
                 >
                   <View style={[styles.sportIcon, { backgroundColor: colors.accentLight }]}>
@@ -189,32 +279,33 @@ export default function LibraryScreen() {
           </>
         ) : null}
 
-        {/* ——— 2 · Le temps ——— */}
-        {step === 'time' ? (
+        {/* ——— 2 · Le type de séance (course / vélo / natation) ou la zone du corps (muscu / callisthénie) ——— */}
+        {step === 'kind' && quickSport ? (
           <>
-            <Text style={styles.title}>Combien de temps ?</Text>
-            <Text style={styles.sub}>{sportLabel} · fais glisser pour régler la durée.</Text>
-            <View style={styles.timeBox}>
-              <Text style={styles.bigNumber}>{minutes}</Text>
-              <Text style={styles.bigUnit}>minutes</Text>
-            </View>
-            <MinutesSlider value={minutes} onChange={setMinutes} colors={colors} />
-            <View style={styles.sliderLabels}>
-              <Text style={styles.sliderLabel}>Express</Text>
-              <Text style={styles.sliderLabel}>Séance complète</Text>
-            </View>
-            <View style={{ marginTop: spacing.lg }}>
-              {isBody ? (
-                <PrimaryButton label="Continuer" onPress={() => setStep('area')} />
-              ) : (
-                <PrimaryButton label={`Lancer · ${minutes} min`} onPress={startQuick} />
-              )}
+            <Text style={styles.title}>Quel type de séance ?</Text>
+            <Text style={styles.sub}>{sportLabel} · c’est toi qui décides.</Text>
+            <View style={{ gap: spacing.sm, marginTop: spacing.md }}>
+              {QUICK_KINDS[quickSport].map((k) => (
+                <PressableScale
+                  key={k.id}
+                  variant="nav"
+                  accessibilityLabel={k.label}
+                  onPress={() => chooseKind(k)}
+                  contentStyle={[styles.sportTile, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sportLabel}>{k.label}</Text>
+                    <Text style={styles.sportSub}>{k.sub}</Text>
+                  </View>
+                  <Text style={styles.kindDuration}>{k.min}–{k.max} min</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </PressableScale>
+              ))}
             </View>
           </>
         ) : null}
 
-        {/* ——— 3 · La zone du corps (muscu / callisthénie) ——— */}
-        {step === 'area' ? (
+        {step === 'kind' && isBody ? (
           <>
             <Text style={styles.title}>Que veux-tu travailler ?</Text>
             <Text style={styles.sub}>Choisis une zone, ou cible des muscles précis.</Text>
@@ -249,18 +340,121 @@ export default function LibraryScreen() {
                 />
               ))}
             </View>
-            {sport === 'calisthenics' ? (
-              <>
-                <Text style={styles.label}>Objectif</Text>
-                <View style={styles.pills}>
-                  {(Object.keys(CALIS_GOAL_LIB_LABEL) as CalisthenicsGoalFocus[]).map((g) => (
-                    <Chip key={g} label={CALIS_GOAL_LIB_LABEL[g]} selected={calisGoal === g} onPress={() => setCalisGoal(g)} />
-                  ))}
+            <View style={{ marginTop: spacing.lg }}>
+              <PrimaryButton label="Continuer" onPress={() => setStep('time')} />
+            </View>
+          </>
+        ) : null}
+
+        {/* ——— 3 · Le temps ——— */}
+        {step === 'time' ? (
+          <>
+            <Text style={styles.title}>Combien de temps ?</Text>
+            <Text style={styles.sub}>{sportLabel} · {kindLabel} · fais glisser pour régler la durée.</Text>
+            <View style={styles.timeBox}>
+              <Text style={styles.bigNumber}>{minutes}</Text>
+              <Text style={styles.bigUnit}>minutes</Text>
+            </View>
+            <RangeSlider
+              value={minutes}
+              onChange={setMinutes}
+              min={MIN}
+              max={maxMinutes}
+              snap={SNAP}
+              marks={Array.from({ length: Math.floor(maxMinutes / 30) }, (_, i) => (i + 1) * 30).filter((m) => m < maxMinutes)}
+              label="Durée de la séance"
+              valueText={`${minutes} minutes`}
+              colors={colors}
+            />
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabel}>Express</Text>
+              <Text style={styles.sliderLabel}>{maxMinutes >= 120 ? 'Longue sortie' : 'Séance complète'}</Text>
+            </View>
+            {!coherence.ok ? (
+              <View style={[styles.warn, { borderColor: '#F59E0B', backgroundColor: colors.bgCard }]}>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                  <Ionicons name="alert-circle" size={20} color={'#F59E0B'} />
+                  <Text style={styles.warnText}>{coherence.message}</Text>
                 </View>
-              </>
+                <SecondaryButton label={`Passer à ${coherence.suggestedMinutes} min`} onPress={() => setMinutes(coherence.suggestedMinutes)} />
+                {coherence.alt && quickSport ? (
+                  <SecondaryButton
+                    label={`Choisir « ${coherence.alt.label} » à la place`}
+                    onPress={() => {
+                      const alt = quickKind(quickSport, coherence.alt!.id);
+                      setKind(alt.id);
+                    }}
+                  />
+                ) : null}
+              </View>
             ) : null}
             <View style={{ marginTop: spacing.lg }}>
-              <PrimaryButton label={`Lancer · ${minutes} min · ${areaSummary}`} onPress={startQuick} />
+              <PrimaryButton label={coherence.ok ? 'Continuer' : `Garder ${minutes} min`} onPress={() => setStep('intensity')} />
+            </View>
+          </>
+        ) : null}
+
+        {/* ——— 4 · L'intensité ——— */}
+        {step === 'intensity' ? (
+          <>
+            <Text style={styles.title}>Quelle intensité ?</Text>
+            <Text style={styles.sub}>{sportLabel} · {kindLabel} · {minutes} min</Text>
+            <View style={styles.timeBox}>
+              <Text style={[styles.intensityName, { color: INTENSITY_COLORS[intensityIdx] }]}>{intensityInfo.label}</Text>
+              <Text style={styles.intensityHint}>{intensityInfo.hint}</Text>
+            </View>
+            <RangeSlider
+              value={intensityIdx}
+              onChange={(v) => setIntensity(INTENSITIES[v]!.id)}
+              min={0}
+              max={2}
+              snap={1}
+              marks={[]}
+              label="Intensité de la séance"
+              valueText={intensityInfo.label}
+              colors={colors}
+              segmentColors={INTENSITY_COLORS}
+            />
+            <View style={styles.sliderLabels}>
+              <Text style={styles.sliderLabel}>Plus tranquille</Text>
+              <Text style={styles.sliderLabel}>Dans le rouge</Text>
+            </View>
+            <View style={{ marginTop: spacing.lg }}>
+              <PrimaryButton label={`Lancer · ${minutes} min · ${intensityInfo.label.toLowerCase()}`} onPress={afterIntensity} />
+            </View>
+          </>
+        ) : null}
+
+        {/* ——— 5 · Compléter (facultatif) ——— */}
+        {step === 'complete' ? (
+          <>
+            <Text style={styles.title}>Pour une séance à ta mesure</Text>
+            <Text style={styles.sub}>
+              Il nous manque une info pour caler tes allures au plus juste. C’est facultatif : sans elle, on estime d’après ton niveau (souvent plus lent que ta réalité).
+            </Text>
+            {missing.includes('run-pace') ? (
+              <>
+                <Text style={styles.label}>Ta VMA (km/h)</Text>
+                <AppTextInput value={vmaText} onChangeText={setVmaText} keyboardType="decimal-pad" placeholder="ex. 16,5" placeholderTextColor={colors.textMuted} style={styles.input} />
+                <Text style={styles.label}>… ou ton chrono récent sur 5 km</Text>
+                <AppTextInput value={raceText} onChangeText={setRaceText} placeholder="ex. 24:30" placeholderTextColor={colors.textMuted} style={styles.input} />
+              </>
+            ) : null}
+            {missing.includes('bike-ftp') ? (
+              <>
+                <Text style={styles.label}>Ta FTP (watts)</Text>
+                <AppTextInput value={ftpText} onChangeText={setFtpText} keyboardType="number-pad" placeholder="ex. 220" placeholderTextColor={colors.textMuted} style={styles.input} />
+              </>
+            ) : null}
+            {missing.includes('swim-pace') ? (
+              <>
+                <Text style={styles.label}>Ton allure au 100 m</Text>
+                <AppTextInput value={swimText} onChangeText={setSwimText} placeholder="ex. 1:45" placeholderTextColor={colors.textMuted} style={styles.input} />
+              </>
+            ) : null}
+            <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+              <PrimaryButton label="Enregistrer et lancer" onPress={saveAndStart} />
+              <SecondaryButton label="Lancer sans compléter" onPress={() => startQuick()} />
             </View>
           </>
         ) : null}
@@ -272,25 +466,45 @@ export default function LibraryScreen() {
   );
 }
 
-/** Curseur de durée : on fait glisser (ou on touche) la piste ; valeurs de 5 en 5 min. */
-function MinutesSlider({
+/**
+ * Curseur générique : on fait glisser (ou on touche) la piste ; les valeurs s'aimantent sur `snap`.
+ * `segmentColors` : piste en tronçons colorés (intensité), sans remplissage.
+ */
+function RangeSlider({
   value,
   onChange,
+  min,
+  max,
+  snap,
+  marks,
+  label,
+  valueText,
   colors,
+  segmentColors,
 }: {
   value: number;
   onChange: (v: number) => void;
+  min: number;
+  max: number;
+  snap: number;
+  marks: number[];
+  label: string;
+  valueText: string;
   colors: ReturnType<typeof useThemeColors>['colors'];
+  segmentColors?: string[];
 }) {
   const width = useRef(1);
   const cb = useRef(onChange);
   cb.current = onChange;
   const startX = useRef(0);
+  const range = useRef({ min, max, snap });
+  range.current = { min, max, snap };
 
   const fromX = (x: number) => {
+    const r = range.current;
     const ratio = Math.min(1, Math.max(0, x / width.current));
-    const raw = MIN + ratio * (MAX - MIN);
-    return Math.min(MAX, Math.max(MIN, Math.round(raw / SNAP) * SNAP));
+    const raw = r.min + ratio * (r.max - r.min);
+    return Math.min(r.max, Math.max(r.min, Math.round(raw / r.snap) * r.snap));
   };
 
   const pan = useMemo(
@@ -309,8 +523,8 @@ function MinutesSlider({
     [],
   );
 
-  const ratio = (value - MIN) / (MAX - MIN);
-  const marks = [15, 30, 45, 60, 75];
+  const ratio = (value - min) / Math.max(1, max - min);
+  const thumbColor = segmentColors ? segmentColors[Math.min(segmentColors.length - 1, Math.round(ratio * (segmentColors.length - 1)))]! : colors.accent;
 
   return (
     <View
@@ -320,19 +534,27 @@ function MinutesSlider({
       }}
       accessible
       accessibilityRole="adjustable"
-      accessibilityLabel="Durée de la séance"
-      accessibilityValue={{ min: MIN, max: MAX, now: value, text: `${value} minutes` }}
+      accessibilityLabel={label}
+      accessibilityValue={{ min, max, now: value, text: valueText }}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(e) => onChange(Math.min(MAX, Math.max(MIN, value + (e.nativeEvent.actionName === 'increment' ? SNAP : -SNAP))))}
+      onAccessibilityAction={(e) => onChange(Math.min(max, Math.max(min, value + (e.nativeEvent.actionName === 'increment' ? snap : -snap))))}
       {...pan.panHandlers}
     >
       <View pointerEvents="none" style={[sliderStyles.track, { backgroundColor: colors.border }]}>
-        <View style={[sliderStyles.fill, { width: `${ratio * 100}%`, backgroundColor: colors.accent }]} />
+        {segmentColors ? (
+          <View style={{ flexDirection: 'row', flex: 1 }}>
+            {segmentColors.map((c) => (
+              <View key={c} style={{ flex: 1, backgroundColor: c, opacity: 0.85 }} />
+            ))}
+          </View>
+        ) : (
+          <View style={[sliderStyles.fill, { width: `${ratio * 100}%`, backgroundColor: colors.accent }]} />
+        )}
         {marks.map((m) => (
-          <View key={m} style={[sliderStyles.mark, { left: `${((m - MIN) / (MAX - MIN)) * 100}%`, backgroundColor: m <= value ? colors.onAccent : colors.textMuted }]} />
+          <View key={m} style={[sliderStyles.mark, { left: `${((m - min) / (max - min)) * 100}%`, backgroundColor: m <= value ? colors.onAccent : colors.textMuted }]} />
         ))}
       </View>
-      <View pointerEvents="none" style={[sliderStyles.thumb, { left: `${ratio * 100}%`, backgroundColor: colors.accent, borderColor: colors.bgCard }]} />
+      <View pointerEvents="none" style={[sliderStyles.thumb, { left: `${ratio * 100}%`, backgroundColor: thumbColor, borderColor: colors.bgCard }]} />
     </View>
   );
 }
@@ -450,6 +672,12 @@ function makeStyles(colors: ReturnType<typeof useThemeColors>['colors']) {
     bigNumber: { fontSize: 76, fontWeight: '800', color: colors.text, lineHeight: 84 },
     bigUnit: { fontSize: 14, fontWeight: '700', color: colors.textMuted, marginTop: -4 },
     sliderLabels: { flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 8, marginTop: 2 },
+    kindDuration: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
+    intensityName: { fontSize: 40, fontWeight: '800' },
+    intensityHint: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
+    warn: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.lg, borderWidth: 1.5, gap: spacing.sm },
+    warnText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
+    input: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 12, fontSize: 18, fontWeight: '700', color: colors.text },
     sliderLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
     areaRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
     areaTile: { paddingVertical: 18, paddingHorizontal: 6, borderRadius: radii.lg, borderWidth: 1.5, alignItems: 'center' },

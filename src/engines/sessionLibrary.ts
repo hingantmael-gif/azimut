@@ -12,6 +12,7 @@ import {
   makeVmaIntervals,
   type RunSessionContext,
 } from './runSessionLibrary';
+import { buildQuickBike, buildQuickRun, buildQuickSwim, type Intensity, type QuickKindId } from './quickSession';
 import { paceBandForRunKind, warmupBandForMain, type PaceZones } from './paceZones';
 import {
   CALIS_TARGET_OPTIONS,
@@ -225,23 +226,30 @@ export type QuickOptions = {
   strengthGoal?: StrengthGoalFocus;
   /** Musculation : cibles précises. */
   strengthTargets?: StrengthTarget[];
+  /** Course / vélo / natation : type de séance choisi (footing, sortie longue, fractionné…). */
+  kind?: QuickKindId;
+  /** Intensité choisie (3 crans). Sans elle : modérée. */
+  intensity?: Intensity;
 };
+
+const STRENGTH_GOAL_BY_INTENSITY: Record<Intensity, StrengthGoalFocus> = { gentle: 'fitness', moderate: 'hypertrophy', hard: 'power' };
+const CALIS_GOAL_BY_INTENSITY: Record<Intensity, CalisthenicsGoalFocus> = { gentle: 'endurance', moderate: 'hypertrophy', hard: 'strength' };
 
 /** « Séance rapide » : une séance adaptée au sport et au temps dont on dispose, prête à démarrer. */
 export function buildQuickSession(ctx: LibContext, date: string, o: QuickOptions): PlannedWorkout {
   let w: PlannedWorkout;
+  const intensity: Intensity = o.intensity ?? 'moderate';
+  const qctx = { zones: ctx.zones, ftp: ctx.ftp, swimPace100: ctx.swimPace100, level: ctx.level };
   switch (o.sport) {
     case 'run':
-      w = quickEasyRun(ctx, date, o.minutes);
+      w = buildQuickRun(qctx, date, o.kind ?? 'easy', o.minutes, intensity);
       break;
     case 'bike':
-      w = B.bikeEndurance(date, Math.max(30, o.minutes), ctx.ftp, 'developpement_general', `Sortie vélo ${Math.max(30, o.minutes)} min`);
+      w = buildQuickBike(qctx, date, o.kind ?? 'endurance', o.minutes, intensity);
       break;
-    case 'swim': {
-      const meters = Math.max(600, Math.round(((o.minutes * 60) / ctx.swimPace100) * 100 / 100) * 100);
-      w = B.swimAerobic(date, meters, ctx.swimPace100, 'developpement_general', `Natation ${meters} m`);
+    case 'swim':
+      w = buildQuickSwim(qctx, date, o.kind ?? 'endurance', o.minutes, intensity);
       break;
-    }
     case 'strength':
       w = fitToDuration(
         buildStrengthSession({
@@ -251,7 +259,7 @@ export function buildQuickSession(ctx: LibContext, date: string, o: QuickOptions
           level: ctx.level,
           block: 'developpement_general',
           equipment: ctx.equipment,
-          strengthGoal: o.strengthGoal ?? 'fitness',
+          strengthGoal: o.strengthGoal ?? STRENGTH_GOAL_BY_INTENSITY[intensity],
           bodyFocus: o.strengthFocus ?? 'full',
           targets: o.strengthTargets,
         }),
@@ -267,7 +275,7 @@ export function buildQuickSession(ctx: LibContext, date: string, o: QuickOptions
           trainingDaysCount: 3,
           level: ctx.level,
           block: 'developpement_general',
-          goal: o.calisGoal ?? 'hypertrophy',
+          goal: o.calisGoal ?? CALIS_GOAL_BY_INTENSITY[intensity],
           scope: o.scope,
           targets: o.targets,
         }),
