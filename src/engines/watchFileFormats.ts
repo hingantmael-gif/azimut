@@ -1,5 +1,6 @@
 import type { PlannedWorkout, SportDiscipline, WatchBrandId, WorkoutStep } from '../types/domain';
 import { buildGarminWorkoutExport } from './garminWorkout';
+import { encodeFitWorkout } from './fitWorkout';
 import { buildWatchWorkoutBrief } from './watchExport';
 import { summarizeWorkout } from './workoutPresentation';
 
@@ -7,6 +8,8 @@ export type WatchExportFile = {
   filename: string;
   mime: string;
   content: string;
+  /** Contenu binaire (fichier .fit) : prioritaire sur `content`. */
+  bytes?: Uint8Array;
   /** Extension affichée à l’utilisateur */
   formatLabel: string;
   /** Consigne courte après téléchargement */
@@ -342,8 +345,6 @@ export function buildGarminTrainingJson(workout: PlannedWorkout): string {
       scheduleDate,
       summary,
       workout: payload,
-      importHint:
-        'Garmin Connect → Entraînement → Importer (JSON Training API) ou laisse Mova pousser via le compte lié.',
     },
     null,
     2,
@@ -358,29 +359,22 @@ export function buildWatchExportFiles(
   workout: PlannedWorkout,
   brandId: WatchBrandId,
 ): { primary: WatchExportFile; extras: WatchExportFile[] } {
-  const base = `azimut-${slug(workout.title)}-${workout.date}`;
+  const base = `mova-${slug(workout.title)}-${workout.date}`;
   const tcx = buildStructuredTcx(workout);
 
   switch (brandId) {
     case 'garmin':
+      // Format FIT « Workout » : celui que la montre lit nativement (copié dans GARMIN/NewFiles).
       return {
         primary: {
-          filename: `${base}-garmin.json`,
-          mime: 'application/json',
-          content: buildGarminTrainingJson(workout),
-          formatLabel: 'JSON Garmin Training',
-          nextStep:
-            'Si le compte Garmin est lié, Mova pousse aussi sur Connect. Sinon : Garmin Connect → Entraînements → Importer.',
+          filename: `${base}.fit`,
+          mime: 'application/octet-stream',
+          content: '',
+          bytes: encodeFitWorkout(workout),
+          formatLabel: 'FIT Garmin',
+          nextStep: 'Copie le fichier .fit dans le dossier GARMIN › NewFiles de ta montre (câble USB).',
         },
-        extras: [
-          {
-            filename: `${base}-garmin.tcx`,
-            mime: 'application/vnd.garmin.tcx+xml',
-            content: tcx,
-            formatLabel: 'TCX',
-            nextStep: 'Import TCX dans Garmin Connect (compatible course / vélo / natation).',
-          },
-        ],
+        extras: [],
       };
     case 'apple':
       return {

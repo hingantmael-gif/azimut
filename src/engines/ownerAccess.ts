@@ -56,8 +56,8 @@ export function forceOwnerChampionRank(ranked: RankedProgress): RankedProgress {
 }
 
 /**
- * Applique / retire le Premium propriétaire selon le fournisseur d’auth.
- * Les autres comptes ne sont pas touchés ici (gifts gérés à part).
+ * Le compte propriétaire est toujours Premium (et Champion). Les autres comptes ne sont pas touchés ici
+ * (les cadeaux Premium sont gérés à part, et seul le propriétaire peut en faire).
  */
 export function applyOwnerPremiumPolicy<
   T extends {
@@ -69,16 +69,16 @@ export function applyOwnerPremiumPolicy<
   },
 >(profile: T): T {
   if (!isOwnerPremiumEmail(profile.email)) return profile;
-  if (isOwnerGooglePremiumGrant(profile.email, profile.authProvider)) {
-    return {
-      ...profile,
-      plan: ownerPremiumPlan(),
-      authProvider: 'google',
-      premiumSource: 'owner',
-      ranked: forceOwnerChampionRank(profile.ranked),
-    };
-  }
-  return { ...profile, plan: 'free', premiumSource: null };
+  // Le compte propriétaire est TOUJOURS Premium, sans exception (jamais « gratuit », même après une synchro
+  // ou une reconnexion). La connexion Google obligatoire est vérifiée à l'ouverture de session (AUTH_WITH_PROVIDER),
+  // pas ici : sinon un champ « fournisseur » perdu en route rétrogradait le compte.
+  return {
+    ...profile,
+    plan: ownerPremiumPlan(),
+    authProvider: 'google',
+    premiumSource: 'owner',
+    ranked: forceOwnerChampionRank(profile.ranked),
+  };
 }
 
 /** True si l’abonnement ne peut pas être retiré par l’owner (paiement réel). */

@@ -1478,12 +1478,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       }
       // Impossible de s’auto-attribuer le Premium (sauf compte Google propriétaire)
       if (patch.plan != null && isPremium(patch.plan)) {
-        if (
-          !isOwnerGooglePremiumGrant(
-            state.profile.email,
-            state.profile.authProvider,
-          )
-        ) {
+        if (!isOwnerPremiumEmail(state.profile.email)) {
           delete patch.plan;
           delete patch.premiumSource;
         }

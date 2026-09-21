@@ -5,7 +5,7 @@ import type { WatchExportFile } from '../engines/watchFileFormats';
 export async function deliverWatchExportFile(file: WatchExportFile): Promise<boolean> {
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     try {
-      const blob = new Blob([file.content], { type: file.mime });
+      const blob = new Blob([file.bytes ? (file.bytes as unknown as BlobPart) : file.content], { type: file.mime });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -19,6 +19,24 @@ export async function deliverWatchExportFile(file: WatchExportFile): Promise<boo
     } catch {
       /* fallback share below */
     }
+  }
+
+  // Fichier binaire (.fit) sur téléphone : on l'écrit puis on ouvre la feuille de partage sur le VRAI fichier.
+  if (file.bytes) {
+    try {
+      const { File, Paths } = await import('expo-file-system');
+      const Sharing = await import('expo-sharing');
+      const out = new File(Paths.cache, file.filename);
+      out.create({ overwrite: true });
+      out.write(file.bytes);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(out.uri, { mimeType: file.mime, dialogTitle: file.filename });
+        return true;
+      }
+    } catch {
+      return false;
+    }
+    return false;
   }
 
   try {

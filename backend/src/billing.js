@@ -231,7 +231,7 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
 
   /** Liste des cadeaux — owner uniquement */
   app.get('/billing/gifts', authMiddleware, (req, res) => {
-    if (normalizeEmail(req.authEmail) !== OWNER_EMAIL) {
+    if (!OWNER_EMAIL || normalizeEmail(req.authEmail) !== OWNER_EMAIL) {
       return res.status(403).json({ error: 'owner_only' });
     }
     res.json({ gifts: loadGifts() });
@@ -239,7 +239,7 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
 
   /** Ajouter / retirer un cadeau Premium — owner uniquement */
   app.post('/billing/gifts', authMiddleware, (req, res) => {
-    if (normalizeEmail(req.authEmail) !== OWNER_EMAIL) {
+    if (!OWNER_EMAIL || normalizeEmail(req.authEmail) !== OWNER_EMAIL) {
       return res.status(403).json({ error: 'owner_only' });
     }
     const action = String(req.body?.action || '').toLowerCase();

@@ -4,12 +4,14 @@ import {
   autoExportTodayToWatch,
   canSendWorkoutToWatch,
   exportWorkoutToSelectedWatch,
+  type WatchSendOutcome,
   watchExportHint,
   watchResendLabel,
   watchSendLabel,
 } from '../utils/watchWorkoutExport';
 import { useApp, todayWorkout } from '../store/AppContext';
 import { WatchBrandPickModal } from '../ui/watch/WatchBrandPickModal';
+import { WatchSendSheet } from '../ui/watch/WatchSendSheet';
 
 /**
  * Envoi séance vers la montre sélectionnée :
@@ -19,6 +21,7 @@ import { WatchBrandPickModal } from '../ui/watch/WatchBrandPickModal';
 export function useWatchWorkoutExport() {
   const { state, dispatch } = useApp();
   const [exporting, setExporting] = useState(false);
+  const [outcome, setOutcome] = useState<WatchSendOutcome | null>(null);
   const [autoSent, setAutoSent] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const autoTriedRef = useRef<string | null>(null);
@@ -84,27 +87,32 @@ export function useWatchWorkoutExport() {
         router?.push('/settings/subscription');
         return false;
       }
-      return await exportWorkoutToSelectedWatch({
+      const result = await exportWorkoutToSelectedWatch({
         state,
         dispatch,
         workoutId,
         router,
         requestWatchPick,
       });
+      setOutcome(result.status === 'cancelled' ? null : result);
+      return result.status === 'pushed' || result.status === 'file';
     } finally {
       setExporting(false);
     }
   };
 
   const WatchPicker = (
-    <WatchBrandPickModal
-      visible={pickerVisible}
-      onSelect={(id) => {
-        dispatch({ type: 'SET_WATCH', brandId: id });
-        closePicker(id);
-      }}
-      onCancel={() => closePicker(null)}
-    />
+    <>
+      <WatchBrandPickModal
+        visible={pickerVisible}
+        onSelect={(id) => {
+          dispatch({ type: 'SET_WATCH', brandId: id });
+          closePicker(id);
+        }}
+        onCancel={() => closePicker(null)}
+      />
+      <WatchSendSheet outcome={outcome} busy={exporting && !pickerVisible} onClose={() => setOutcome(null)} />
+    </>
   );
 
   return {

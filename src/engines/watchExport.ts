@@ -63,7 +63,7 @@ export function watchExportHint(brandId?: WatchBrandId | null): string {
   }
   switch (brandId) {
     case 'garmin':
-      return 'Export JSON Garmin Training (+ TCX). Si ton compte est lié, Mova pousse aussi sur Garmin Connect → sync Bluetooth.';
+      return 'Mova crée un fichier .fit que ta montre lit directement : tu le copies dans GARMIN › NewFiles (USB). Compte Garmin lié : envoi automatique.';
     case 'apple':
       return 'Export JSON WorkoutKit (+ TCX). Ouvre Fitness / Santé sur iPhone — l’Apple Watch récupère le plan.';
     case 'samsung':

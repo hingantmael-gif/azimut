@@ -121,6 +121,38 @@ export async function exportWorkoutToGarmin(opts: GarminExportOptions): Promise<
   return true;
 }
 
+export type GarminPushResult =
+  | { ok: true; message: string }
+  | { ok: false; reason: 'no_account' | 'not_linked' | 'not_supported' | 'api_error'; error?: string };
+
+/**
+ * Envoi via Garmin Connect (compte lié) — SANS aucune alerte : le résultat est rendu à l'appelant,
+ * qui l'affiche dans une seule feuille claire.
+ */
+export async function pushWorkoutToGarminQuiet(opts: {
+  state: AppState;
+  dispatch: GarminExportDispatch;
+  workoutId: string;
+}): Promise<GarminPushResult> {
+  const { state, dispatch, workoutId } = opts;
+  const token = state.authToken;
+  if (!isRemoteAuthToken(token)) return { ok: false, reason: 'no_account' };
+  const garmin = state.profile.integrations.find((i) => i.provider === 'garmin');
+  if (!garmin?.connected) return { ok: false, reason: 'not_linked' };
+  const workout = state.plan.find((w) => w.id === workoutId);
+  if (!workout || !canSendWorkoutToWatch(workout.discipline)) return { ok: false, reason: 'not_supported' };
+  let payload;
+  try {
+    payload = buildGarminWorkoutExport(workout);
+  } catch (e) {
+    return { ok: false, reason: 'not_supported', error: e instanceof Error ? e.message : undefined };
+  }
+  const res = await apiExportGarminWorkout(token!, payload);
+  if (res.error) return { ok: false, reason: 'api_error', error: res.error };
+  dispatch({ type: 'MARK_GARMIN_EXPORTED', workoutId });
+  return { ok: true, message: res.message || GARMIN_SUCCESS_MESSAGE };
+}
+
 /** Envoie la séance du jour si Garmin lié et pas encore exportée. */
 export async function autoExportTodayGarminWorkout(opts: {
   state: AppState;
