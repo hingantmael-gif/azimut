@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { mountCommunityRoutes } from './community.js';
 import { mountBillingRoutes } from './billing.js';
 import { mountContactRoutes } from './contact.js';
+import { mountReviewRoutes } from './reviews.js';
 import { mountConfigRoutes } from './appConfig.js';
 import { purgeUserCommunity } from './community.js';
 import { deleteDoc, flushStorage, initStorage, readDoc, storageMode, userDocName, writeDoc } from './storage.js';
@@ -1110,6 +1111,7 @@ app.put('/sync/state', authMiddleware, (req, res) => {
 });
 
 mountConfigRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
+mountReviewRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
 mountCommunityRoutes(app, { authMiddleware, loadUsers, saveUsers, isOwner: isOwnerPremiumEmail });
 mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
 mountContactRoutes(app, {

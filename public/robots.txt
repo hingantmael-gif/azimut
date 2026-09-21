@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /settings/
+Disallow: /session/
+Disallow: /user/
+
+Sitemap: https://hingantmael-gif.github.io/sitemap.xml

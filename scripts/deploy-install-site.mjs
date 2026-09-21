@@ -23,6 +23,8 @@ const BUILD_ID = Date.now().toString(36);
 
 sh('node scripts/generate-install-qr.mjs');
 sh('npx --yes tsx scripts/generate-terms-html.mjs');
+// Site vitrine (pages SEO, calculateurs, guides, avis, sitemap) : régénéré à chaque déploiement.
+sh('node scripts/generate-site.mjs', root, { MOVA_SITE_URL: LIVE });
 
 /** Expo charge `.env` et peut écraser l’env shell → on force l’URL prod le temps du build. */
 const envPath = path.join(root, '.env');
@@ -62,10 +64,18 @@ for (const f of [
   'apropos.html',
   'privacy.html',
   'terms.html',
+  'sitemap.xml',
+  'robots.txt',
 ]) {
   const src = path.join(root, 'public', f);
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
 }
+
+// Pages du site vitrine (*.html générées) + ressources (/site : css, js, captures d'écran).
+for (const f of fs.readdirSync(path.join(root, 'public'))) {
+  if (f.endsWith('.html')) fs.copyFileSync(path.join(root, 'public', f), path.join(dist, f));
+}
+if (fs.existsSync(path.join(root, 'public', 'site'))) fs.cpSync(path.join(root, 'public', 'site'), path.join(dist, 'site'), { recursive: true });
 
 // Version publiée + service worker estampillé (chaque déploiement change les octets de sw.js,
 // donc le navigateur installe la nouvelle version au prochain lancement).

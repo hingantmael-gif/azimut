@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -241,6 +241,15 @@ export default function SettingsIndex() {
                     : 'Gratuit'
                 }
                 onPress={() => router.push('/settings/subscription')}
+              />
+              <SettingsRow
+                label="Donner mon avis"
+                value="Sur le site Mova"
+                icon={{ name: 'star', color: '#F59E0B' }}
+                onPress={() => {
+                  const site = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : process.env.EXPO_PUBLIC_SITE_URL || 'https://hingantmael-gif.github.io';
+                  void Linking.openURL(`${site}/avis.html`);
+                }}
               />
               <SettingsRow
                 label="Tout explorer"

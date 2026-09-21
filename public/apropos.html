@@ -1,164 +1,200 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mova — Coaching multi-sport</title>
-  <meta
-    name="description"
-    content="Mova est une application de coaching multi-sport : plans d’entraînement, récupération, sommeil, suivi course / vélo / natation / triathlon."
-  />
-  <meta name="google-site-verification" content="6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw" />
-  <style>
-    :root {
-      --ink: #07111f;
-      --jade: #0e8f6f;
-      --mint: #3dff9a;
-      --text: #e8f3ef;
-      --muted: rgba(232, 243, 239, 0.78);
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
-      background: radial-gradient(1200px 600px at 80% -10%, rgba(14,143,111,0.28), transparent),
-        linear-gradient(165deg, #0a1628 0%, var(--ink) 45%, #061018 100%);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.55;
-    }
-    main {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
-    }
-    .eyebrow {
-      font-family: system-ui, sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--mint);
-      margin-bottom: 12px;
-    }
-    h1 {
-      font-size: clamp(2.2rem, 5vw, 3.2rem);
-      line-height: 1.1;
-      margin: 0 0 16px;
-      letter-spacing: -0.02em;
-    }
-    h2 {
-      font-size: 1.35rem;
-      margin: 36px 0 12px;
-      color: #fff;
-    }
-    p { color: var(--muted); font-size: 1.05rem; margin: 0 0 14px; }
-    ul { color: var(--muted); padding-left: 1.2em; }
-    li { margin-bottom: 8px; }
-    .cta {
-      display: inline-block;
-      margin-top: 28px;
-      margin-right: 12px;
-      padding: 14px 22px;
-      border-radius: 10px;
-      background: var(--mint);
-      color: var(--ink);
-      font-family: system-ui, sans-serif;
-      font-weight: 800;
-      text-decoration: none;
-    }
-    .cta.secondary {
-      background: transparent;
-      color: var(--mint);
-      border: 1px solid rgba(61, 255, 154, 0.45);
-    }
-    a.inline { color: var(--mint); font-weight: 700; }
-    .privacy-box {
-      margin-top: 28px;
-      padding: 16px 18px;
-      border-radius: 12px;
-      border: 1px solid rgba(61, 255, 154, 0.28);
-      background: rgba(14, 143, 111, 0.12);
-      font-family: system-ui, sans-serif;
-      font-size: 0.95rem;
-    }
-    footer {
-      margin-top: 48px;
-      padding-top: 20px;
-      border-top: 1px solid rgba(255,255,255,0.12);
-      font-family: system-ui, sans-serif;
-      font-size: 14px;
-      color: var(--muted);
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mova — Application de coaching multi-sport : course, vélo, natation, triathlon</title>
+<meta name="description" content="Mova génère ton plan d’entraînement personnalisé (5 km, 10 km, semi, marathon, triathlon, musculation), règle tes allures, te guide avec un tracker GPS et suit ta récupération. Gratuit, sur iPhone et Android.">
+<meta name="keywords" content="application course à pied, plan d’entraînement running, coach sportif application, application triathlon, entraînement vélo watts, application natation, plan marathon, plan 10 km, calcul VMA, tracker GPS running, séance de sport rapide, musculation callisthénie, coaching multi-sport, application sport gratuite, Mova">
+<meta name="google-site-verification" content="6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
+<meta name="theme-color" content="#07111f">
+<link rel="canonical" href="https://hingantmael-gif.github.io/apropos.html">
+<link rel="icon" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mova">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Mova — Application de coaching multi-sport : course, vélo, natation, triathlon">
+<meta property="og:description" content="Mova génère ton plan d’entraînement personnalisé (5 km, 10 km, semi, marathon, triathlon, musculation), règle tes allures, te guide avec un tracker GPS et suit ta récupération. Gratuit, sur iPhone et Android.">
+<meta property="og:url" content="https://hingantmael-gif.github.io/apropos.html">
+<meta property="og:image" content="https://hingantmael-gif.github.io/site/img/accueil.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mova — Application de coaching multi-sport : course, vélo, natation, triathlon">
+<meta name="twitter:description" content="Mova génère ton plan d’entraînement personnalisé (5 km, 10 km, semi, marathon, triathlon, musculation), règle tes allures, te guide avec un tracker GPS et suit ta récupération. Gratuit, sur iPhone et Android.">
+<meta name="twitter:image" content="https://hingantmael-gif.github.io/site/img/accueil.webp">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="stylesheet" href="/site/site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Mova","url":"https://hingantmael-gif.github.io/apropos.html","inLanguage":"fr-FR"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Mova","alternateName":"Mova — coaching multi-sport","url":"https://hingantmael-gif.github.io/apropos.html","applicationCategory":"HealthApplication","applicationSubCategory":"Application de course à pied, vélo, natation, triathlon, musculation","operatingSystem":"Android, iOS, Web","inLanguage":"fr-FR","description":"Application de coaching multi-sport : plans d’entraînement personnalisés, tracker GPS avec jauge d’allure, séance rapide, récupération et communauté.","offers":[{"@type":"Offer","price":"0","priceCurrency":"EUR","name":"Mova gratuit"},{"@type":"Offer","price":"9.99","priceCurrency":"EUR","name":"Mova Premium (mensuel)"}],"screenshot":["https://hingantmael-gif.github.io/site/img/accueil.webp","https://hingantmael-gif.github.io/site/img/jauge-allure.webp","https://hingantmael-gif.github.io/site/img/plan-entrainement.webp","https://hingantmael-gif.github.io/site/img/seance-rapide-intensite.webp","https://hingantmael-gif.github.io/site/img/theme-aurore.webp"],"featureList":["Plans d’entraînement personnalisés","Tracker GPS avec jauge d’allure en temps réel","Séance rapide : type, durée, intensité","Export des séances au format FIT pour montre Garmin","Suivi de la récupération et de la charge","Prédiction de chrono","Classement et badges","Personnalisation complète (Premium)"]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Mova","url":"https://hingantmael-gif.github.io/apropos.html","logo":"https://hingantmael-gif.github.io/icon-512.png"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Mova est-elle gratuite ?","acceptedAnswer":{"@type":"Answer","text":"Oui, l’essentiel est gratuit : ton programme, le tracker GPS, la séance rapide, le suivi de récupération et la communauté. Une formule Premium optionnelle (9,99 € par mois ou 59,99 € par an, avec 7 jours d’essai) supprime les limites (plusieurs programmes, plus d’imports et d’envois vers ta montre, plusieurs clubs) et débloque la personnalisation complète de l’application."}},{"@type":"Question","name":"Quels sports et quels objectifs Mova couvre-t-elle ?","acceptedAnswer":{"@type":"Answer","text":"Course à pied (5 km, 10 km, semi-marathon, marathon, trail), vélo, natation, triathlon et Ironman, musculation et callisthénie. Tu choisis ton objectif, ton niveau et tes jours disponibles : Mova construit le plan semaine après semaine."}},{"@type":"Question","name":"Comment Mova calcule-t-elle mes allures d’entraînement ?","acceptedAnswer":{"@type":"Answer","text":"À partir de ce que tu sais de toi : un chrono récent (5 km, 10 km, semi…), ta VMA, ton volume hebdomadaire ou tes activités importées. Mova en déduit tes zones (footing, sortie longue, seuil, allure marathon, VMA) et les applique à chaque séance. Si tu n’as encore aucune donnée, l’appli te propose de compléter ta VMA ou un chrono pour éviter des allures trop lentes ou trop rapides."}},{"@type":"Question","name":"Comment installer Mova sur iPhone ou Android sans passer par un store ?","acceptedAnswer":{"@type":"Answer","text":"Mova est une application web installable. Sur Android : menu du navigateur → « Installer l’application ». Sur iPhone : ouvre le site dans Safari, touche Partager puis « Sur l’écran d’accueil ». L’icône apparaît avec tes autres applications et s’ouvre en plein écran. Un guide pas à pas est disponible sur la page d’installation."}},{"@type":"Question","name":"Puis-je envoyer mes séances sur ma montre Garmin ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Mova exporte tes séances structurées au format .FIT, à importer dans Garmin Connect pour qu’elles apparaissent sur ta montre, avec les allures et les répétitions. Les autres marques de montres sont proposées avec le format qui leur correspond."}},{"@type":"Question","name":"Puis-je importer mes sorties depuis Strava ou un fichier GPX ?","acceptedAnswer":{"@type":"Answer","text":"Oui : tu peux importer des activités au format GPX ou TCX (exportées de Strava, Garmin, Coros, Suunto…). Mova les rattache à ta séance prévue pour comparer le prévu et le réalisé."}},{"@type":"Question","name":"À quoi sert la « séance rapide » ?","acceptedAnswer":{"@type":"Answer","text":"Tu as 30 minutes et pas de plan précis ? Choisis le sport, le type de séance (footing, sortie longue, fractionné, seuil…), la durée puis l’intensité (tranquille, modérée, intense). Mova prépare une séance calée sur tes allures. Si la durée n’est pas cohérente avec le type choisi, l’app te prévient."}},{"@type":"Question","name":"Comment fonctionne le tracker GPS ?","acceptedAnswer":{"@type":"Answer","text":"Pendant la séance, une jauge en demi-cercle te montre en temps réel si tu es dans la zone d’allure (vert) ou trop rapide / trop lent (rouge). Le tracker affiche le chrono, la distance, l’allure moyenne, gère la pause automatique et peut t’encourager à la voix."}},{"@type":"Question","name":"Mes données de santé et ma position sont-elles protégées ?","acceptedAnswer":{"@type":"Answer","text":"Tu gardes la main : consentements séparés (santé, position, notifications), profil privé par défaut, export de tes données et suppression du compte depuis l’application. Les détails figurent dans la politique de confidentialité."}},{"@type":"Question","name":"Peut-on personnaliser l’apparence de l’application ?","acceptedAnswer":{"@type":"Answer","text":"Avec Premium, oui : 12 thèmes prêts à l’emploi, 20 fonds d’écran animés, couleurs libres (palette, teinte, code hexadécimal), style et forme des boutons, cartes, police et taille du texte. Les contrastes se corrigent automatiquement pour que tout reste lisible. Sans personnalisation, tu gardes l’application standard."}},{"@type":"Question","name":"Mova convient-elle aux débutants ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Le niveau (débutant, intermédiaire, confirmé) règle le volume, les séances de qualité et les temps de récupération. Les échauffements et retours au calme sont inclus, et chaque étape est expliquée pendant la séance."}},{"@type":"Question","name":"Comment donner mon avis ou signaler un problème ?","acceptedAnswer":{"@type":"Answer","text":"Tu peux publier un avis sur la page « Avis » du site. Pour une question ou un bug, utilise le formulaire de contact dans l’application (Réglages → Écrire à Mova) : ton message arrive directement à l’équipe."}}]}</script>
 </head>
 <body>
-  <main>
-    <p class="eyebrow">Application multi-sport · coaching</p>
-    <h1>Mova</h1>
-    <p>
-      <strong style="color:#fff">Objectif :</strong> aider les sportifs à progresser avec un plan
-      d’entraînement clair (course à pied, vélo, natation, triathlon, musculation), en suivant la
-      charge, la récupération et le sommeil — sans perdre le plaisir de s’entraîner.
-    </p>
-    <p>
-      Mova construit des programmes adaptés à ton niveau et à ta disponibilité, propose le suivi
-      des séances, la récupération musculaire, l’export vers les montres (Garmin, Apple, etc.) et un
-      espace profil pour suivre ta progression.
-    </p>
+<a class="skip" href="#main">Aller au contenu</a>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<header class="top"><div class="wrap bar">
+  <a class="brand" href="/apropos.html" aria-label="Mova — accueil du site"><img src="/icon-192.png" alt="" width="34" height="34">Mova</a>
+  <nav class="main" aria-label="Navigation principale">
+    <a href="/apropos.html#fonctionnalites">Fonctionnalités</a><a href="/apropos.html#captures">Captures</a><a href="/apropos.html#disciplines">Disciplines</a><a href="/apropos.html#outils">Outils</a><a href="/avis.html">Avis</a><a href="/apropos.html#faq">FAQ</a>
+    <a class="btn primary small" href="/" style="color:#04140f">Ouvrir l’app</a>
+  </nav>
+  <button class="burger" aria-label="Menu" aria-expanded="false">Menu</button>
+</div></header>
+<main id="main">
 
-    <h2>À qui s’adresse l’app ?</h2>
-    <ul>
-      <li>Débutants qui veulent un plan simple et progressif</li>
-      <li>Athlètes confirmés (5 km → Ironman, fond, VMA…)</li>
-      <li>Sportifs multi-disciplines (triathlon, duathlon…)</li>
-    </ul>
+<section class="hero"><div class="wrap"><div class="grid">
+  <div>
+    <span class="eyebrow">Coaching multi-sport · Gratuit</span>
+    <h1>Ton coach de <em>course à pied, vélo, natation</em> et musculation</h1>
+    <p class="lead">Mova génère ton plan d’entraînement personnalisé, règle tes allures sur ton vrai niveau, te guide en direct avec le tracker GPS et suit ta récupération. Une seule application pour tous tes sports.</p>
+    <div class="cta-row"><a class="btn primary" href="/"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Commencer gratuitement</a><a class="btn ghost" href="#captures">Voir l’application</a></div>
+    <div class="pills"><span class="pill">Plans 5 km · 10 km · semi · marathon</span><span class="pill">Triathlon & Ironman</span><span class="pill">Tracker GPS</span><span class="pill">iPhone & Android</span></div>
+  </div>
+  <div class="hero-shots" aria-hidden="false">
+    <div class="phone p1"><img src="/site/img/seance-rapide-intensite.webp" alt="Séance rapide : curseur d’intensité tranquille, modérée, intense" width="540" height="1170" loading="lazy" decoding="async"></div>
+    <div class="phone p2"><img src="/site/img/accueil.webp" alt="Écran d’accueil de Mova avec la séance du jour" width="540" height="1170" fetchpriority="high"></div>
+    <div class="phone p3"><img src="/site/img/jauge-allure.webp" alt="Jauge d’allure en demi-cercle vert et rouge du tracker GPS" width="540" height="1170" loading="lazy" decoding="async"></div>
+  </div>
+</div>
+<div class="stats reveal">
+  <div class="stat"><b data-count="7">7</b><span>disciplines couvertes</span></div>
+  <div class="stat"><b data-count="4">4</b><span>plans : 5 km, 10 km, semi, marathon</span></div>
+  <div class="stat"><b data-count="20">20</b><span>fonds animés (Premium)</span></div>
+  <div class="stat"><b data-count="12">12</b><span>thèmes de couleurs (Premium)</span></div>
+</div></div></section>
 
-    <h2>Fonctionnalités principales</h2>
-    <ul>
-      <li>Création de programmes et calendrier d’entraînement</li>
-      <li>Suivi du corps / récupération musculaire</li>
-      <li>Sommeil et readiness</li>
-      <li>Connexion de compte (e-mail ou Google)</li>
-      <li>Export de séances vers la montre</li>
-    </ul>
+<section id="fonctionnalites" class="alt"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Fonctionnalités</span><h2>Tout ce qu’il faut pour progresser, dans une seule application</h2>
+  <p>Plan d’entraînement, tracker GPS, séance rapide, récupération, prédiction de chrono, communauté : chaque outil est pensé pour te faire gagner du temps et te garder motivé.</p></div>
+  <div class="cards"><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><h3>Allures calculées sur toi</h3><p>Chrono, VMA, volume ou activités importées : Mova déduit tes zones (footing, seuil, VMA…) et les applique à chaque séance.</p><a class="more" href="/application-course-a-pied.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><h3>Plans personnalisés</h3><p>5 km, 10 km, semi, marathon, trail, vélo, natation, triathlon, Ironman, musculation : un calendrier adapté à ton niveau et à tes jours libres.</p><a class="more" href="/plan-entrainement-10km.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><h3>Séance rapide</h3><p>Sport, type de séance, durée, intensité : ta séance prête en 10 secondes, avec contrôle de cohérence.</p><a class="more" href="/seance-rapide.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><h3>Tracker GPS et jauge d’allure</h3><p>Un demi-cercle vert et rouge et un point qui suit ton allure en direct. Départ instantané, pause auto, coach vocal.</p><a class="more" href="/tracker-gps-course.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><polyline points="12 9.5 12 12 13.6 13.4"/><path d="M16.5 16.6 16 21H8l-.5-4.4M7.5 7.4 8 3h8l.5 4.4"/></svg></span><h3>Envoi sur ta montre</h3><p>Séances structurées au format FIT pour Garmin, et formats adaptés aux autres marques.</p><a class="more" href="/envoyer-seance-montre-garmin.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span><h3>Récupération & sommeil</h3><p>Charge d’entraînement, forme, sommeil, étirements et mobilité guidés avec chronomètre.</p><a class="more" href="/guide-recuperation-sommeil.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span><h3>Prédiction de course</h3><p>Estime tes chronos sur 5 km, 10 km, semi et marathon d’après tes performances.</p><a class="more" href="/calculateur-allure.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="7"/><polyline points="8.2 13.9 7 23 12 20 17 23 15.8 13.9"/></svg></span><h3>Rangs, badges, classement</h3><p>De Bronze à Champion : gagne de l’XP à chaque séance, débloque des badges, défie la communauté.</p><a class="more" href="/apropos.html#fonctionnalites">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><h3>Communauté</h3><p>Fil d’actualité, clubs, partage de séances et de programmes, athlètes certifiés.</p><a class="more" href="/apropos.html#fonctionnalites">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".6"/><circle cx="17.5" cy="10.5" r=".6"/><circle cx="8.5" cy="7.5" r=".6"/><circle cx="6.5" cy="12.5" r=".6"/><path d="M12 2a10 10 0 0 0 0 20 2 2 0 0 0 2-2c0-.6-.2-1-.5-1.4a2 2 0 0 1 1.5-3.4H17a5 5 0 0 0 5-5c0-4.4-4.5-8.2-10-8.2z"/></svg></span><h3>Personnalisation totale</h3><p>Premium : 12 thèmes, 20 fonds animés, couleurs libres, boutons, cartes, polices. Lisible quoi que tu choisisses.</p><a class="more" href="/apropos.html#personnalisation">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><h3>Import & export</h3><p>Importe tes sorties GPX / TCX (Strava, Garmin…), compare le prévu et le réalisé.</p><a class="more" href="/application-course-a-pied.html">En savoir plus →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><h3>Données sous contrôle</h3><p>Consentements séparés, profil privé par défaut, export de tes données et suppression du compte.</p><a class="more" href="/privacy.html">En savoir plus →</a></article></div>
+</div></section>
 
-    <h2>Pourquoi Mova demande des données Google ?</h2>
-    <p>
-      Lorsque tu choisis <strong style="color:#fff">« Continuer avec Google »</strong>, Mova
-      demande l’accès à ton <strong style="color:#fff">adresse e-mail</strong>, ton
-      <strong style="color:#fff">nom</strong> et ton <strong style="color:#fff">profil de base</strong>
-      uniquement pour :
-    </p>
-    <ul>
-      <li>créer ou retrouver ton compte Mova sans mot de passe séparé ;</li>
-      <li>afficher ton identité sur ton profil dans l’application ;</li>
-      <li>sécuriser la connexion (pas d’envoi d’e-mails marketing via ton Gmail).</li>
-    </ul>
-    <p>
-      Mova ne publie pas sur ton compte Google et ne vend pas ces données.
-      Tu peux aussi t’inscrire uniquement avec un e-mail et un mot de passe, sans Google.
-    </p>
+<section id="captures"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Captures d’écran</span><h2>L’application en images</h2><p>Des vraies captures de Mova : de l’accueil au tracker GPS, du plan d’entraînement à la personnalisation.</p></div>
+  <div class="gallery reveal" role="list"><figure role="listitem"><div class="phone "><img src="/site/img/accueil.webp" alt="Écran d’accueil de Mova avec la séance du jour" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Accueil</b>Ta séance du jour d’un coup d’œil</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/plan-entrainement.webp" alt="Calendrier du plan d’entraînement dans Mova" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Plan</b>Le calendrier de ton programme</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/seance-rapide-type.webp" alt="Séance rapide : choix du type de séance de course" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Séance rapide</b>Choisis le type de séance</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/seance-rapide-intensite.webp" alt="Séance rapide : curseur d’intensité tranquille, modérée, intense" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Intensité</b>Tranquille, modérée ou intense</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/jauge-allure.webp" alt="Jauge d’allure en demi-cercle vert et rouge du tracker GPS" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Jauge d’allure</b>Reste dans la zone verte</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/tracker-gps.webp" alt="Tracker GPS libre avec carte, chrono, allure et distance" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Tracker libre</b>Carte, chrono, allure, distance</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/progres.webp" alt="Écran progrès avec classement et profil sportif" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Progrès</b>Classement, profil sportif</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/recuperation.webp" alt="Suivi de la récupération et de l’état de forme" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Récupération</b>État de forme et muscles</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/prediction-course.webp" alt="Prédiction de chrono sur 5 km, 10 km, semi et marathon" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Prédiction</b>Tes chronos estimés</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/communaute.webp" alt="Fil social de la communauté Mova" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Communauté</b>Le fil de tes amis athlètes</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/profil.webp" alt="Profil athlète avec rang, badges et abonnés" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Profil</b>Rang, badges, abonnés</figcaption></figure><figure role="listitem"><div class="phone "><img src="/site/img/personnalisation.webp" alt="Écran de personnalisation de l’application (thèmes, fonds, couleurs)" width="540" height="1170" loading="lazy" decoding="async"></div><figcaption><b>Personnaliser</b>Thèmes, fonds, couleurs, boutons</figcaption></figure></div>
+</div></section>
 
-    <div class="privacy-box">
-      <strong style="color:#fff">Confidentialité :</strong>
-      lis notre
-      <a class="inline" href="/privacy.html">politique de confidentialité</a>
-      (données collectées, finalités, droits RGPD) et nos
-      <a class="inline" href="/terms.html">conditions d’utilisation</a>.
-      Aucune connexion n’est requise pour lire ces pages.
+<section class="alt"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Comment ça marche</span><h2>De zéro au premier kilomètre en 3 étapes</h2></div>
+  <div class="steps">
+    <div class="step reveal"><h3>Dis-nous qui tu es</h3><p>Sport, objectif, niveau, jours disponibles, et si tu les connais : chrono, VMA ou FTP.</p></div>
+    <div class="step reveal"><h3>Reçois ton plan</h3><p>Un calendrier de séances détaillées : échauffement, corps de séance, retour au calme, avec les allures de chaque étape.</p></div>
+    <div class="step reveal"><h3>Lance-toi, ajuste</h3><p>Démarre le tracker GPS, suis la jauge d’allure, puis compare le prévu et le réalisé. Le plan se met à jour avec toi.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap split">
+  <div class="reveal"><span class="eyebrow">Séance rapide</span><h2>Une séance sur mesure, en 4 touches</h2>
+  <p style="margin-top:12px">Le sport, le type de séance, la durée, l’intensité. C’est toi qui décides ; Mova calcule le reste avec tes allures.</p>
+  <ul class="ticks"><li><b>Course :</b> footing, sortie longue, fractionné, seuil / tempo.</li><li><b>Contrôle de cohérence :</b> une sortie longue en 20 minutes ? Mova te le dit.</li><li><b>Trois intensités :</b> tranquille, modérée, ou dans le rouge.</li><li><b>Étape facultative :</b> complète ta VMA ou ton chrono pour des allures justes.</li></ul>
+  <div class="cta-row" style="margin-top:22px"><a class="btn ghost" href="/seance-rapide.html">Découvrir la séance rapide</a></div></div>
+  <div class="media reveal"><div class="phone "><img src="/site/img/seance-rapide-type.webp" alt="Séance rapide : choix du type de séance de course" width="540" height="1170" loading="lazy" decoding="async"></div><div class="phone "><img src="/site/img/seance-rapide-intensite.webp" alt="Séance rapide : curseur d’intensité tranquille, modérée, intense" width="540" height="1170" loading="lazy" decoding="async"></div></div>
+</div></section>
+
+<section class="alt"><div class="wrap split rev">
+  <div class="reveal"><span class="eyebrow">Tracker GPS</span><h2>Une jauge qui te dit si tu es dans la zone</h2>
+  <p style="margin-top:12px">Un demi-cercle en trois parties : vert au centre, rouge de chaque côté. Le point suit ton allure seconde après seconde. Tu n’as plus à regarder ta montre pour savoir si tu accélères trop tôt.</p>
+  <ul class="ticks"><li><b>Allure visée en grand :</b> 4:01 /km, lisible d’un coup d’œil.</li><li><b>Étapes claires :</b> « Échauffement 12 minutes à 6:16 ».</li><li><b>Départ instantané</b> et détection automatique de la localisation.</li><li><b>Pause automatique</b> et coach vocal.</li></ul>
+  <div class="cta-row" style="margin-top:22px"><a class="btn ghost" href="/tracker-gps-course.html">Voir le tracker GPS</a></div></div>
+  <div class="media reveal"><div class="phone "><img src="/site/img/jauge-allure.webp" alt="Jauge d’allure en demi-cercle vert et rouge du tracker GPS" width="540" height="1170" loading="lazy" decoding="async"></div><div class="phone "><img src="/site/img/tracker-gps.webp" alt="Tracker GPS libre avec carte, chrono, allure et distance" width="540" height="1170" loading="lazy" decoding="async"></div></div>
+</div></section>
+
+<section id="disciplines"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Disciplines</span><h2>Une application, tous tes sports</h2><p>Que tu coures, pédales, nages ou soulèves de la fonte, Mova te propose des séances pensées pour ta discipline.</p></div>
+  <div class="cards"><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="4.5" r="2"/><path d="M6 21l3.5-5.5 3 2V22M9.5 15.5l1-5 3.5 2.5 3 0M10.5 10.5 8 8.5 5 9.5"/></svg></span><h3>Course à pied</h3><p>5 km, 10 km, semi, marathon, trail. Fractionné, seuil, sortie longue.</p><a class="more" href="/application-course-a-pied.html">Voir la discipline →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h2l-4 7.5H8l-2.5 4M12 13.5 9 6H7"/></svg></span><h3>Vélo</h3><p>Séances en watts calées sur ta FTP, sorties longues, intervalles.</p><a class="more" href="/application-velo.html">Voir la discipline →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.7l5.7 5.6a8 8 0 1 1-11.4 0z"/></svg></span><h3>Natation</h3><p>Endurance et séries de 100 m avec repos courts.</p><a class="more" href="/application-natation.html">Voir la discipline →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span><h3>Triathlon & Ironman</h3><p>Trois sports dans un seul calendrier, du sprint au 140.6.</p><a class="more" href="/application-triathlon.html">Voir la discipline →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg></span><h3>Musculation</h3><p>Corps entier, haut, bas ou muscles ciblés, avec ton matériel.</p><a class="more" href="/application-musculation.html">Voir la discipline →</a></article><article class="card reveal"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2.3"/><path d="M12 7v7M6 9.5l6 1.5 6-1.5M9 22l3-8 3 8"/></svg></span><h3>Callisthénie</h3><p>Pompes, tractions, dips, gainage : tout au poids du corps.</p><a class="more" href="/application-callisthenie.html">Voir la discipline →</a></article></div>
+</div></section>
+
+<section id="personnalisation" class="alt"><div class="wrap split">
+  <div class="media reveal"><div class="phone "><img src="/site/img/theme-aurore.webp" alt="Mova personnalisé avec le thème Aurore rose" width="540" height="1170" loading="lazy" decoding="async"></div><div class="phone "><img src="/site/img/theme-nuit.webp" alt="Mova en mode sombre avec le thème Néon et fond en grille" width="540" height="1170" loading="lazy" decoding="async"></div></div>
+  <div class="reveal"><span class="eyebrow">Premium · Personnalisation</span><h2>Fais de Mova ton application</h2>
+  <p style="margin-top:12px">Comme sur ta montre, tout se personnalise : le fond d’écran, les couleurs, les boutons, les cartes, la police. Et ça reste lisible : le texte passe automatiquement en noir ou en blanc selon tes couleurs.</p>
+  <ul class="ticks"><li><b>12 thèmes</b> prêts à l’emploi : Aurore rose, Océan, Coucher de soleil, Forêt, Néon, Minuit…</li><li><b>20 fonds animés</b> : aurore boréale, vagues, étoiles, pluie fine, rayons, grille, dunes…</li><li><b>Couleurs libres :</b> palette, curseur de teinte ou code hexadécimal.</li><li><b>Boutons :</b> dégradé, uni, contour ou verre ; arrondi, pilule ou carré ; effet au toucher.</li><li>Sans personnalisation, tu gardes l’application standard.</li></ul></div>
+</div></section>
+
+<section id="outils"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Outils gratuits</span><h2>Calculateurs et guides pour t’entraîner malin</h2><p>Des outils utilisables tout de suite, sans compte, et des guides pour comprendre ce que tu fais.</p></div>
+  <div class="cards four">
+    <a class="card reveal" href="/calculateur-vma.html" style="text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><polyline points="12 9 12 13 14.5 14.5"/><line x1="9" y1="2" x2="15" y2="2"/></svg></span><h3>Calculateur de VMA</h3><p>Test de Cooper, demi-Cooper ou chrono : obtiens ta VMA et tes zones.</p></a>
+    <a class="card reveal" href="/calculateur-allure.html" style="text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span><h3>Calculateur d’allure</h3><p>Allure, vitesse et prédictions de chrono sur 5 km, 10 km, semi, marathon.</p></a>
+    <a class="card reveal" href="/guide-vma.html" style="text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span><h3>Guide : la VMA</h3><p>Définition, tests et utilisation dans tes séances.</p></a>
+    <a class="card reveal" href="/guide-fractionne.html" style="text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><h3>Guide : le fractionné</h3><p>30/30, 400 m, 1 000 m, seuil : les séances qui font progresser.</p></a>
+  </div>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Pour qui ?</span><h2>Mova s’adapte à ta situation</h2><p>Quelques exemples de profils pour lesquels l’application est pensée.</p></div>
+  <div class="cards"><article class="card reveal"><h3>Tu débutes la course</h3><p>Tu veux courir 5 km sans t’arrêter : un plan progressif, des séances courtes et des allures faciles.</p></article><article class="card reveal"><h3>Tu prépares un 10 km ou un semi</h3><p>Sorties longues, seuil et fractionné calés sur ton chrono, avec la jauge d’allure pour rester dans la zone.</p></article><article class="card reveal"><h3>Tu vises un marathon</h3><p>Périodisation, semaines d’allègement, affûtage et suivi de la charge pour arriver frais.</p></article><article class="card reveal"><h3>Tu fais du triathlon</h3><p>Natation, vélo et course dans un même calendrier, avec une charge globale maîtrisée.</p></article><article class="card reveal"><h3>Tu manques de temps</h3><p>Séance rapide : 20, 30 ou 45 minutes, choisis l’intensité, c’est prêt.</p></article><article class="card reveal"><h3>Tu t’entraînes à la maison</h3><p>Callisthénie et musculation au poids du corps, aux haltères ou aux élastiques, avec repos guidés.</p></article></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">Gratuit ou Premium</span><h2>L’essentiel est gratuit</h2></div>
+  <div class="tablewrap reveal"><table><thead><tr><th>Fonction</th><th>Gratuit</th><th>Premium</th></tr></thead><tbody>
+    <tr><td>Programme personnalisé, tracker GPS, séance rapide</td><td class="y">✓</td><td class="y">✓</td></tr>
+    <tr><td>Récupération, prédiction de chrono, classement, badges</td><td class="y">✓</td><td class="y">✓</td></tr>
+    <tr><td>Programmes actifs en même temps</td><td>1</td><td class="y">Plusieurs</td></tr>
+    <tr><td>Imports d’activités par mois</td><td>5</td><td class="y">Illimité</td></tr>
+    <tr><td>Envois vers ta montre par mois</td><td>3</td><td class="y">Illimité</td></tr>
+    <tr><td>Clubs rejoints</td><td>1</td><td class="y">Plusieurs</td></tr>
+    <tr><td>Personnalisation complète (thèmes, fonds, couleurs, boutons, polices)</td><td>—</td><td class="y">✓</td></tr>
+  </tbody></table></div>
+  <p class="note" style="margin-top:12px;text-align:center">Premium : 9,99 € par mois ou 59,99 € par an, 7 jours d’essai. Sans engagement, à gérer depuis ton compte.</p>
+</div></section>
+
+<section id="avis"><div class="wrap" data-reviews>
+  <div class="head center reveal"><span class="eyebrow">Avis</span><h2>Ils utilisent Mova, ils en parlent</h2>
+  <p>Seuls les avis de vraies personnes sont publiés, avec la note qu’elles ont donnée. Toi aussi, dis-nous ce que tu en penses.</p></div>
+  <div class="rating-sum" data-reviews-summary hidden></div>
+  <div class="reviews" data-reviews-list><div class="empty">Chargement des avis…</div></div>
+  <form class="rev reveal" novalidate>
+    <h3>Donner mon avis sur Mova</h3>
+    <div><span style="font-weight:700;font-size:.9rem">Ta note</span><div class="starpick" role="group" aria-label="Note de 1 à 5 étoiles"><button type="button" aria-label="1 étoile" aria-pressed="false"><svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg></button><button type="button" aria-label="2 étoiles" aria-pressed="false"><svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg></button><button type="button" aria-label="3 étoiles" aria-pressed="false"><svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg></button><button type="button" aria-label="4 étoiles" aria-pressed="false"><svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg></button><button type="button" aria-label="5 étoiles" aria-pressed="false"><svg viewBox="0 0 24 24"><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"/></svg></button></div></div>
+    <div class="row2">
+      <label>Prénom ou pseudo<input name="name" maxlength="40" autocomplete="given-name" required></label>
+      <label>Ville (facultatif)<input name="city" maxlength="40" autocomplete="address-level2"></label>
     </div>
+    <label>Ta pratique principale
+      <select name="sport"><option value="">— choisir —</option><option value="course">Course à pied</option><option value="velo">Vélo</option><option value="natation">Natation</option><option value="triathlon">Triathlon</option><option value="musculation">Musculation</option><option value="callisthenie">Callisthénie</option><option value="autre">Autre</option></select>
+    </label>
+    <label>Ton avis<textarea name="text" maxlength="600" placeholder="Ce que tu utilises, ce que tu aimes, ce qui pourrait être mieux…" required></textarea></label>
+    <div class="count">0 / 600</div>
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <button class="btn primary" type="submit">Publier mon avis</button>
+    <div class="msg" role="status" aria-live="polite"></div>
+    <p class="note">Ton avis est public. Ni lien, ni coordonnées personnelles s’il te plaît. Un avis abusif peut être masqué.</p>
+  </form>
+</div></section>
+<script>window.addEventListener('load',function(){window.MovaReviews&&window.MovaReviews.init("https://azimut-auth-api.onrender.com",6);});</script>
 
-    <a class="cta" href="/welcome">Ouvrir l’application Mova</a>
-    <a class="cta secondary" href="/welcome">Créer un compte</a>
+<section id="faq" class="alt"><div class="wrap">
+  <div class="head center reveal"><span class="eyebrow">FAQ</span><h2>Questions fréquentes</h2></div>
+  <div class="faq reveal"><details><summary>Mova est-elle gratuite ?</summary><p>Oui, l’essentiel est gratuit : ton programme, le tracker GPS, la séance rapide, le suivi de récupération et la communauté. Une formule Premium optionnelle (9,99 € par mois ou 59,99 € par an, avec 7 jours d’essai) supprime les limites (plusieurs programmes, plus d’imports et d’envois vers ta montre, plusieurs clubs) et débloque la personnalisation complète de l’application.</p></details><details><summary>Quels sports et quels objectifs Mova couvre-t-elle ?</summary><p>Course à pied (5 km, 10 km, semi-marathon, marathon, trail), vélo, natation, triathlon et Ironman, musculation et callisthénie. Tu choisis ton objectif, ton niveau et tes jours disponibles : Mova construit le plan semaine après semaine.</p></details><details><summary>Comment Mova calcule-t-elle mes allures d’entraînement ?</summary><p>À partir de ce que tu sais de toi : un chrono récent (5 km, 10 km, semi…), ta VMA, ton volume hebdomadaire ou tes activités importées. Mova en déduit tes zones (footing, sortie longue, seuil, allure marathon, VMA) et les applique à chaque séance. Si tu n’as encore aucune donnée, l’appli te propose de compléter ta VMA ou un chrono pour éviter des allures trop lentes ou trop rapides.</p></details><details><summary>Comment installer Mova sur iPhone ou Android sans passer par un store ?</summary><p>Mova est une application web installable. Sur Android : menu du navigateur → « Installer l’application ». Sur iPhone : ouvre le site dans Safari, touche Partager puis « Sur l’écran d’accueil ». L’icône apparaît avec tes autres applications et s’ouvre en plein écran. Un guide pas à pas est disponible sur la page d’installation.</p></details><details><summary>Puis-je envoyer mes séances sur ma montre Garmin ?</summary><p>Oui. Mova exporte tes séances structurées au format .FIT, à importer dans Garmin Connect pour qu’elles apparaissent sur ta montre, avec les allures et les répétitions. Les autres marques de montres sont proposées avec le format qui leur correspond.</p></details><details><summary>Puis-je importer mes sorties depuis Strava ou un fichier GPX ?</summary><p>Oui : tu peux importer des activités au format GPX ou TCX (exportées de Strava, Garmin, Coros, Suunto…). Mova les rattache à ta séance prévue pour comparer le prévu et le réalisé.</p></details><details><summary>À quoi sert la « séance rapide » ?</summary><p>Tu as 30 minutes et pas de plan précis ? Choisis le sport, le type de séance (footing, sortie longue, fractionné, seuil…), la durée puis l’intensité (tranquille, modérée, intense). Mova prépare une séance calée sur tes allures. Si la durée n’est pas cohérente avec le type choisi, l’app te prévient.</p></details><details><summary>Comment fonctionne le tracker GPS ?</summary><p>Pendant la séance, une jauge en demi-cercle te montre en temps réel si tu es dans la zone d’allure (vert) ou trop rapide / trop lent (rouge). Le tracker affiche le chrono, la distance, l’allure moyenne, gère la pause automatique et peut t’encourager à la voix.</p></details><details><summary>Mes données de santé et ma position sont-elles protégées ?</summary><p>Tu gardes la main : consentements séparés (santé, position, notifications), profil privé par défaut, export de tes données et suppression du compte depuis l’application. Les détails figurent dans la politique de confidentialité.</p></details><details><summary>Peut-on personnaliser l’apparence de l’application ?</summary><p>Avec Premium, oui : 12 thèmes prêts à l’emploi, 20 fonds d’écran animés, couleurs libres (palette, teinte, code hexadécimal), style et forme des boutons, cartes, police et taille du texte. Les contrastes se corrigent automatiquement pour que tout reste lisible. Sans personnalisation, tu gardes l’application standard.</p></details><details><summary>Mova convient-elle aux débutants ?</summary><p>Oui. Le niveau (débutant, intermédiaire, confirmé) règle le volume, les séances de qualité et les temps de récupération. Les échauffements et retours au calme sont inclus, et chaque étape est expliquée pendant la séance.</p></details><details><summary>Comment donner mon avis ou signaler un problème ?</summary><p>Tu peux publier un avis sur la page « Avis » du site. Pour une question ou un bug, utilise le formulaire de contact dans l’application (Réglages → Écrire à Mova) : ton message arrive directement à l’équipe.</p></details></div>
+</div></section>
 
-    <footer>
-      <a class="inline" href="/privacy.html">Politique de confidentialité</a>
-      ·
-      <a class="inline" href="/terms.html">Conditions d’utilisation</a>
-      ·
-      <a class="inline" href="/welcome">App</a>
-    </footer>
-  </main>
+<section id="installer"><div class="wrap"><div class="install reveal">
+  <div><span class="eyebrow">Gratuit · sans store</span><h2>Installe Mova en 10 secondes</h2>
+  <p style="margin:12px 0 22px">Ouvre le site sur ton téléphone puis ajoute Mova à ton écran d’accueil : elle s’ouvre en plein écran comme une vraie application, sur iPhone comme sur Android.</p>
+  <ul class="ticks"><li><b>Android :</b> menu du navigateur ⋮ → « Installer l’application ».</li><li><b>iPhone / iPad :</b> Safari → Partager → « Sur l’écran d’accueil ».</li><li><b>Ordinateur :</b> icône « Installer » dans la barre d’adresse (Chrome, Edge).</li></ul>
+  <div class="cta-row" style="margin-top:22px"><a class="btn primary" href="/telecharger.html"><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Guide d’installation</a><a class="btn ghost" href="/">Ouvrir l’app web</a></div></div>
+  <div><div class="qr"><img src="/qr-install.png" alt="QR code pour installer l’application Mova" width="190" height="190" loading="lazy"></div><p style="text-align:center;margin-top:12px;font-size:.88rem">Scanne avec ton téléphone</p></div>
+</div></div></section>
+
+</main>
+<footer><div class="wrap">
+  <div class="fgrid">
+    <div><a class="brand" href="/apropos.html"><img src="/icon-192.png" alt="" width="34" height="34">Mova</a>
+    <p style="margin-top:12px;font-size:.92rem">L’application de coaching multi-sport : plans d’entraînement personnalisés, tracker GPS, récupération et communauté. Course, vélo, natation, triathlon, musculation, callisthénie.</p></div>
+    <div><h4>Disciplines</h4><ul><li><a href="/application-course-a-pied.html">Course à pied</a></li><li><a href="/application-velo.html">Vélo</a></li><li><a href="/application-natation.html">Natation</a></li><li><a href="/application-triathlon.html">Triathlon & Ironman</a></li><li><a href="/application-musculation.html">Musculation</a></li><li><a href="/application-callisthenie.html">Callisthénie</a></li></ul></div>
+    <div><h4>Plans & séances</h4><ul><li><a href="/plan-entrainement-5km.html">Plan 5 km</a></li><li><a href="/plan-entrainement-10km.html">Plan 10 km</a></li><li><a href="/plan-entrainement-semi-marathon.html">Plan semi-marathon</a></li><li><a href="/plan-entrainement-marathon.html">Plan marathon</a></li><li><a href="/tracker-gps-course.html">Tracker GPS course</a></li><li><a href="/seance-rapide.html">Séance rapide</a></li></ul></div>
+    <div><h4>Outils & guides</h4><ul><li><a href="/calculateur-vma.html">Calculateur de VMA</a></li><li><a href="/calculateur-allure.html">Calculateur d’allure</a></li><li><a href="/guide-vma.html">Guide : la VMA</a></li><li><a href="/guide-fractionne.html">Guide : le fractionné</a></li><li><a href="/guide-sortie-longue.html">Guide : la sortie longue</a></li><li><a href="/guide-recuperation-sommeil.html">Guide : récupération</a></li></ul></div>
+  </div>
+  <div class="fgrid" style="margin-top:26px">
+    <div><h4>Mova</h4><ul><li><a href="/telecharger.html">Installer l’application</a></li><li><a href="/">Ouvrir l’app web</a></li><li><a href="/avis.html">Donner mon avis</a></li><li><a href="/plan-du-site.html">Plan du site</a></li></ul></div>
+    <div><h4>Légal</h4><ul><li><a href="/privacy.html">Confidentialité</a></li><li><a href="/terms.html">Conditions d’utilisation</a></li></ul></div>
+  </div>
+  <p class="copy">© 2026 Mova. Les conseils d’entraînement sont donnés à titre indicatif : en cas de doute ou de problème de santé, consulte un professionnel.</p>
+</div></footer>
+<script src="/site/site.js" defer></script>
 </body>
 </html>
