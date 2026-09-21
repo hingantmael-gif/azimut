@@ -45,6 +45,8 @@ export type PlatformKind = 'ios' | 'android' | 'desktop' | 'native';
 
 export function detectPlatform(): { kind: PlatformKind; inAppBrowser: boolean } {
   if (Platform.OS !== 'web' || typeof navigator === 'undefined') return { kind: 'native', inAppBrowser: false };
+  const sim = detectIos();
+  if (sim) return { kind: 'ios', inAppBrowser: sim.browser === 'inapp' };
   const ua = navigator.userAgent || '';
   const ios = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const android = /android/i.test(ua);
@@ -78,4 +80,47 @@ export function usePwaInstall() {
       return choice.outcome;
     },
   };
+}
+
+export type IosInfo = {
+  /** iPhone ou iPad (l'emplacement du bouton Partager change). */
+  device: 'iphone' | 'ipad';
+  /** Navigateur utilisé : seul Safari (ou Chrome récent) peut ajouter à l'écran d'accueil. */
+  browser: 'safari' | 'chrome' | 'firefox' | 'edge' | 'inapp' | 'other';
+  /** Version majeure d'iOS (0 si inconnue). */
+  major: number;
+};
+
+/** Détails iOS utiles au guide d'installation (null hors iPhone / iPad). */
+export function detectIos(): IosInfo | null {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return null;
+  let ua = navigator.userAgent || '';
+  let ipadOs = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  // Simulation (localhost uniquement) pour vérifier l'écran sans iPhone : ?sim=ios-safari | ios-chrome | ios-inapp | ios-ipad
+  if (typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    const sim = new URLSearchParams(location.search).get('sim');
+    if (sim === 'ios-safari') ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+    if (sim === 'ios-chrome') ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/123.0 Mobile/15E148 Safari/604.1';
+    if (sim === 'ios-inapp') ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 320.0';
+    if (sim === 'ios-ipad') {
+      ua = 'Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1';
+      ipadOs = false;
+    }
+  }
+  if (!/iphone|ipod|ipad/i.test(ua) && !ipadOs) return null;
+  const device: IosInfo['device'] = /ipad/i.test(ua) || ipadOs ? 'ipad' : 'iphone';
+  const major = Number(/OS (\d+)[_.]/.exec(ua)?.[1] ?? 0);
+  const inapp = /FBAN|FBAV|Instagram|Snapchat|TikTok|MicroMessenger|Line\/|Twitter|LinkedInApp|GSA\/|Messenger|WhatsApp/i.test(ua);
+  const browser: IosInfo['browser'] = inapp
+    ? 'inapp'
+    : /CriOS/i.test(ua)
+      ? 'chrome'
+      : /FxiOS/i.test(ua)
+        ? 'firefox'
+        : /EdgiOS/i.test(ua)
+          ? 'edge'
+          : /Safari/i.test(ua)
+            ? 'safari'
+            : 'other';
+  return { device, browser, major };
 }

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { isStandaloneDisplay } from '../../src/services/pwaInstall';
 import { Text } from '../../src/ui/Text';
 import { useRouter, type Href } from 'expo-router';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
@@ -11,8 +12,14 @@ import { useI18n } from '../../src/i18n/I18nContext';
 import { WizardBackdrop } from '../../src/ui/program/WizardBackdrop';
 
 /** Accueil Mova — entrée simple ; CGU à l’inscription. */
+function useCanInstall(): boolean {
+  // Navigateur (pas l'app installée) : on propose le guide d'installation dès l'accueil — utile surtout sur iPhone.
+  return Platform.OS === 'web' && typeof window !== 'undefined' && !isStandaloneDisplay();
+}
+
 export default function WelcomeScreen() {
   const router = useRouter();
+  const canInstall = useCanInstall();
   const { state } = useApp();
   const { t } = useI18n();
 
@@ -52,6 +59,11 @@ export default function WelcomeScreen() {
           variant="outline"
           onPress={() => router.push('/(auth)/login')}
         />
+        {canInstall ? (
+          <Text style={styles.legal} onPress={() => router.push('/install' as Href)}>
+            Installer Mova sur mon téléphone
+          </Text>
+        ) : null}
         <Text style={styles.legal} onPress={() => router.push('/settings/legal/terms' as Href)}>
           {t('settings.terms')}
         </Text>

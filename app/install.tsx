@@ -6,7 +6,11 @@ import { AppScrollView } from '../src/ui/scrolling';
 import { PrimaryButton, SecondaryButton, Screen } from '../src/ui/primitives';
 import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
-import { detectPlatform, usePwaInstall } from '../src/services/pwaInstall';
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { detectIos, detectPlatform, isStandaloneDisplay, usePwaInstall } from '../src/services/pwaInstall';
+import { IosInstallGuide } from '../src/ui/install/IosInstallGuide';
+import { LoopView } from '../src/ui/atmosphere/LoopView';
 
 /**
  * « Installer Mova » — DANS l'application (flèche retour en haut) : plus de page externe qui fait sortir de l'app.
@@ -17,6 +21,12 @@ export default function InstallScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { canPrompt, installed, prompt } = usePwaInstall();
   const { kind, inAppBrowser } = detectPlatform();
+  const ios = detectIos();
+  const router = useRouter();
+  // L'app installée ouvre parfois cette page (iOS mémorise l'adresse où on a ajouté l'icône) : direction l'accueil.
+  useEffect(() => {
+    if (isStandaloneDisplay()) router.replace('/');
+  }, [router]);
   const [status, setStatus] = useState('');
   const [guide, setGuide] = useState(kind === 'ios');
   const [copied, setCopied] = useState(false);
@@ -70,7 +80,9 @@ export default function InstallScreen() {
           <Text style={styles.sub}>Sur ton écran d’accueil, en plein écran, comme une vraie application. Sans store, en 10 secondes.</Text>
         </View>
 
-        {installed ? (
+        {ios && !installed ? (
+          <IosInstallGuide info={ios} link={link} onCopy={() => void copy()} copied={copied} onShare={share} />
+        ) : installed ? (
           <View style={[styles.card, { borderColor: colors.accent }]}>
             <Ionicons name="checkmark-circle" size={28} color={colors.accent} />
             <Text style={styles.cardTitle}>Mova est installée sur cet appareil ✓</Text>
@@ -83,7 +95,7 @@ export default function InstallScreen() {
           </>
         )}
 
-        {!installed && guide ? (
+        {!ios && !installed && guide ? (
           <View style={styles.card}>
             {kind === 'ios' ? (
               <>
@@ -130,6 +142,14 @@ export default function InstallScreen() {
           </View>
         </View>
       </AppScrollView>
+      {ios && !installed && ios.device === 'iphone' && (ios.browser === 'safari' || ios.browser === 'chrome') ? (
+        <View pointerEvents="none" style={styles.arrowWrap}>
+          <LoopView from={{ y: 0 }} to={{ y: 10 }} ms={700} style={styles.arrow}>
+            <Ionicons name="arrow-down" size={26} color="#04140F" />
+          </LoopView>
+          <Text style={styles.arrowText}>Partager</Text>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -165,5 +185,8 @@ function makeStyles(colors: ReturnType<typeof useThemeColors>['colors']) {
     qrBox: { alignSelf: 'center', padding: 10, borderRadius: radii.md, backgroundColor: '#FFFFFF' },
     qr: { width: 190, height: 190 },
     row: { flexDirection: 'row', gap: spacing.sm },
+    arrowWrap: { position: 'absolute', bottom: 8, left: 0, right: 0, alignItems: 'center' },
+    arrow: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+    arrowText: { marginTop: 2, fontSize: 12, fontWeight: '800', color: colors.text },
   });
 }
