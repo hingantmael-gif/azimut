@@ -657,3 +657,17 @@ export function flowPercent(zoneSec: number, measuredSec: number): number | null
   if (!Number.isFinite(zoneSec) || !Number.isFinite(measuredSec) || measuredSec < 20) return null;
   return Math.max(0, Math.min(100, Math.round((zoneSec / measuredSec) * 100)));
 }
+
+/**
+ * Position 0–1 du point sur l'arc de 180° partagé en trois : tiers gauche (trop rapide), tiers central (zone cible),
+ * tiers droit (trop lent). Dans la zone, le point se déplace d'un bord à l'autre du tiers central ; hors zone, il
+ * continue vers le rouge sur une distance égale à la largeur de la zone, puis reste au bout.
+ */
+export function paceDotPosition(currentSecPerKm: number | null, minSecPerKm: number, maxSecPerKm: number): number {
+  const lo = Math.min(minSecPerKm, maxSecPerKm);
+  const hi = Math.max(minSecPerKm, maxSecPerKm);
+  if (currentSecPerKm == null || !Number.isFinite(currentSecPerKm)) return 0.5;
+  const width = Math.max(1, hi - lo);
+  const t = 1 / 3 + ((currentSecPerKm - lo) / width) / 3;
+  return Math.min(1, Math.max(0, t));
+}

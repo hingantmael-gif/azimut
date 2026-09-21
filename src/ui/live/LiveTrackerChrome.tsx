@@ -11,7 +11,8 @@ import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
 import { PressableScale, SoftPulse } from '../motion/softMotion';
-import { formatLivePace, formatPaceColon, paceGaugeLayout } from '../../engines/liveWorkout';
+import Svg, { Path } from 'react-native-svg';
+import { formatLivePace, formatPaceColon, paceDotPosition } from '../../engines/liveWorkout';
 
 /** Barres signal GPS (style Record Strava, couleurs Mova). */
 export function GpsSignalBars({
@@ -289,6 +290,26 @@ export function LiveFinishCelebration({ visible }: { visible: boolean }) {
  * Jauge d’allure type Garmin — aiguille dans la zone verte cible.
  * Gauche = trop rapide, droite = trop lent.
  */
+const ARC_W = 240;
+const ARC_R = 96;
+const ARC_STROKE = 20;
+const ARC_CX = ARC_W / 2;
+const ARC_CY = ARC_R + 20;
+const ARC_H = ARC_CY + 12;
+/** Ouverture totale de l'arc (degrés) — demi-cercle. */
+const ARC_SWEEP = 180;
+const GAUGE_GREEN = '#22B45C';
+const GAUGE_RED = '#F43F4E';
+
+/** Tronçon de l'arc entre deux positions 0–1 (0 = extrémité gauche, 1 = extrémité droite, par le haut). */
+function arcPath(t0: number, t1: number): string {
+  const pt = (t: number) => {
+    const th = Math.PI * (1 - t);
+    return `${(ARC_CX + ARC_R * Math.cos(th)).toFixed(2)} ${(ARC_CY - ARC_R * Math.sin(th)).toFixed(2)}`;
+  };
+  return `M ${pt(t0)} A ${ARC_R} ${ARC_R} 0 0 1 ${pt(t1)}`;
+}
+
 export function LivePaceGauge({
   currentSecPerKm,
   minSecPerKm,
@@ -324,68 +345,44 @@ export function LivePaceGauge({
     return () => clearInterval(id);
   }, []);
 
-  const layout = paceGaugeLayout(shown, minSecPerKm, maxSecPerKm);
-  const needleAnim = useRef(new Animated.Value(layout.needle)).current;
+  const dot = paceDotPosition(shown, minSecPerKm, maxSecPerKm);
+  const dotAnim = useRef(new Animated.Value(dot)).current;
 
   useEffect(() => {
-    Animated.timing(needleAnim, {
-      toValue: layout.needle,
+    Animated.timing(dotAnim, {
+      toValue: dot,
       duration: 1000,
       easing: Easing.linear,
       useNativeDriver: true,
     }).start();
-  }, [layout.needle, needleAnim]);
+  }, [dot, dotAnim]);
 
-  const rotate = needleAnim.interpolate({
+  // Le point suit l'arc : on fait pivoter, autour du centre de l'arc, un conteneur dont le point est en haut.
+  const rotate = dotAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-110deg', '110deg'],
+    outputRange: [`-${ARC_SWEEP / 2}deg`, `${ARC_SWEEP / 2}deg`],
   });
 
-  const status: typeof statusProp =
-    statusProp === 'none' || shown == null
-      ? 'none'
-      : shown < Math.min(minSecPerKm, maxSecPerKm)
-        ? 'too_fast'
-        : shown > Math.max(minSecPerKm, maxSecPerKm)
-          ? 'too_slow'
-          : 'in_zone';
-  const zoneColor =
-    status === 'in_zone'
-      ? BRAND.accent
-      : status === 'too_fast'
-        ? '#F59E0B'
-        : status === 'too_slow'
-          ? '#EF4444'
-          : BRAND.accent;
-
-  const zoneLeftPct = layout.zoneStart * 100;
-  const zoneWidthPct = Math.max(4, (layout.zoneEnd - layout.zoneStart) * 100);
+  const inZone = shown != null && shown >= Math.min(minSecPerKm, maxSecPerKm) && shown <= Math.max(minSecPerKm, maxSecPerKm);
+  const zoneColor = shown == null || inZone ? GAUGE_GREEN : GAUGE_RED;
   const nowLabel = statusProp === 'none' && shown == null ? currentLabel : formatLivePace(shown);
   const targetLabel = targetSecPerKm != null && Number.isFinite(targetSecPerKm) ? formatPaceColon(targetSecPerKm) : null;
 
   return (
     <View style={styles.gaugeWrap} accessibilityLabel={`Allure ${nowLabel}, cible ${targetLabel ?? bandLabel}`}>
       <View style={styles.gaugeDial}>
-        <View style={styles.gaugeTrack} />
-        <View
-          style={[
-            styles.gaugeZone,
-            {
-              left: `${zoneLeftPct}%`,
-              width: `${zoneWidthPct}%`,
-              backgroundColor: `${BRAND.accent}55`,
-              borderColor: BRAND.accent,
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.gaugeNeedlePivot,
-            { transform: [{ rotate }] },
-          ]}
-        >
-          <View style={[styles.gaugeNeedle, { backgroundColor: zoneColor }]} />
-          <View style={[styles.gaugeHub, { borderColor: zoneColor }]} />
+        <Svg width={ARC_W} height={ARC_H} viewBox={`0 0 ${ARC_W} ${ARC_H}`}>
+          <Path d={arcPath(0, 1)} stroke="rgba(15,23,42,0.07)" strokeWidth={ARC_STROKE + 6} strokeLinecap="round" fill="none" />
+          <Path d={arcPath(0, 1 / 3)} stroke={GAUGE_RED} strokeWidth={ARC_STROKE} strokeLinecap="round" fill="none" />
+          <Path d={arcPath(2 / 3, 1)} stroke={GAUGE_RED} strokeWidth={ARC_STROKE} strokeLinecap="round" fill="none" />
+          <Path d={arcPath(1 / 3, 2 / 3)} stroke={GAUGE_GREEN} strokeWidth={ARC_STROKE} strokeLinecap="butt" fill="none" />
+        </Svg>
+        <Animated.View pointerEvents="none" style={[styles.gaugeDotPivot, { transform: [{ rotate }] }]}>
+          <View style={[styles.gaugeDotRing, { boxShadow: `0 3px 12px ${zoneColor}88` } as object]}>
+            <View style={[styles.gaugeDotCore, { backgroundColor: zoneColor }]}>
+              <View style={styles.gaugeDotShine} />
+            </View>
+          </View>
         </Animated.View>
       </View>
       <View style={styles.gaugeLabels}>
@@ -1226,11 +1223,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   gaugeDial: {
-    width: 220,
-    height: 118,
+    width: ARC_W,
+    height: ARC_H,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    overflow: 'hidden',
   },
   gaugeTrack: {
     position: 'absolute',
@@ -1274,10 +1270,10 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   gaugeLabels: {
-    width: 220,
+    width: ARC_W,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    paddingHorizontal:  14,
     marginTop: 2,
   },
   gaugeEdge: {
@@ -1300,6 +1296,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(15,23,42,0.55)',
   },
+  gaugeDotPivot: {
+    position: 'absolute',
+    left: ARC_CX - ARC_R,
+    top: ARC_CY - ARC_R,
+    width: ARC_R * 2,
+    height: ARC_R * 2,
+    alignItems: 'center',
+  },
+  gaugeDotRing: {
+    marginTop: -13,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gaugeDotCore: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  gaugeDotShine: { position: 'absolute', top: 5, left: 7, width: 9, height: 6, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.45)' },
   gaugeTargetRow: { alignItems: 'center', marginTop: 8 },
   gaugeTargetKicker: {
     fontSize: 11,

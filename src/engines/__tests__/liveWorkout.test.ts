@@ -420,3 +420,15 @@ describe('libellés centrés sur l’allure', () => {
     expect(flat.map((f) => f.displayLabel)).toEqual(['Échauffement 10 min', 'Corps']);
   });
 });
+
+describe('position du point sur l’arc en trois zones', () => {
+  it('zone cible = tiers central, rouge à gauche (trop rapide) et à droite (trop lent)', async () => {
+    const { paceDotPosition } = await import('../liveWorkout');
+    expect(paceDotPosition(300, 290, 310)).toBeCloseTo(0.5, 5);
+    expect(paceDotPosition(290, 290, 310)).toBeCloseTo(1 / 3, 5);
+    expect(paceDotPosition(310, 290, 310)).toBeCloseTo(2 / 3, 5);
+    expect(paceDotPosition(270, 290, 310)).toBeCloseTo(0, 5);
+    expect(paceDotPosition(400, 290, 310)).toBe(1);
+    expect(paceDotPosition(null, 290, 310)).toBe(0.5);
+  });
+});
