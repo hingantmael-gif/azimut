@@ -178,6 +178,7 @@ function AppShell() {
             <Stack.Screen name="settings/privacy" options={{ title: 'Qui peut me voir' }} />
             <Stack.Screen name="settings/data-permissions" options={{ title: 'Autorisations' }} />
             <Stack.Screen name="settings/display" options={{ title: 'Unités et carte' }} />
+            <Stack.Screen name="settings/customize" options={{ title: 'Personnaliser' }} />
             <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
             <Stack.Screen name="settings/email" options={{ title: 'E-mail' }} />
             <Stack.Screen name="settings/help" options={{ title: 'Centre d\'aide' }} />

@@ -122,7 +122,7 @@ export default function LiveSessionScreen() {
       }
     };
   }, []);
-  const { colors } = useThemeColors();
+  const { colors, custom: customTheme } = useThemeColors();
   const styles = useMemo(() => liveTrackerStyles(colors), [colors]);
   const screenH = Dimensions.get('window').height;
 
@@ -387,7 +387,7 @@ export default function LiveSessionScreen() {
         : [];
 
   const discColor =
-    DISCIPLINE_META[workout.discipline]?.color || BRAND.accent;
+    (customTheme ? undefined : DISCIPLINE_META[workout.discipline]?.color) || BRAND.accent;
   const isFree =
     mode === 'free' ||
     workout.id.startsWith('free-') ||

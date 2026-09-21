@@ -9,6 +9,8 @@ import {
 import { useIsFocused } from 'expo-router';
 import { todayWorkout, useApp } from '../store/AppContext';
 import { sportKeyFrom, tintForSport, type SportTint } from './sportTints';
+import { useCustomTheme } from './ThemeContext';
+import type { MotionLevel, PatternId } from './customTheme';
 
 type Ctx = {
   sport: string;
@@ -47,7 +49,21 @@ export function AmbientSportProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAmbientTint(): SportTint {
-  return useContext(AmbientContext).tint;
+  const { tint } = useContext(AmbientContext);
+  const custom = useCustomTheme();
+  const bg1 = custom?.bg1;
+  const bg2 = custom?.bg2;
+  return useMemo<SportTint>(() => (bg1 && bg2 ? [bg1, bg2] : tint), [bg1, bg2, tint]);
+}
+
+/** Motif du fond choisi par l'utilisateur (null = motif standard de la discipline). */
+export function useCustomPattern(): PatternId | null {
+  return useCustomTheme()?.pattern ?? null;
+}
+
+/** Niveau d'animation du fond (standard = calme). */
+export function useBackgroundMotion(): MotionLevel {
+  return useCustomTheme()?.motion ?? 'calm';
 }
 
 /** Clé du sport ambiant (choisit aussi la famille de motif du fond). */

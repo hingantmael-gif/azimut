@@ -46,7 +46,7 @@ function daysUntilLabel(n: number): string {
 /** Accueil — cockpit du jour (audit UX : une action prioritaire). */
 export default function HomeDashboard() {
   const { state, dispatch } = useApp();
-  const { colors, isDark } = useThemeColors();
+  const { colors, isDark, custom } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const heroColors = isDark ? (['#0F2238', '#0B4A44'] as const) : (['#0B1B2B', '#0E3B3A'] as const);
   const router = useRouter();
@@ -65,7 +65,8 @@ export default function HomeDashboard() {
   const daysUntil = focus ? daysBetweenIso(todayIso, focus.date) : null;
   const summary =
     focus && focus.discipline !== 'rest' ? summarizeWorkout(focus) : null;
-  const discColor = focus
+  // Personnalisation Premium : le bouton principal suit la couleur choisie plutôt que celle de la discipline.
+  const discColor = focus && !custom
     ? DISCIPLINE_META[focus.discipline]?.color ?? colors.accent
     : colors.accent;
 

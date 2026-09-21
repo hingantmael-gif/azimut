@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useReducedMotion } from '../../utils/motionPrefs';
 
@@ -53,7 +53,16 @@ function resolveStops({ from, to, stops }: Pick<Props, 'from' | 'to' | 'stops'>)
   ];
 }
 
-export function LoopView({ from, to, stops, ms, delay = 0, yoyo = true, linear = false, paused: pausedProp = false, origin, style, children }: Props) {
+/**
+ * Vitesse des fonds : multiplicateur de durée (1 = normal, 0,6 = plus vif, 1,8 = plus lent).
+ * Posé par le fond d'écran selon la personnalisation ; ne touche pas aux autres animations.
+ */
+export const MotionScaleContext = createContext(1);
+
+export function LoopView({ from, to, stops, ms: msIn, delay: delayIn = 0, yoyo = true, linear = false, paused: pausedProp = false, origin, style, children }: Props) {
+  const speed = useContext(MotionScaleContext);
+  const ms = msIn * speed;
+  const delay = delayIn * speed;
   const resolved = useMemo(() => resolveStops({ from, to, stops }), [from, to, stops]);
   // Réglage « réduire les animations » (ou préférence du système) : tout reste immobile.
   const reducedMotion = useReducedMotion();
@@ -100,7 +109,9 @@ function WebLoop({
     const css = {
       animationKeyframes: [keyframes],
       animationDuration: `${ms}ms`,
-      animationDelay: `${delay}ms`,
+      // À l'arrêt (animations réduites, écran caché) on fige une image « à mi-course » plutôt que la toute première pose :
+      // les motifs qui démarrent invisibles (pluie, bulles, ondes) restent ainsi visibles.
+      animationDelay: paused ? `${-Math.round(ms * 0.45)}ms` : `${delay}ms`,
       animationIterationCount: 'infinite',
       animationDirection: yoyo ? 'alternate' : 'normal',
       animationTimingFunction: linear ? 'linear' : 'ease-in-out',
@@ -131,7 +142,10 @@ function NativeLoop({
 }: Omit<Props, 'from' | 'to' | 'stops'> & { resolved: Stop[]; delay: number; yoyo: boolean; linear: boolean; paused: boolean }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (paused) return;
+    if (paused) {
+      v.setValue(0.45);
+      return;
+    }
     const easing = linear ? Easing.linear : Easing.inOut(Easing.sin);
     const up = Animated.timing(v, { toValue: 1, duration: ms, delay, easing, useNativeDriver: true });
     const back = yoyo

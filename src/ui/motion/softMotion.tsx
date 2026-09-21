@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Text } from '../Text';
+import { useCustomTheme } from '../../theme/ThemeContext';
 import { usePathname } from 'expo-router';
 import { LoopView } from '../atmosphere/LoopView';
 
@@ -406,9 +407,11 @@ export function PressableScale({
   const pressed = useRef(false);
   const navLock = useRef(false);
 
-  // Zoom discret uniquement — pas de déformation du texte
-  const hoverScale = variant === 'subtle' ? 1.015 : 1.02;
-  const pressScale = variant === 'subtle' ? 0.985 : variant === 'nav' ? 0.96 : 0.97;
+  // Zoom discret uniquement — pas de déformation du texte. Personnalisation Premium : réaction au toucher.
+  const feel = useCustomTheme()?.buttonPress ?? 'spring';
+  const hoverScale = feel === 'none' || feel === 'sink' ? 1 : feel === 'pulse' ? 1.04 : variant === 'subtle' ? 1.015 : 1.02;
+  const pressScale =
+    feel === 'none' ? 1 : feel === 'sink' ? 0.9 : feel === 'pulse' ? 1.07 : variant === 'subtle' ? 0.985 : variant === 'nav' ? 0.96 : 0.97;
 
   const sync = (opts?: { hover?: boolean; press?: boolean }) => {
     if (opts?.hover != null) hovered.current = opts.hover;
@@ -435,7 +438,7 @@ export function PressableScale({
     navLock.current = true;
     Animated.sequence([
       Animated.timing(scale, {
-        toValue: 0.96,
+        toValue: pressScale,
         duration: 80,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,

@@ -171,6 +171,12 @@ export default function SettingsIndex() {
                 }
               />
               <SettingsRow
+                label="Personnaliser l’application"
+                value={state.profile.customTheme?.active ? 'Activée' : 'Standard'}
+                icon={{ name: 'color-palette', color: '#A855F7' }}
+                onPress={() => router.push('/settings/customize')}
+              />
+              <SettingsRow
                 label={t('settings.language')}
                 value={localeLabel(locale)}
                 onPress={() => router.push('/settings/display')}

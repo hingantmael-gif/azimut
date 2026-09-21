@@ -51,7 +51,7 @@ export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, dispatch } = useApp();
   const router = useRouter();
-  const { colors } = useThemeColors();
+  const { colors, custom: customTheme } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const workout = state.plan.find((w) => w.id === id);
   useAmbientSport(workout?.discipline);
@@ -97,7 +97,7 @@ export default function SessionDetailScreen() {
     !isRest &&
     !rpeAlreadyDone &&
     canAccessSessionRpe(workout.date, todayIso);
-  const discColor = DISCIPLINE_META[workout.discipline]?.color ?? colors.accent;
+  const discColor = (customTheme ? undefined : DISCIPLINE_META[workout.discipline]?.color) ?? colors.accent;
 
   const dateLabel = new Date(workout.date + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long',

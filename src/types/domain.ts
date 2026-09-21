@@ -543,6 +543,8 @@ export interface AthleteProfile {
   borderStyle?: string;
   units: UnitsSystem;
   theme: ThemeMode;
+  /** Personnalisation de l'application (Premium) : couleurs, fond, boutons, texte. Absente = application standard. */
+  customTheme?: import('../theme/customTheme').CustomTheme;
   language: string;
   plan: SubscriptionPlan;
   /**

@@ -13,6 +13,7 @@ import { usePathname } from 'expo-router';
 import { useThemeColors } from '../theme/ThemeContext';
 import { elevation, fonts, radii, rgba, spacing, typography } from '../theme/tokens';
 import type { ColorPalette } from '../theme/palettes';
+import { buttonRadius } from '../theme/customTheme';
 import { stripBidiMarks } from '../constants/authLabels';
 import { PressableScale, ScreenEnter } from './motion/softMotion';
 import { ScreenAtmosphere } from './atmosphere/ScreenAtmosphere';
@@ -80,26 +81,38 @@ export function PrimaryButton({
   /** Élément placé avant le libellé (icône). */
   icon?: ReactNode;
 }) {
-  const { colors, isDark } = useThemeColors();
+  const { colors, isDark, custom } = useThemeColors();
   const styles = makeStyles(colors, isDark);
   const plain = stripBidiMarks(label);
+  // Personnalisation Premium : style (dégradé, uni, contour, verre) et forme du bouton.
+  const look = custom?.buttonStyle ?? 'gradient';
+  const shape = { borderRadius: buttonRadius(custom?.buttonShape ?? 'soft', radii.lg) };
+  const fill: readonly [string, string] =
+    look === 'solid' ? [colors.accent, colors.accent] : look === 'glass' ? [colors.glass, colors.glass] : look === 'outline' ? ['transparent', 'transparent'] : colors.gradientHero;
+  const frame: ViewStyle | null =
+    look === 'outline'
+      ? { borderWidth: 2, borderColor: colors.accent, boxShadow: 'none' as never }
+      : look === 'glass'
+        ? { borderWidth: 1.5, borderColor: colors.accent, boxShadow: 'none' as never }
+        : null;
+  const textColor = look === 'outline' ? colors.accent : look === 'glass' ? colors.text : colors.onAccent;
   return (
     <PressableScale
       disabled={disabled}
       onPress={onPress}
       variant="nav"
       accessibilityLabel={plain}
-      style={[styles.btn, disabled && styles.btnDisabled]}
+      style={[styles.btn, shape, frame, disabled && styles.btnDisabled]}
       contentStyle={styles.btnContentFill}
     >
       <LinearGradient
-        colors={colors.gradientHero}
+        colors={fill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.btnGradient}
       >
         {icon}
-        <Text style={styles.btnText}>{plain}</Text>
+        <Text style={[styles.btnText, { color: textColor }]}>{plain}</Text>
       </LinearGradient>
     </PressableScale>
   );
@@ -114,15 +127,17 @@ export function SecondaryButton({
   onPress: () => void;
   icon?: ReactNode;
 }) {
-  const { colors, isDark } = useThemeColors();
+  const { colors, isDark, custom } = useThemeColors();
   const styles = makeStyles(colors, isDark);
   const plain = stripBidiMarks(label);
+  const shape = { borderRadius: buttonRadius(custom?.buttonShape ?? 'soft', radii.lg) };
+  const accentBorder = custom && (custom.buttonStyle === 'outline' || custom.buttonStyle === 'glass') ? { borderColor: colors.accent, borderWidth: 2 } : null;
   return (
     <PressableScale
       onPress={onPress}
       variant="pop"
       accessibilityLabel={plain}
-      style={styles.btnSecondary}
+      style={[styles.btnSecondary, shape, accentBorder]}
       contentStyle={styles.btnContent}
     >
       <View style={styles.btnRow}>
@@ -142,15 +157,16 @@ export function Chip({
   selected?: boolean;
   onPress?: () => void;
 }) {
-  const { colors, isDark } = useThemeColors();
+  const { colors, isDark, custom } = useThemeColors();
   const styles = makeStyles(colors, isDark);
   const plain = stripBidiMarks(label);
+  const chipShape = custom?.buttonShape === 'square' ? { borderRadius: 8 } : null;
   return (
     <PressableScale
       onPress={onPress}
       variant="subtle"
       accessibilityLabel={plain}
-      style={[styles.chip, selected && styles.chipSelected]}
+      style={[styles.chip, chipShape, selected && styles.chipSelected]}
       contentStyle={styles.btnContent}
     >
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{plain}</Text>
