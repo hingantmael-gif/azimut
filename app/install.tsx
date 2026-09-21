@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Image, Platform, Share, StyleSheet, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../src/ui/Text';
 import { AppScrollView } from '../src/ui/scrolling';
@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { detectIos, detectPlatform, isStandaloneDisplay, usePwaInstall } from '../src/services/pwaInstall';
 import { IosInstallGuide } from '../src/ui/install/IosInstallGuide';
 import { LoopView } from '../src/ui/atmosphere/LoopView';
+import { PLAY_STORE_URL } from '../src/constants/stores';
 
 /**
  * « Installer Mova » — DANS l'application (flèche retour en haut) : plus de page externe qui fait sortir de l'app.
@@ -80,6 +81,8 @@ export default function InstallScreen() {
           <Text style={styles.sub}>Sur ton écran d’accueil, en plein écran, comme une vraie application. Sans store, en 10 secondes.</Text>
         </View>
 
+        {kind === 'android' && !installed ? <PlayStoreCard styles={styles} colors={colors} /> : null}
+
         {ios && !installed ? (
           <IosInstallGuide info={ios} link={link} onCopy={() => void copy()} copied={copied} onShare={share} />
         ) : installed ? (
@@ -90,6 +93,7 @@ export default function InstallScreen() {
           </View>
         ) : (
           <>
+            {kind === 'android' && PLAY_STORE_URL ? <Text style={styles.orLabel}>Ou, sans passer par le store :</Text> : null}
             <PrimaryButton label={canPrompt ? 'Installer l’application' : 'Comment l’installer ?'} onPress={() => void install()} />
             {status ? <Text style={styles.status}>{status}</Text> : null}
           </>
@@ -154,6 +158,49 @@ export default function InstallScreen() {
   );
 }
 
+/** Google Play : bouton si la fiche est en ligne (EXPO_PUBLIC_PLAY_STORE_URL), sinon « Bientôt disponible ». */
+function PlayStoreCard({ styles, colors }: { styles: ReturnType<typeof makeStyles>; colors: ReturnType<typeof useThemeColors>['colors'] }) {
+  if (PLAY_STORE_URL) {
+    return (
+      <PressableCard onPress={() => void Linking.openURL(PLAY_STORE_URL)} styles={styles} colors={colors}>
+        <Ionicons name="logo-google-playstore" size={26} color={colors.onAccent} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.playTitle}>Obtenir sur Google Play</Text>
+          <Text style={styles.playSub}>Installation, mises à jour et paiements gérés par le store</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.onAccent} />
+      </PressableCard>
+    );
+  }
+  return (
+    <View style={[styles.card, styles.playSoon]}>
+      <Ionicons name="logo-google-playstore" size={22} color={colors.textMuted} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.cardTitle}>Bientôt disponible sur Google Play</Text>
+        <Text style={styles.sub}>En attendant, installe Mova ci-dessous — même application, mise à jour automatiquement.</Text>
+      </View>
+    </View>
+  );
+}
+
+function PressableCard({
+  onPress,
+  children,
+  styles,
+  colors,
+}: {
+  onPress: () => void;
+  children: React.ReactNode;
+  styles: ReturnType<typeof makeStyles>;
+  colors: ReturnType<typeof useThemeColors>['colors'];
+}) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Obtenir Mova sur Google Play" style={[styles.playCard, { backgroundColor: colors.accent }]}>
+      {children}
+    </Pressable>
+  );
+}
+
 function Step({ n, children, styles }: { n: number; children: React.ReactNode; styles: ReturnType<typeof makeStyles> }) {
   return (
     <View style={styles.step}>
@@ -174,6 +221,11 @@ function makeStyles(colors: ReturnType<typeof useThemeColors>['colors']) {
     h1: { fontSize: 26, fontWeight: '800', color: colors.text, textAlign: 'center' },
     sub: { fontSize: 14, lineHeight: 20, color: colors.textMuted, textAlign: 'center' },
     status: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+    orLabel: { fontSize: 12, fontWeight: '700', color: colors.textMuted, textAlign: 'center', marginBottom: -spacing.xs },
+    playCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: spacing.md, borderRadius: radii.lg },
+    playTitle: { fontSize: 16, fontWeight: '800', color: colors.onAccent },
+    playSub: { fontSize: 12, color: colors.onAccent, opacity: 0.85, marginTop: 2 },
+    playSoon: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     card: { padding: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bgCard, gap: spacing.sm, alignItems: 'stretch' },
     cardTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
     step: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },

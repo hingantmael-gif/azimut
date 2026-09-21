@@ -14,7 +14,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LIVE = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
 const CUSTOM_DOMAIN = /github\.io$/.test(new URL(LIVE).hostname) ? null : new URL(LIVE).hostname;
 /** API auth partagée (Render) — tous les e-mails, comptes cross-device */
-const PROD_API = process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onrender.com';
+const PROD_API = process.env.MOVA_API_URL || 'https://mova-api.onrender.com';
 const sh = (cmd, cwd = root, env = {}) =>
   execSync(cmd, { cwd, stdio: 'inherit', shell: true, env: { ...process.env, ...env } });
 
@@ -23,6 +23,7 @@ const BUILD_ID = Date.now().toString(36);
 
 sh('node scripts/generate-install-qr.mjs');
 sh('npx --yes tsx scripts/generate-terms-html.mjs');
+sh('npx --yes tsx scripts/generate-privacy-html.mjs');
 
 /** Expo charge `.env` et peut écraser l’env shell → on force l’URL prod le temps du build. */
 const envPath = path.join(root, '.env');
@@ -92,6 +93,20 @@ if (fs.existsSync(path.join(dist, 'index.html'))) {
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
 if (CUSTOM_DOMAIN) fs.writeFileSync(path.join(dist, 'CNAME'), `${CUSTOM_DOMAIN}\n`);
 
+// Google Play : jeton remplacé par la vraie fiche une fois publiée (voir docs/PLAY_STORE.md).
+// Vide tant que EXPO_PUBLIC_PLAY_STORE_URL n'est pas défini → la page affiche « Bientôt disponible ».
+{
+  const telechargerPath = path.join(dist, 'telecharger.html');
+  if (fs.existsSync(telechargerPath)) {
+    const playUrl = (process.env.EXPO_PUBLIC_PLAY_STORE_URL || '').trim();
+    const patched = fs
+      .readFileSync(telechargerPath, 'utf8')
+      .split('__PLAY_STORE_URL__')
+      .join(playUrl);
+    fs.writeFileSync(telechargerPath, patched);
+  }
+}
+
 // Garde-fou OAuth : si Google renvoie encore sur /apropos.html, renvoyer vers /welcome
 const aproposPath = path.join(dist, 'apropos.html');
 if (fs.existsSync(aproposPath)) {
@@ -131,7 +146,7 @@ try {
   });
 } catch {
   sh(
-    'gh repo create hingantmael-gif/hingantmael-gif.github.io --public --description "Azimut — app web PWA (racine)"',
+    'gh repo create hingantmael-gif/hingantmael-gif.github.io --public --description "Mova — app web PWA (racine)"',
   );
 }
 sh('git remote add origin https://github.com/hingantmael-gif/hingantmael-gif.github.io.git', rootTmp);

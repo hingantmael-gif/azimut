@@ -2,6 +2,7 @@
   "expo": {
     "name": "Mova",
     "slug": "mova",
+    "description": "Coach sportif personnel : programme multi-mois, tracker GPS, séance adaptée à ton sommeil et à ta forme.",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -86,6 +87,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.mova.coach",
+      "buildNumber": "1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mova utilise ta position pour guider ta séance (distance, allure, carte).",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Mova continue de suivre ta séance (distance, allure, tracé) quand l’écran est verrouillé. La position n’est utilisée que pendant un enregistrement.",

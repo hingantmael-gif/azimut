@@ -97,6 +97,16 @@
       .how div { display: flex; gap: 12px; align-items: center; font-size: 0.9rem; color: #c5d0dd; }
       .how span { flex: none; width: 34px; height: 34px; border-radius: 12px; background: rgba(61, 255, 154, 0.14); display: grid; place-items: center; font-size: 1.1rem; }
 
+      .play-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-radius: 16px; background: linear-gradient(135deg, #12b87a, var(--cyan)); color: #04140d; text-decoration: none; margin-bottom: 12px; }
+      .play-btn svg { flex: none; width: 26px; height: 26px; }
+      .play-btn div { text-align: left; flex: 1; }
+      .play-btn b { display: block; font-size: 1rem; font-weight: 800; }
+      .play-btn span { display: block; font-size: 0.78rem; opacity: 0.85; margin-top: 1px; }
+      .play-soon { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); margin-bottom: 14px; }
+      .play-soon svg { flex: none; width: 22px; height: 22px; opacity: 0.6; }
+      .play-soon b { display: block; font-size: 0.92rem; font-weight: 800; color: #dbe4ee; }
+      .play-soon span { display: block; font-size: 0.78rem; color: #9fb0c3; margin-top: 1px; }
+      .or-label { text-align: center; font-size: 0.8rem; font-weight: 700; color: #9fb0c3; margin: 2px 0 10px; }
       .links { display: flex; gap: 8px; margin-top: 16px; }
       .links button { flex: 1; padding: 11px 8px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: #e6edf5; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
       footer { text-align: center; margin-top: 18px; font-size: 0.78rem; color: #7f90a5; }
@@ -120,6 +130,17 @@
           <div class="qr-box"><img src="/qr-install.png" alt="QR code pour installer Mova" /></div>
           <p><b>Scanne ce QR code avec ton téléphone</b><br />La page d'installation s'ouvre : appuie sur « Installer ».</p>
         </div>
+
+        <!-- Android : Google Play si la fiche est en ligne (__PLAY_STORE_URL__ remplacé au déploiement), sinon « bientôt ». -->
+        <a href="__PLAY_STORE_URL__" class="play-btn" id="play-link" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#04140d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8V4z"/></svg>
+          <div><b>Obtenir sur Google Play</b><span>Installation et mises à jour gérées par le store</span></div>
+        </a>
+        <div class="play-soon" id="play-soon" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#9fb0c3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 8-16 8V4z"/></svg>
+          <div><b>Bientôt disponible sur Google Play</b><span>En attendant, installe la même application ci-dessous</span></div>
+        </div>
+        <p class="or-label" id="or-label" hidden>Ou, sans passer par le store :</p>
 
         <button type="button" class="btn btn-primary" id="install-btn">Installer l'application</button>
         <a href="/" class="btn btn-ghost" id="open-app">Ouvrir dans le navigateur</a>
@@ -206,6 +227,14 @@
 
         if (!isMobile) { $('qr-desktop').hidden = false; $('qr-mobile').style.display = 'none'; }
         if (navigator.share) $('share-btn').hidden = false;
+
+        /* Google Play : le jeton est remplacé par scripts/deploy-install-site.mjs depuis EXPO_PUBLIC_PLAY_STORE_URL. */
+        var playUrl = '__PLAY_STORE_URL__';
+        var playConfigured = playUrl.indexOf('__PLAY_STORE_URL__') === -1 && playUrl.length > 0;
+        if (isAndroid) {
+          if (playConfigured) { $('play-link').hidden = false; $('or-label').hidden = false; }
+          else { $('play-soon').hidden = false; }
+        }
 
         if (isStandalone) { setInstalled(); return; }
 
