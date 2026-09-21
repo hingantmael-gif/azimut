@@ -12,7 +12,6 @@ import {
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { mixHex, radii, readableOn, rgba, spacing } from '../../src/theme/tokens';
 import { toLocalDateIso } from '../../src/engines/sleepCalendar';
-import { InstallBanner } from '../../src/ui/home/InstallBanner';
 import { TopProgramsStrip } from '../../src/ui/program/TopProgramsStrip';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,10 +33,8 @@ import { AppScrollView } from '../../src/ui/scrolling';
 import { SportAtmosphereBanner } from '../../src/ui/SportAtmosphereBanner';
 import { ATMOSPHERE_IMAGES } from '../../src/constants/sportVisuals';
 import { DayStatusBanner } from '../../src/ui/home/DayStatusBanner';
-import { DayStateChip } from '../../src/ui/home/DayStateChip';
 import { HomeStatusStack } from '../../src/ui/home/HomeStatusStack';
 import { WhyCoachExpand } from '../../src/ui/home/WhyCoachExpand';
-import { FloatingActionButton } from '../../src/ui/FloatingActionButton';
 
 function daysUntilLabel(n: number): string {
   if (n <= 0) return 'aujourd’hui';
@@ -416,18 +413,6 @@ export default function HomeDashboard() {
                     >
                       <Text style={styles.moreLink}>Ajuster allures & jours</Text>
                     </PressableScale>
-                    <PressableScale
-                      variant="subtle"
-                      onPress={() => router.navigate('/calendar')}
-                    >
-                      <Text style={styles.moreLink}>Voir le plan</Text>
-                    </PressableScale>
-                    <PressableScale
-                      variant="subtle"
-                      onPress={() => router.navigate('/(tabs)/record')}
-                    >
-                      <Text style={styles.moreLink}>Enregistrer une sortie libre</Text>
-                    </PressableScale>
                   </View>
                 ) : null}
               </>
@@ -486,9 +471,8 @@ export default function HomeDashboard() {
         <View style={styles.quickRow}>
           {(
             [
-              { label: 'Rapide', sub: 'Selon ton temps', icon: 'flash', href: '/library?quick=1' },
-              { label: 'Séances', sub: 'Toute la biblio', icon: 'albums', href: '/library' },
-              { label: 'Sortie libre', sub: 'GPS', icon: 'navigate', href: '/(tabs)/record' },
+              { label: 'Séance rapide', sub: 'Choisis ton temps', icon: 'flash', href: '/library' },
+              { label: 'Sortie libre', sub: 'Tracker GPS', icon: 'navigate', href: '/(tabs)/record' },
             ] as const
           ).map((q) => (
             <PressableScale
@@ -508,23 +492,12 @@ export default function HomeDashboard() {
           ))}
         </View>
 
-        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>ÉTAT DU JOUR</Text>
         <DayStatusBanner
           adjustment={adjustment}
           onPress={() => router.navigate('/(tabs)/body')}
         />
 
         {adjustment.whyLine ? <WhyCoachExpand whyLine={adjustment.whyLine} /> : null}
-
-        <View style={styles.homeChipRow}>
-          <DayStateChip
-            confidence={twin.modelConfidence}
-            lifeStress01={lifeStress01}
-            onToggleStress={() =>
-              setLifeStress01((prev) => (prev == null ? 0.65 : null))
-            }
-          />
-        </View>
 
         <HomeStatusStack
           sentinel={sentinel}
@@ -549,10 +522,6 @@ export default function HomeDashboard() {
                 : null
           }
         />
-
-        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.sm }}>
-          <InstallBanner />
-        </View>
 
         <View style={{ paddingHorizontal: spacing.md }}>
           <TopProgramsStrip
@@ -588,21 +557,12 @@ export default function HomeDashboard() {
           </PressableScale>
         </View>
 
-        <PressableScale
-          variant="nav"
-          style={styles.weekPress}
-          onPress={() => router.push('/week-review')}
-        >
-          <Card variant="glass" level={1} style={styles.weekCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.weekTitle}>Bilan de la semaine</Text>
-              <Text style={styles.weekSub}>Charge, forme, tendance</Text>
-            </View>
-            <Text style={styles.weekChevron}>›</Text>
-          </Card>
-        </PressableScale>
-
-        <Text style={styles.feedSection}>Activités récentes</Text>
+        <View style={styles.feedHead}>
+          <Text style={[styles.feedSection, { marginBottom: 0 }]}>Activités récentes</Text>
+          <PressableScale variant="subtle" onPress={() => router.push('/week-review')}>
+            <Text style={styles.feedLink}>Bilan de la semaine ›</Text>
+          </PressableScale>
+        </View>
         {state.activities.length === 0 ? (
           <View style={styles.emptyFeed}>
             {!strengthOnlyPrograms ? (
@@ -626,7 +586,7 @@ export default function HomeDashboard() {
             </SoftPulse>
           </View>
         ) : (
-          state.activities.map((a) => {
+          state.activities.slice(0, 5).map((a) => {
             const analysis = state.analyses.find((x) => x.activityId === a.id);
             const date = new Date(a.startDate);
             const dateStr = date.toLocaleDateString('fr-FR', {
@@ -664,8 +624,12 @@ export default function HomeDashboard() {
             );
           })
         )}
+        {state.activities.length > 5 ? (
+          <PressableScale variant="subtle" style={styles.secondaryLink} onPress={() => router.push('/activities')}>
+            <Text style={[styles.secondaryLinkText, { color: colors.accent }]}>Voir toutes les activités</Text>
+          </PressableScale>
+        ) : null}
       </AppScrollView>
-      <FloatingActionButton />
     </View>
   );
 }
@@ -755,6 +719,8 @@ function makeStyles(colors: ColorPalette) {
       color: colors.accent,
       fontSize: 13,
     },
+    feedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.lg, marginBottom: spacing.sm },
+    feedLink: { fontSize: 13, fontWeight: '700', color: colors.accent },
     quickRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm },
     quickTileWrap: { flex: 1 },
     quickTile: { borderRadius: radii.lg, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'flex-start', gap: 2 },
