@@ -4,13 +4,13 @@ import { useRouter } from 'expo-router';
 import { Text } from '../../src/ui/Text';
 import { AppTextInput } from '../../src/ui/AppTextInput';
 import { AppScrollView } from '../../src/ui/scrolling';
-import { PrimaryButton } from '../../src/ui/primitives';
+import { PrimaryButton, SecondaryButton } from '../../src/ui/primitives';
 import { SettingsScreen } from '../../src/ui/settings/SettingsList';
 import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
-import { refreshRemoteConfig, saveRemoteConfig, useRemoteConfig } from '../../src/services/remoteConfig';
+import { decideCertification, fetchPendingCertifications, refreshRemoteConfig, saveRemoteConfig, useRemoteConfig, type PendingCertification } from '../../src/services/remoteConfig';
 
 /** Réservé au compte propriétaire : ces seuils s'appliquent tout de suite à tous les utilisateurs. */
 export default function CommunityRulesScreen() {
@@ -23,7 +23,6 @@ export default function CommunityRulesScreen() {
 
   const [groupMin, setGroupMin] = useState(String(cfg.groupMinFollowers));
   const [verifiedMin, setVerifiedMin] = useState(String(cfg.verifiedMinFollowers));
-  const [price, setPrice] = useState(String(cfg.verifiedPriceEur));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -34,8 +33,21 @@ export default function CommunityRulesScreen() {
   useEffect(() => {
     setGroupMin(String(cfg.groupMinFollowers));
     setVerifiedMin(String(cfg.verifiedMinFollowers));
-    setPrice(String(cfg.verifiedPriceEur));
-  }, [cfg.groupMinFollowers, cfg.verifiedMinFollowers, cfg.verifiedPriceEur]);
+  }, [cfg.groupMinFollowers, cfg.verifiedMinFollowers]);
+
+  const [pending, setPending] = useState<PendingCertification[]>([]);
+  const loadPending = async () => {
+    if (state.authToken) setPending(await fetchPendingCertifications(state.authToken));
+  };
+  useEffect(() => {
+    if (isOwner) void loadPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, state.authToken]);
+  const decide = async (username: string, approve: boolean) => {
+    if (!state.authToken) return;
+    await decideCertification(state.authToken, username, approve);
+    await loadPending();
+  };
 
   if (!isOwner) return null;
 
@@ -48,7 +60,6 @@ export default function CommunityRulesScreen() {
     const r = await saveRemoteConfig(state.authToken, {
       groupMinFollowers: num(groupMin),
       verifiedMinFollowers: num(verifiedMin),
-      verifiedPriceEur: num(price),
     });
     setBusy(false);
     setMsg(r.ok ? { ok: true, text: 'Enregistré — appliqué à tous les utilisateurs.' } : { ok: false, text: r.error ?? 'Échec.' });
@@ -79,14 +90,27 @@ export default function CommunityRulesScreen() {
           styles={styles}
           placeholderColor={colors.textMuted}
         />
-        <Rule
-          label="Prix mensuel de la certification (€)"
-          hint="Pour les athlètes sous le seuil. Par défaut 1 €."
-          value={price}
-          onChange={setPrice}
-          styles={styles}
-          placeholderColor={colors.textMuted}
-        />
+
+        <View style={styles.rule}>
+          <Text style={styles.label}>Demandes de pastille en attente</Text>
+          {pending.length === 0 ? <Text style={styles.hint}>Aucune demande pour le moment.</Text> : null}
+          {pending.map((p) => (
+            <View key={p.username} style={{ gap: 6, marginTop: 6 }}>
+              <Text style={styles.label}>
+                @{p.username}
+                {p.name ? ` · ${p.name}` : ''} · {p.followers} abonnés
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <PrimaryButton label="Accorder" onPress={() => void decide(p.username, true)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <SecondaryButton label="Refuser" onPress={() => void decide(p.username, false)} />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
 
         {msg ? <Text style={[styles.msg, { color: msg.ok ? colors.success : colors.danger }]}>{msg.text}</Text> : null}
         <PrimaryButton label={busy ? 'Enregistrement…' : 'Enregistrer'} disabled={busy} onPress={save} />

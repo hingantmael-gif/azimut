@@ -179,7 +179,17 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
     }
     try {
       const mapped = fromRevenueCatEvent(req.body || {});
-      if (mapped.email) {
+      if (mapped.email && /verified|certif/i.test(String(mapped.subscription.productId || ''))) {
+        // Abonnement « certification athlète » : active / retire la pastille, sans toucher au Premium.
+        const users = loadUsers();
+        const u = users.find((x) => String(x.email || '').toLowerCase() === String(mapped.email).toLowerCase());
+        if (u) {
+          const on = mapped.subscription.status === 'active' || mapped.subscription.status === 'grace_period' || mapped.subscription.status === 'canceled';
+          u.verified = on;
+          u.certification = { status: on ? 'approved' : 'refused', at: new Date().toISOString(), source: 'store' };
+          saveUsers(users);
+        }
+      } else if (mapped.email) {
         upsertSub(mapped.email, mapped.subscription);
       }
       res.json({ ok: true });

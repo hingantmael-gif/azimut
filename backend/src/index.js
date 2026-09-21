@@ -1110,7 +1110,7 @@ app.put('/sync/state', authMiddleware, (req, res) => {
 });
 
 mountConfigRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
-mountCommunityRoutes(app, { authMiddleware, loadUsers, isOwner: isOwnerPremiumEmail });
+mountCommunityRoutes(app, { authMiddleware, loadUsers, saveUsers, isOwner: isOwnerPremiumEmail });
 mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
 mountContactRoutes(app, {
   authMiddleware,

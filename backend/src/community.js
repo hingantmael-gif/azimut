@@ -102,7 +102,7 @@ function isBlocked(db, a, b) {
  * @param {import('express').Express} app
  * @param {{ authMiddleware: Function, loadUsers: Function }} deps
  */
-export function mountCommunityRoutes(app, { authMiddleware, loadUsers, isOwner = () => false }) {
+export function mountCommunityRoutes(app, { authMiddleware, loadUsers, saveUsers = () => undefined, isOwner = () => false }) {
   /** Certifié ? (par pseudo) — calculé à la volée, donc un changement de seuil s'applique tout de suite. */
   const verifiedOf = (db, cfg, users) => {
     const byName = new Map(users.map((u) => [String(u.username || '').toLowerCase(), u]));
@@ -119,7 +119,60 @@ export function mountCommunityRoutes(app, { authMiddleware, loadUsers, isOwner =
       followers,
       verified: isVerifiedAccount(db, me, cfg),
       canCreateGroup: isOwner(req.authEmail) || followers >= cfg.groupMinFollowers,
+      /** Demande de certification : null | 'pending' | 'refused' (l'état « approuvé » = verified). */
+      certification: me?.certification?.status ?? null,
     });
+  });
+
+  /**
+   * Demande de la pastille « athlète certifié ». Le propriétaire l'obtient tout de suite ; les autres passent en
+   * attente de validation (ou sont activés automatiquement par l'abonnement store via /billing/webhook/revenuecat).
+   */
+  app.post('/community/me/certification', authMiddleware, (req, res) => {
+    const users = loadUsers();
+    const me = users.find((u) => u.email === req.authEmail);
+    if (!me) return res.status(404).json({ error: 'Compte introuvable' });
+    const db = loadCommunity();
+    if (isVerifiedAccount(db, me, loadConfig())) return res.json({ ok: true, verified: true, certification: 'approved' });
+    if (isOwner(req.authEmail)) {
+      me.verified = true;
+      me.certification = { status: 'approved', at: new Date().toISOString() };
+      saveUsers(users);
+      return res.json({ ok: true, verified: true, certification: 'approved' });
+    }
+    if (me.certification?.status !== 'pending') {
+      me.certification = { status: 'pending', requestedAt: new Date().toISOString() };
+      saveUsers(users);
+    }
+    res.json({ ok: true, verified: false, certification: 'pending' });
+  });
+
+  /** Propriétaire : demandes de pastille en attente. */
+  app.get('/admin/certifications', authMiddleware, (req, res) => {
+    if (!isOwner(req.authEmail)) return res.status(403).json({ error: 'Réservé au propriétaire' });
+    const db = loadCommunity();
+    const pending = loadUsers()
+      .filter((u) => u.certification?.status === 'pending' && u.verified !== true)
+      .map((u) => ({
+        username: u.username,
+        name: (String(u.firstName || '') + ' ' + String(u.lastName || '')).trim(),
+        followers: followerCount(db, u.username),
+        requestedAt: u.certification?.requestedAt ?? null,
+      }));
+    res.json({ ok: true, pending });
+  });
+
+  /** Propriétaire : accorde ou refuse la pastille. */
+  app.post('/admin/certifications/:username', authMiddleware, (req, res) => {
+    if (!isOwner(req.authEmail)) return res.status(403).json({ error: 'Réservé au propriétaire' });
+    const users = loadUsers();
+    const target = users.find((u) => String(u.username || '').toLowerCase() === String(req.params.username || '').toLowerCase());
+    if (!target) return res.status(404).json({ error: 'Compte introuvable' });
+    const approve = req.body?.approve === true;
+    target.verified = approve;
+    target.certification = { status: approve ? 'approved' : 'refused', at: new Date().toISOString() };
+    saveUsers(users);
+    res.json({ ok: true, username: target.username, verified: approve });
   });
 
   app.get('/community/hub-summary', authMiddleware, (req, res) => {

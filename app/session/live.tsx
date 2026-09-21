@@ -36,6 +36,7 @@ import {
   formatLiveDistanceKmValue,
   formatLivePace,
   formatPaceBand,
+  paceTargetMean,
   formatStepRemaining,
   freeLiveShell,
   haversineM,
@@ -273,7 +274,7 @@ export default function LiveSessionScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await gps.prepare();
+      void gps.prepare();
       const draft = await loadLiveDraft();
       if (cancelled || !draft) return;
       if (draft.key !== sessionKey) {
@@ -399,7 +400,7 @@ export default function LiveSessionScreen() {
     }
     const ok = await gps.start();
     if (!ok) return;
-    await clearLiveDraft();
+    void clearLiveDraft();
     startIsoRef.current = new Date().toISOString();
     wallStartRef.current = Date.now();
     wallPausedAccumRef.current = 0;
@@ -714,6 +715,7 @@ export default function LiveSessionScreen() {
         </PressableScale>
       ) : null}
       {phase === 'running' || phase === 'paused' || phase === 'saving' ? (
+        <View style={styles.laterRow}>
         <PressableScale
           variant="subtle"
           onPress={onSaveLater}
@@ -722,6 +724,7 @@ export default function LiveSessionScreen() {
         >
           <Text style={styles.laterLinkText}>Reprendre plus tard</Text>
         </PressableScale>
+        </View>
       ) : null}
     </>
   );
@@ -783,6 +786,7 @@ export default function LiveSessionScreen() {
                 phase === 'ready' ? null : gps.currentPaceSecPerKm,
               )}
               bandLabel={paceBand ?? '—'}
+              targetSecPerKm={paceTargetMean(currentStep)}
             />
           ) : (
             <>
@@ -906,6 +910,7 @@ export default function LiveSessionScreen() {
         </PressableScale>
       ) : null}
       {phase === 'running' || phase === 'paused' || phase === 'saving' ? (
+        <View style={styles.laterRow}>
         <PressableScale
           variant="subtle"
           onPress={onSaveLater}
@@ -916,6 +921,7 @@ export default function LiveSessionScreen() {
             Reprendre plus tard
           </Text>
         </PressableScale>
+        </View>
       ) : null}
     </>
   );

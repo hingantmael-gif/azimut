@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { startBackgroundTracking, stopBackgroundTracking } from '../services/backgroundTracking';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { haversineM } from '../engines/liveWorkout';
 import {
@@ -94,6 +94,21 @@ function webGetFreshPosition(): Promise<Location.LocationObject | null> {
   });
 }
 
+/** État de l'autorisation de localisation SANS ouvrir de fenêtre. null = impossible à savoir (ancien navigateur). */
+async function silentPermission(): Promise<'granted' | 'denied' | 'prompt' | null> {
+  try {
+    if (Platform.OS === 'web') {
+      if (typeof navigator === 'undefined' || !navigator.permissions?.query) return null;
+      const st = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      return st.state as 'granted' | 'denied' | 'prompt';
+    }
+    const res = await Location.getForegroundPermissionsAsync();
+    return res.status === Location.PermissionStatus.GRANTED ? 'granted' : res.canAskAgain === false ? 'denied' : 'prompt';
+  } catch {
+    return null;
+  }
+}
+
 function webWatchPosition(
   onPos: (loc: Location.LocationObject) => void,
 ): { remove: () => void } {
@@ -165,6 +180,7 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
   const lastPaceSampleAtRef = useRef(0);
   const autoPauseFiredRef = useRef(false);
   const stillSecRef = useRef(0);
+  const lastPointRef = useRef<GpsPoint | null>(null);
 
   const stopWatch = useCallback(() => {
     subRef.current?.remove();
@@ -175,7 +191,10 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     try {
       let granted: boolean;
       let blocked = false;
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      const known = await silentPermission();
+      if (known === 'granted') {
+        granted = true;
+      } else if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
         // Web : la fenêtre d'autorisation du navigateur s'ouvre en appelant directement la
         // géolocalisation (à partir d'un geste, ex. le bouton « Activer »).
         // Code 1 = refusée ; 2 (position indisponible) et 3 (délai) = autorisée mais sans fix.
@@ -217,6 +236,7 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     const acc = raw.coords.accuracy ?? 999;
     const speed = raw.coords.speed;
     const next = toGpsPoint(raw);
+    lastPointRef.current = next;
 
     // Toujours afficher la position live (même imprécise), avec message si grossière
     setState((s) => ({
@@ -316,8 +336,9 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     }));
   }, []);
 
+  const preparingRef = useRef<Promise<boolean> | null>(null);
   /** Allume le GPS (carte) sans démarrer le chrono. */
-  const prepare = useCallback(async () => {
+  const prepareNow = useCallback(async () => {
     const ok = await requestPermission();
     if (!ok) return false;
     try {
@@ -334,16 +355,15 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
       if (subRef.current) return true;
 
       // Fix frais (pas de cache navigateur)
+      // Le premier fix arrive en tâche de fond : on n'attend JAMAIS le GPS pour démarrer.
       if (Platform.OS === 'web') {
-        const fix = await webGetFreshPosition();
-        if (fix) ingestPoint(fix);
+        void webGetFreshPosition().then((fix) => fix && ingestPoint(fix));
         const sub = webWatchPosition(ingestPoint);
         subRef.current = sub;
       } else {
-        const fix = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.BestForNavigation,
-        }).catch(() => null);
-        if (fix) ingestPoint(fix);
+        void Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation })
+          .then((fix) => ingestPoint(fix))
+          .catch(() => undefined);
 
         const sub = await Location.watchPositionAsync(
           {
@@ -373,6 +393,16 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     }
   }, [ingestPoint, requestPermission]);
 
+  /** Un seul démarrage à la fois (évite deux abonnements GPS). */
+  const prepare = useCallback((): Promise<boolean> => {
+    if (!preparingRef.current) {
+      preparingRef.current = prepareNow().finally(() => {
+        preparingRef.current = null;
+      });
+    }
+    return preparingRef.current;
+  }, [prepareNow]);
+
   /** Démarre l’enregistrement (trace + distance). */
   const startRecording = useCallback(async () => {
     const ok = await prepare();
@@ -392,38 +422,24 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
     autoPauseFiredRef.current = false;
     stillSecRef.current = 0;
 
-    // Re-fetch un fix frais au démarrage (évite une vieille position)
-    if (Platform.OS === 'web') {
-      const fresh = await webGetFreshPosition();
-      if (fresh) ingestPoint(fresh);
-    } else {
-      const fresh = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation,
-      }).catch(() => null);
-      if (fresh) ingestPoint(fresh);
-    }
-
     // Natif : garde le suivi actif écran verrouillé (service de premier plan Android / mode arrière-plan iOS).
     if (Platform.OS !== 'web') void startBackgroundTracking();
 
-    setState((s) => {
-      const startPts =
-        s.lastPoint != null
-          ? [{ ...s.lastPoint, timestamp: Date.now() }]
-          : [];
-      pointsRef.current = startPts;
-      return {
-        ...s,
-        recording: true,
-        paused: false,
-        points: startPts,
-        distanceM: 0,
-        currentPaceSecPerKm: null,
-        avgPaceSecPerKm: null,
-        recentPaces: [],
-        stillSec: 0,
-      };
-    });
+    // Point de départ = dernière position connue si elle est fraîche ; sinon le premier fix qui arrive.
+    const lp = lastPointRef.current;
+    const startPts = lp && Date.now() - lp.timestamp < 15000 ? [{ ...lp, timestamp: Date.now() }] : [];
+    pointsRef.current = startPts;
+    setState((s) => ({
+      ...s,
+      recording: true,
+      paused: false,
+      points: startPts,
+      distanceM: 0,
+      currentPaceSecPerKm: null,
+      avgPaceSecPerKm: null,
+      recentPaces: [],
+      stillSec: 0,
+    }));
     return true;
   }, [prepare, ingestPoint]);
 
@@ -551,6 +567,53 @@ export function useLiveGpsTrack(options?: UseLiveGpsTrackOptions) {
   }, [autoPauseAfterSec]);
 
   useEffect(() => () => stopWatch(), [stopWatch]);
+
+  // L'utilisateur active la localisation dans les réglages du téléphone pendant que l'écran est ouvert :
+  // on le détecte tout seul (sondage rapide + retour au premier plan) et le GPS démarre sans quitter la séance.
+  const permissionRef = useRef(state.permission);
+  permissionRef.current = state.permission;
+  const errorRef = useRef(state.error);
+  errorRef.current = state.error;
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      if (!alive) return;
+      const now = await silentPermission();
+      if (!alive || now == null) return;
+      if (now === 'granted') {
+        if (permissionRef.current !== 'granted' || !subRef.current) {
+          const ok = await prepare();
+          if (ok && alive) setState((st) => ({ ...st, permission: 'granted', error: null }));
+        }
+      } else if (permissionRef.current === 'granted' && now === 'denied') {
+        setState((st) => ({ ...st, permission: 'denied', error: 'Autorise la localisation pour suivre ta séance (GPS).' }));
+      }
+    };
+    const id = setInterval(() => {
+      // Sonde seulement tant que le GPS n'est pas actif : aucun coût une fois la séance lancée.
+      if (permissionRef.current !== 'granted' || !subRef.current) void check();
+    }, 1200);
+    const appSub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') void check();
+    });
+    let permStatus: PermissionStatus | null = null;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((st) => {
+          permStatus = st;
+          st.onchange = () => void check();
+        })
+        .catch(() => undefined);
+    }
+    void check();
+    return () => {
+      alive = false;
+      clearInterval(id);
+      appSub.remove();
+      if (permStatus) permStatus.onchange = null;
+    };
+  }, [prepare]);
 
   return {
     ...state,

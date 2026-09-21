@@ -44,9 +44,51 @@ export function haversineM(
   return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/** Allure « 4:01 » (deux-points, comme sur une montre) — plus lisible en grand que 4'01". */
+export function formatPaceColon(secPerKm: number): string {
+  const total = Math.round(Math.min(1200, Math.max(120, Number.isFinite(secPerKm) ? secPerKm : 330)));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** Allure moyenne visée d'une étape (milieu de la bande), ou null sans cible d'allure. */
+export function paceTargetMean(step: WorkoutStep | null): number | null {
+  if (!step?.target || step.target.type !== 'pace') return null;
+  return (step.target.minSecPerKm + step.target.maxSecPerKm) / 2;
+}
+
+function goalText(step: WorkoutStep): string | null {
+  const m = stepGoalMeters(step);
+  if (m != null) return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1).replace('.', ',')} km` : `${Math.round(m)} m`;
+  const sec = stepGoalSec(step);
+  if (sec == null) return null;
+  const min = Math.floor(sec / 60);
+  const rest = Math.round(sec - min * 60);
+  if (min >= 60) return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
+  if (rest === 0) return `${min} minute${min > 1 ? 's' : ''}`;
+  return min === 0 ? `${rest} secondes` : `${min} min ${String(rest).padStart(2, '0')}`;
+}
+
+/** Étape de « transition de zone » : déjà comprise dans l'échauffement, on ne la montre plus comme étape à part. */
+const ZONE_TRANSITION = /(zone|z)\s*1\s*(→|->|–|—|-|vers|à|puis)\s*(zone|z)\s*2|passage\s+(en|à|de)\s+(la\s+)?zone/i;
+
+/** Libellé centré sur les chiffres : « 5 minutes à 4:01 », « Récupération 3 minutes à 5:18 ». */
+function paceFirstLabel(step: WorkoutStep, suffix: string, times: number): string | null {
+  const mean = paceTargetMean(step);
+  const goal = goalText(step);
+  if (mean == null || goal == null) return null;
+  const prefix =
+    step.type === 'warmup' ? 'Échauffement ' : step.type === 'rest' ? 'Récupération ' : step.type === 'cooldown' ? 'Retour au calme ' : '';
+  if (times > 1) {
+    const head = step.type === 'rest' ? 'Récupération' : step.type === 'active' ? 'Effort' : prefix.trim();
+    return `${head}${suffix} · ${goal} à ${formatPaceColon(mean)}`;
+  }
+  return `${prefix}${goal} à ${formatPaceColon(mean)}`;
+}
+
 /** Aplatit les répétitions pour le guidage live (effort ↔ récup entrelacés). */
-export function flattenWorkoutSteps(steps: WorkoutStep[]): FlatLiveStep[] {
+export function flattenWorkoutSteps(rawSteps: WorkoutStep[]): FlatLiveStep[] {
   const out: FlatLiveStep[] = [];
+  const steps = rawSteps.filter((st) => !(st.type === 'warmup' && ZONE_TRANSITION.test(st.label ?? '')));
 
   const pushFlat = (step: WorkoutStep, repIndex: number, times: number) => {
     const suffix = times > 1 ? ` (${repIndex + 1}/${times})` : '';
@@ -70,12 +112,13 @@ export function flattenWorkoutSteps(steps: WorkoutStep[]): FlatLiveStep[] {
                 : base.split('·')[0]?.trim() || base
           }${suffix}`
         : base;
+    const paced = paceFirstLabel(step, suffix, times);
     out.push({
       ...step,
       id: `${step.id}__${repIndex}`,
       repeat: undefined,
       flatIndex: out.length,
-      displayLabel: short,
+      displayLabel: paced ?? short,
     });
   };
 

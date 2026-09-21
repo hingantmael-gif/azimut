@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -11,7 +11,7 @@ import { BRAND } from '../../constants/brand';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
 import { PressableScale, SoftPulse } from '../motion/softMotion';
-import { paceGaugeLayout } from '../../engines/liveWorkout';
+import { formatLivePace, formatPaceColon, paceGaugeLayout } from '../../engines/liveWorkout';
 
 /** Barres signal GPS (style Record Strava, couleurs Mova). */
 export function GpsSignalBars({
@@ -293,9 +293,10 @@ export function LivePaceGauge({
   currentSecPerKm,
   minSecPerKm,
   maxSecPerKm,
-  status,
+  status: statusProp,
   currentLabel,
   bandLabel,
+  targetSecPerKm,
 }: {
   currentSecPerKm: number | null;
   minSecPerKm: number;
@@ -303,15 +304,34 @@ export function LivePaceGauge({
   status: 'too_fast' | 'in_zone' | 'too_slow' | 'none';
   currentLabel: string;
   bandLabel: string;
+  /** Allure moyenne visée : affichée en GRAND sous la jauge. */
+  targetSecPerKm?: number | null;
 }) {
-  const layout = paceGaugeLayout(currentSecPerKm, minSecPerKm, maxSecPerKm);
+  // L'aiguille se met à jour UNE fois par seconde vers l'allure mesurée (lissage 40 %), puis glisse en douceur
+  // pendant toute la seconde suivante : plus de saut 4:00 → 4:10, un mouvement continu.
+  const latest = useRef<number | null>(currentSecPerKm);
+  latest.current = currentSecPerKm;
+  const shownRef = useRef<number | null>(currentSecPerKm);
+  const [shown, setShown] = useState<number | null>(currentSecPerKm);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = latest.current;
+      const prev = shownRef.current;
+      const next = t == null ? null : prev == null ? t : prev + (t - prev) * 0.4;
+      shownRef.current = next;
+      setShown(next);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const layout = paceGaugeLayout(shown, minSecPerKm, maxSecPerKm);
   const needleAnim = useRef(new Animated.Value(layout.needle)).current;
 
   useEffect(() => {
     Animated.timing(needleAnim, {
       toValue: layout.needle,
-      duration: 280,
-      easing: Easing.out(Easing.cubic),
+      duration: 1000,
+      easing: Easing.linear,
       useNativeDriver: true,
     }).start();
   }, [layout.needle, needleAnim]);
@@ -321,6 +341,14 @@ export function LivePaceGauge({
     outputRange: ['-110deg', '110deg'],
   });
 
+  const status: typeof statusProp =
+    statusProp === 'none' || shown == null
+      ? 'none'
+      : shown < Math.min(minSecPerKm, maxSecPerKm)
+        ? 'too_fast'
+        : shown > Math.max(minSecPerKm, maxSecPerKm)
+          ? 'too_slow'
+          : 'in_zone';
   const zoneColor =
     status === 'in_zone'
       ? BRAND.accent
@@ -332,9 +360,11 @@ export function LivePaceGauge({
 
   const zoneLeftPct = layout.zoneStart * 100;
   const zoneWidthPct = Math.max(4, (layout.zoneEnd - layout.zoneStart) * 100);
+  const nowLabel = statusProp === 'none' && shown == null ? currentLabel : formatLivePace(shown);
+  const targetLabel = targetSecPerKm != null && Number.isFinite(targetSecPerKm) ? formatPaceColon(targetSecPerKm) : null;
 
   return (
-    <View style={styles.gaugeWrap} accessibilityLabel={`Allure ${currentLabel}, cible ${bandLabel}`}>
+    <View style={styles.gaugeWrap} accessibilityLabel={`Allure ${nowLabel}, cible ${targetLabel ?? bandLabel}`}>
       <View style={styles.gaugeDial}>
         <View style={styles.gaugeTrack} />
         <View
@@ -362,8 +392,19 @@ export function LivePaceGauge({
         <Text style={styles.gaugeEdge}>Rapide</Text>
         <Text style={styles.gaugeEdge}>Lent</Text>
       </View>
-      <Text style={[styles.gaugePace, { color: zoneColor }]}>{currentLabel}</Text>
-      <Text style={styles.gaugeBand}>Cible {bandLabel}</Text>
+      <Text style={[styles.gaugePace, { color: zoneColor }]}>{nowLabel}</Text>
+      {targetLabel ? (
+        <View style={styles.gaugeTargetRow}>
+          <Text style={styles.gaugeTargetKicker}>Allure visée</Text>
+          <Text style={styles.gaugeTarget}>
+            {targetLabel}
+            <Text style={styles.gaugeTargetUnit}> /km</Text>
+          </Text>
+          <Text style={styles.gaugeBand}>zone {bandLabel}</Text>
+        </View>
+      ) : (
+        <Text style={styles.gaugeBand}>Cible {bandLabel}</Text>
+      )}
     </View>
   );
 }
@@ -808,6 +849,7 @@ export function liveTrackerStyles(colors: ColorPalette) {
       marginBottom: 10,
       paddingHorizontal: 8,
     },
+    laterRow: { alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
     laterLink: {
       alignSelf: 'center',
       paddingVertical: 10,
@@ -1258,4 +1300,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(15,23,42,0.55)',
   },
+  gaugeTargetRow: { alignItems: 'center', marginTop: 8 },
+  gaugeTargetKicker: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: 'rgba(15,23,42,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  gaugeTarget: {
+    fontSize: 52,
+    lineHeight: 58,
+    fontWeight: '900',
+    letterSpacing: -1.5,
+    color: '#0F172A',
+    fontVariant: ['tabular-nums'],
+  },
+  gaugeTargetUnit: { fontSize: 18, fontWeight: '800', color: 'rgba(15,23,42,0.5)', letterSpacing: 0 },
 });

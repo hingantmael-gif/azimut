@@ -400,3 +400,23 @@ describe('skipLiveStep (Passer l’étape)', () => {
     expect(c.index).toBe(2);
   });
 });
+
+describe('libellés centrés sur l’allure', () => {
+  const pace = (min: number, max: number) => ({ type: 'pace' as const, minSecPerKm: min, maxSecPerKm: max });
+  it('affiche « 5 minutes à 4:01 » (moyenne de la bande) et « Récupération 3 minutes à 5:18 »', () => {
+    const flat = flattenWorkoutSteps([
+      { id: 'a', type: 'active', label: '5 min à l’allure visée 5 km', endCondition: 'duration', durationSec: 300, target: pace(231, 251) },
+      { id: 'r', type: 'rest', label: 'Récupération 3 min · footing facile', endCondition: 'duration', durationSec: 180, target: pace(307, 329) },
+    ]);
+    expect(flat[0]!.displayLabel).toBe('5 minutes à 4:01');
+    expect(flat[1]!.displayLabel).toBe('Récupération 3 minutes à 5:18');
+  });
+  it('retire l’étape de passage zone 1 → zone 2 (comprise dans l’échauffement)', () => {
+    const flat = flattenWorkoutSteps([
+      { id: 'w', type: 'warmup', label: 'Échauffement 10 min', endCondition: 'duration', durationSec: 600 },
+      { id: 'z', type: 'warmup', label: 'Passage zone 1 → zone 2', endCondition: 'duration', durationSec: 120 },
+      { id: 'a', type: 'active', label: 'Corps', endCondition: 'duration', durationSec: 600 },
+    ]);
+    expect(flat.map((f) => f.displayLabel)).toEqual(['Échauffement 10 min', 'Corps']);
+  });
+});
