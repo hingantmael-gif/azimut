@@ -27,6 +27,43 @@ const RC_IOS_KEY = (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || '').trim();
 
 let configured = false;
 
+/**
+ * Web (PWA) : paiement par carte via Stripe Checkout (page sécurisée hébergée par Stripe : aucune donnée de carte
+ * ne passe par Mova). Le Premium n'est activé que par le webhook du serveur, jamais par la simple redirection.
+ * Sur les apps natives iOS / Android, les abonnements numériques passent par les stores (RevenueCat) — règle Apple / Google.
+ */
+export function isWebCheckoutAvailable(): boolean {
+  return Platform.OS === 'web';
+}
+
+async function stripePost(path: string, authToken: string, body?: object): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`${resolveApiUrl()}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
+    });
+    const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (res.ok && data.url) return { ok: true, url: data.url };
+    if (data.error === 'stripe_not_configured') return { ok: false, error: 'Le paiement en ligne n’est pas encore activé sur ce serveur.' };
+    if (data.error === 'owner_already_premium') return { ok: false, error: 'Ton compte est déjà Premium.' };
+    if (data.error === 'no_stripe_customer') return { ok: false, error: 'Aucun abonnement par carte trouvé sur ce compte.' };
+    return { ok: false, error: 'Paiement momentanément indisponible. Réessaie dans un instant.' };
+  } catch {
+    return { ok: false, error: 'Connexion impossible : vérifie ton réseau puis réessaie.' };
+  }
+}
+
+/** Crée la page de paiement Stripe et renvoie son adresse (à ouvrir dans le navigateur). */
+export function startWebCheckout(period: 'monthly' | 'annual', authToken: string) {
+  return stripePost('/billing/stripe/checkout', authToken, { period });
+}
+
+/** Portail Stripe : changer de carte, résilier, factures. */
+export function openBillingPortal(authToken: string) {
+  return stripePost('/billing/stripe/portal', authToken);
+}
+
 export function isNativeBillingAvailable(): boolean {
   if (Platform.OS === 'web') return false;
   return Boolean(Platform.OS === 'ios' ? RC_IOS_KEY : RC_ANDROID_KEY);

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Linking,
   Platform,
@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
@@ -27,7 +27,11 @@ import { hasPremiumAccess } from '../../src/premium/entitlement';
 import { PremiumBadge } from '../../src/ui/premium';
 import {
   isNativeBillingAvailable,
+  isWebCheckoutAvailable,
   listCatalogOffers,
+  openBillingPortal,
+  refreshSubscriptionStatus,
+  startWebCheckout,
   planFromSubscription,
   PLAY_MANAGE_SUBSCRIPTION_URL,
   purchasePremium,
@@ -88,6 +92,39 @@ export default function SubscriptionScreen() {
   });
   const offers = listCatalogOffers();
   const nativeBilling = isNativeBillingAvailable();
+  const webCheckout = isWebCheckoutAvailable();
+  const params = useLocalSearchParams<{ checkout?: string }>();
+
+  // Retour de la page de paiement Stripe : le serveur reçoit la confirmation par webhook (quelques secondes).
+  // On interroge donc le statut jusqu'à ce que le Premium apparaisse.
+  useEffect(() => {
+    if (!webCheckout || !state.authToken) return;
+    if (params.checkout === 'cancel') {
+      Alert.alert('Paiement', 'Paiement annulé. Tu peux réessayer quand tu veux.');
+      return;
+    }
+    if (params.checkout !== 'success') return;
+    let stop = false;
+    void (async () => {
+      setBusy(true);
+      for (let i = 0; i < 12 && !stop; i++) {
+        const sub = await refreshSubscriptionStatus(state.authToken);
+        if (sub?.entitlement === 'premium') {
+          dispatch({ type: 'APPLY_SUBSCRIPTION', subscription: sub, plan: planFromSubscription(sub) });
+          Alert.alert('Premium', 'Paiement confirmé, bienvenue dans Premium !');
+          setBusy(false);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 2500));
+      }
+      setBusy(false);
+      if (!stop) Alert.alert('Premium', 'Paiement reçu. L’activation peut prendre une minute : rouvre cette page dans un instant.');
+    })();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.checkout, webCheckout, state.authToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,7 +144,43 @@ export default function SubscriptionScreen() {
     });
   };
 
+  const openUrl = (url: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.assign(url);
+    else void Linking.openURL(url);
+  };
+
+  const onWebCheckout = async () => {
+    if (!state.authToken) {
+      Alert.alert('Premium', 'Connecte-toi à ton compte pour t’abonner.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await startWebCheckout(period, state.authToken);
+      if (res.ok) openUrl(res.url);
+      else Alert.alert('Premium', res.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onManageWeb = async () => {
+    if (!state.authToken) return;
+    setBusy(true);
+    try {
+      const res = await openBillingPortal(state.authToken);
+      if (res.ok) openUrl(res.url);
+      else Alert.alert('Abonnement', res.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onPurchase = async () => {
+    if (webCheckout) {
+      await onWebCheckout();
+      return;
+    }
     setBusy(true);
     try {
       const res = await purchasePremium(period);
@@ -200,43 +273,63 @@ export default function SubscriptionScreen() {
                 label={
                   busy
                     ? '…'
-                    : nativeBilling
+                    : nativeBilling || webCheckout
                       ? 'S’abonner'
-                      : Platform.OS === 'web'
-                        ? 'Dispo sur Android (Play)'
-                        : 'Configurer RevenueCat'
+                      : 'Configurer RevenueCat'
                 }
                 onPress={() => void onPurchase()}
                 disabled={busy}
               />
               <View style={{ height: spacing.sm }} />
-              <SecondaryButton
-                label="Restaurer mes achats"
-                onPress={() => void onRestore()}
-              />
-              <Text style={styles.legal}>
-                Renouvellement automatique via Google Play. Annule à tout moment
-                dans Play Store. Droit de rétractation UE 14 jours selon règles
-                Google.
-              </Text>
-              <SecondaryButton
-                label="Gérer l’abonnement (Play)"
-                onPress={() => void Linking.openURL(PLAY_MANAGE_SUBSCRIPTION_URL)}
-              />
+              {webCheckout ? (
+                <>
+                  <Text style={styles.legal}>
+                    Paiement sécurisé par Stripe : tes données de carte ne
+                    passent jamais par Mova. Renouvellement automatique,
+                    résiliable à tout moment depuis « Gérer l’abonnement ».
+                    Droit de rétractation de 14 jours selon la loi.
+                  </Text>
+                  <SecondaryButton label="Gérer l’abonnement" onPress={() => void onManageWeb()} />
+                </>
+              ) : (
+                <>
+                  <SecondaryButton
+                    label="Restaurer mes achats"
+                    onPress={() => void onRestore()}
+                  />
+                  <Text style={styles.legal}>
+                    Renouvellement automatique via Google Play. Annule à tout moment
+                    dans Play Store. Droit de rétractation UE 14 jours selon règles
+                    Google.
+                  </Text>
+                  <SecondaryButton
+                    label="Gérer l’abonnement (Play)"
+                    onPress={() => void Linking.openURL(PLAY_MANAGE_SUBSCRIPTION_URL)}
+                  />
+                </>
+              )}
             </View>
           </SettingsSection>
         ) : (
           <SettingsSection title="Abonnement">
             <View style={styles.ctaPad}>
-              <SecondaryButton
-                label="Restaurer mes achats"
-                onPress={() => void onRestore()}
-              />
-              <View style={{ height: spacing.sm }} />
-              <SecondaryButton
-                label="Gérer dans Google Play"
-                onPress={() => void Linking.openURL(PLAY_MANAGE_SUBSCRIPTION_URL)}
-              />
+              {webCheckout ? (
+                state.profile.subscription?.platform === 'web' ? (
+                  <SecondaryButton label="Gérer mon abonnement (factures, carte, résiliation)" onPress={() => void onManageWeb()} />
+                ) : null
+              ) : (
+                <>
+                  <SecondaryButton
+                    label="Restaurer mes achats"
+                    onPress={() => void onRestore()}
+                  />
+                  <View style={{ height: spacing.sm }} />
+                  <SecondaryButton
+                    label="Gérer dans Google Play"
+                    onPress={() => void Linking.openURL(PLAY_MANAGE_SUBSCRIPTION_URL)}
+                  />
+                </>
+              )}
             </View>
           </SettingsSection>
         )}

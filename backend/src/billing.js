@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mountStripeRoutes } from './stripe.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, '..', 'data');
@@ -101,6 +102,36 @@ function fromRevenueCatEvent(body) {
 }
 
 export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }) {
+  /**
+   * Point d'entrée UNIQUE pour activer / couper un abonnement (webhooks Stripe et RevenueCat, synchro appli).
+   * Ne touche jamais au Premium offert par le propriétaire (owner) ni à un cadeau encore actif.
+   */
+  function applySubscription(email, subscription) {
+    const saved = upsertSub(email, subscription);
+    try {
+      const users = loadUsers();
+      const u = users.find((x) => String(x.email || '').toLowerCase() === String(email).toLowerCase());
+      if (u && u.premiumSource !== 'owner') {
+        const premium = subscription.entitlement === 'premium' && ['active', 'grace_period', 'canceled'].includes(subscription.status);
+        if (premium) {
+          u.plan = /month/i.test(subscription.productId || '') ? 'premium_monthly' : 'premium_yearly';
+          u.premiumSource = 'paid';
+        } else if (u.premiumSource === 'paid') {
+          u.plan = 'free';
+          u.premiumSource = null;
+        }
+        u.subscription = subscription;
+        saveUsers(users);
+      }
+    } catch {
+      /* ignore */
+    }
+    return saved;
+  }
+
+  // Paiements par carte sur le web (Stripe) : /billing/stripe/*
+  mountStripeRoutes(app, { authMiddleware, loadUsers, saveUsers, applySubscription });
+
   app.get('/billing/config', (_req, res) => {
     res.json({
       products: {
@@ -141,31 +172,14 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
     if (!subscription || typeof subscription !== 'object') {
       return res.status(400).json({ error: 'subscription required' });
     }
-    const saved = upsertSub(email, subscription);
-    // Miroir léger sur user.plan si users.json le connaît
-    try {
-      const users = loadUsers();
-      const u = users.find(
-        (x) => String(x.email || '').toLowerCase() === String(email).toLowerCase(),
-      );
-      if (u) {
-        const premium = subscription.entitlement === 'premium' &&
-          ['active', 'grace_period', 'canceled'].includes(subscription.status);
-        if (premium) {
-          u.plan = /month/i.test(subscription.productId || '')
-            ? 'premium_monthly'
-            : 'premium_yearly';
-          u.premiumSource = 'paid';
-        } else if (u.premiumSource === 'paid') {
-          u.plan = 'free';
-          u.premiumSource = null;
-        }
-        u.subscription = subscription;
-        saveUsers(users);
-      }
-    } catch {
-      /* ignore */
+    // Sécurité : le client ne doit pas pouvoir s'accorder le Premium. Dès que les webhooks (Stripe / RevenueCat) sont
+    // en place, mettre BILLING_TRUST_CLIENT=false : seuls les paiements confirmés par les fournisseurs comptent.
+    const current = findSub(email);
+    if (process.env.BILLING_TRUST_CLIENT === 'false' || current?.source === 'stripe') {
+      const { email: _e, updatedAt: _u, ...safe } = current || {};
+      return res.json({ ok: true, ignored: true, subscription: current ? safe : null });
     }
+    const saved = applySubscription(email, subscription);
     res.json({ ok: true, subscription: saved });
   });
 
@@ -190,7 +204,7 @@ export function mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers }
           saveUsers(users);
         }
       } else if (mapped.email) {
-        upsertSub(mapped.email, mapped.subscription);
+        applySubscription(mapped.email, mapped.subscription);
       }
       res.json({ ok: true });
     } catch (e) {

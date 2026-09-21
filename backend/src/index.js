@@ -56,6 +56,8 @@ app.disable('x-powered-by');
 app.use(securityHeaders);
 app.use(cors(corsOptions()));
 // La synchronisation envoie l'état complet de l'app : limite plus large, uniquement sur /sync.
+// Webhook Stripe : la signature se vérifie sur le corps BRUT, il doit passer avant express.json().
+app.use('/billing/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
 app.use('/sync', express.json({ limit: '12mb' }));
 app.use(express.json({ limit: '1mb' }));
 
