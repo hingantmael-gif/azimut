@@ -174,6 +174,8 @@ export interface PlannedWorkout {
   };
   /** Programme parent (plusieurs programmes actifs en parallèle) */
   programId?: string;
+  /** Séance rapide / bibliothèque lancée tout de suite : ne remplace jamais la « séance du jour » du plan et n'envoie pas de rappel. */
+  adHoc?: boolean;
 }
 
 export interface ActivityStream {
@@ -440,6 +442,10 @@ export interface OnboardingAnswers {
    * upper | lower | full
    */
   strengthBodyFocus?: string;
+  /** Callisthénie — zone : full | upper | lower */
+  calisScope?: string;
+  /** Callisthénie — cibles précises : abs | back | arms | legs | chest */
+  calisTargets?: string[];
   connectGarmin?: boolean;
   connectStrava?: boolean;
   /** Intention course (parcours premier compte) */

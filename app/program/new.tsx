@@ -106,7 +106,13 @@ import {
   type StrengthEquipment,
   type StrengthGoalFocus,
 } from '../../src/engines/strengthProgramming';
-import { CALISTHENICS_GOAL_OPTIONS } from '../../src/engines/calisthenicsProgramming';
+import {
+  CALISTHENICS_GOAL_OPTIONS,
+  CALIS_SCOPE_OPTIONS,
+  CALIS_TARGET_OPTIONS,
+  type CalisScope,
+  type CalisTarget,
+} from '../../src/engines/calisthenicsProgramming';
 import {
   StrengthBodyFocusPicker,
   StrengthEquipmentPicker,
@@ -253,6 +259,10 @@ export default function NewProgramScreen() {
     'equipment' | 'goal' | 'focus'
   >(() => (hasProfileEquipment ? 'goal' : 'equipment'));
   const [strengthBodyFocus, setStrengthBodyFocus] = useState<StrengthBodyFocus | null>(null);
+  // Callisthénie : objectif, puis « que veux-tu travailler ? » (zone + cibles précises).
+  const [calisPhase, setCalisPhase] = useState<'goal' | 'area'>('goal');
+  const [calisScope, setCalisScope] = useState<CalisScope | null>(null);
+  const [calisTargets, setCalisTargets] = useState<CalisTarget[]>([]);
   const [strengthLevel, setStrengthLevel] = useState<'debutant' | 'intermediaire' | 'confirme'>(
     () => onboarding?.level ?? 'intermediaire',
   );
@@ -799,6 +809,8 @@ export default function NewProgramScreen() {
         isStrength && strengthEquipment.length > 0 ? strengthEquipment : undefined,
       strengthGoal: isBodyProgram ? strengthGoal ?? undefined : undefined,
       strengthBodyFocus: isStrength ? strengthBodyFocus ?? undefined : undefined,
+      calisScope: isCalis ? calisScope ?? 'full' : undefined,
+      calisTargets: isCalis && calisTargets.length > 0 ? calisTargets : undefined,
       isPremium: true,
     };
   }
@@ -807,6 +819,9 @@ export default function NewProgramScreen() {
     ? [
         'Callisthénie',
         CALISTHENICS_GOAL_OPTIONS.find((g) => g.id === strengthGoal)?.label,
+        calisTargets.length > 0
+          ? calisTargets.map((id) => CALIS_TARGET_OPTIONS.find((o) => o.id === id)?.label).join(' + ')
+          : CALIS_SCOPE_OPTIONS.find((o) => o.id === (calisScope ?? 'full'))?.label,
       ]
         .filter(Boolean)
         .join(' · ')
@@ -872,10 +887,16 @@ export default function NewProgramScreen() {
     step === S.setup && isStrength
       ? strengthStep2Title
       : step === S.setup && isCalis
-        ? 'Quel est ton objectif callisthénie ?'
+        ? calisPhase === 'area'
+          ? 'Que veux-tu travailler ?'
+          : 'Quel est ton objectif callisthénie ?'
         : stepTitles[step];
 
   const advanceStep = () => {
+    if (step === S.setup && isCalis && calisPhase === 'goal') {
+      setCalisPhase('area');
+      return;
+    }
     if (step === S.setup && isStrength) {
       if (strengthSetupPhase === 'equipment') {
         setStrengthSetupPhase('goal');
@@ -894,6 +915,10 @@ export default function NewProgramScreen() {
   };
 
   const goBackStep = () => {
+    if (step === S.setup && isCalis && calisPhase === 'area') {
+      setCalisPhase('goal');
+      return;
+    }
     if (step === S.setup && isStrength) {
       if (strengthSetupPhase === 'focus') {
         setStrengthSetupPhase('goal');
@@ -949,7 +974,9 @@ export default function NewProgramScreen() {
 
   const canContinue =
     step === S.setup && isCalis
-      ? strengthGoal != null
+      ? calisPhase === 'area'
+        ? calisScope != null || calisTargets.length > 0
+        : strengthGoal != null
       : step === S.setup && isStrength && strengthSetupPhase === 'goal'
         ? strengthGoal === 'fitness' || strengthGoal === 'hypertrophy' || strengthGoal === 'power'
         : step === S.setup && isStrength && strengthSetupPhase === 'focus'
@@ -1327,7 +1354,48 @@ export default function NewProgramScreen() {
           </WizardStepShell>
         )}
 
-        {step === S.setup && isCalis && (
+        {step === S.setup && isCalis && calisPhase === 'area' && (
+          <WizardStepShell resetKey="calis-area">
+            <Body style={[{ marginTop: 8, marginBottom: spacing.sm }, styles.bodyOnHero]}>
+              Choisis la zone à travailler. Tu peux aussi cibler des muscles précis : l’algorithme adapte alors toutes les séances.
+            </Body>
+            {CALIS_SCOPE_OPTIONS.map((opt) => (
+              <WizardOptionCard
+                key={opt.id}
+                title={opt.label}
+                subtitle={opt.desc}
+                selected={calisScope === opt.id}
+                onPress={() => setCalisScope(opt.id)}
+                accent={colors.accent}
+                tone="hero"
+              />
+            ))}
+            <Body style={[{ marginTop: spacing.md, marginBottom: spacing.xs, fontWeight: '800' }, styles.bodyOnHero]}>
+              Cible précise (facultatif)
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {CALIS_TARGET_OPTIONS.map((t) => (
+                <WizardPill
+                  key={t.id}
+                  label={t.label}
+                  selected={calisTargets.includes(t.id)}
+                  onPress={() =>
+                    setCalisTargets((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : [...cur, t.id]))
+                  }
+                  accent={colors.accent}
+                  tone="hero"
+                />
+              ))}
+            </View>
+            {calisTargets.length > 0 ? (
+              <Muted style={[{ marginTop: spacing.sm }, styles.mutedOnHero]}>
+                Toutes tes séances travailleront : {calisTargets.map((id) => CALIS_TARGET_OPTIONS.find((o) => o.id === id)!.label.toLowerCase()).join(' + ')}.
+              </Muted>
+            ) : null}
+          </WizardStepShell>
+        )}
+
+        {step === S.setup && isCalis && calisPhase === 'goal' && (
           <WizardStepShell resetKey="calis-goal">
             <Body style={[{ marginTop: 8, marginBottom: spacing.md }, styles.bodyOnHero]}>
               Choisis un objectif, puis touche « Continuer ».

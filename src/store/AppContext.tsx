@@ -51,7 +51,7 @@ import {
   updateBanisterPlus,
 } from '../engines/banisterPlus';
 import { predictSessionRpe } from '../engines/sessionPrediction';
-import { upsertSleepNight, removeSleepNight, computeSleepStreak, sleepNightsLogged } from '../engines/sleepCalendar';
+import { upsertSleepNight, removeSleepNight, computeSleepStreak, sleepNightsLogged, toLocalDateIso } from '../engines/sleepCalendar';
 import {
   applySleepAdaptiveToWorkout,
   decideSleepAdaptiveAction,
@@ -256,6 +256,8 @@ type Action =
   | { type: 'DISMISS_RPE' }
   | { type: 'MOVE_WORKOUT'; id: string; newDate: string }
   | { type: 'REMOVE_WORKOUT'; id: string }
+  /** Séance ajoutée à la main (bibliothèque / séance rapide) : à faire tout de suite ou un autre jour. */
+  | { type: 'ADD_WORKOUT'; workout: PlannedWorkout }
   | { type: 'UPDATE_WORKOUT'; id: string; patch: Partial<PlannedWorkout> }
   | { type: 'SET_PLAN'; plan: PlannedWorkout[] }
   | { type: 'REFRESH_REMINDERS' }
@@ -2137,6 +2139,13 @@ export function reduceAppState(state: AppState, action: Action): AppState {
           w.id === action.id ? { ...w, date: action.newDate } : w,
         ),
       };
+    case 'ADD_WORKOUT': {
+      if (state.plan.some((w) => w.id === action.workout.id)) return state;
+      const plan = [...state.plan, action.workout].sort(
+        (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
+      );
+      return { ...state, plan };
+    }
     case 'REMOVE_WORKOUT':
       return {
         ...state,
@@ -2821,11 +2830,14 @@ export function useApp() {
 }
 
 export function todayWorkout(plan: PlannedWorkout[]): PlannedWorkout | undefined {
-  const d = new Date().toISOString().slice(0, 10);
+  // Date LOCALE (et non UTC) : après minuit la « séance du jour » doit déjà être celle du nouveau jour.
+  const d = toLocalDateIso(new Date());
   const today = plan.filter((w) => w.date === d);
   if (today.length === 0) return undefined;
+  // Les séances rapides (adHoc) ne masquent jamais la séance prévue par le plan.
   return (
-    today.find((w) => w.discipline !== 'rest' && !w.lockedRest) ??
+    today.find((w) => w.discipline !== 'rest' && !w.lockedRest && !w.adHoc) ??
+    today.find((w) => !w.adHoc) ??
     today[0]
   );
 }
@@ -2835,10 +2847,10 @@ export function nextTrainingWorkout(
   plan: PlannedWorkout[],
   fromIso?: string,
 ): PlannedWorkout | undefined {
-  const d = fromIso ?? new Date().toISOString().slice(0, 10);
+  const d = fromIso ?? toLocalDateIso(new Date());
   return (
     plan
-      .filter((w) => w.date >= d && w.discipline !== 'rest')
+      .filter((w) => w.date >= d && w.discipline !== 'rest' && !w.adHoc)
       .sort((a, b) => a.date.localeCompare(b.date))[0] ?? undefined
   );
 }

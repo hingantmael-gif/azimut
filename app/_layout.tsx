@@ -144,6 +144,7 @@ function AppShell() {
             <Stack.Screen name="badges" options={{ title: 'Badges' }} />
             <Stack.Screen name="activities" options={{ title: 'Activités' }} />
             <Stack.Screen name="programs" options={{ title: 'Programmes' }} />
+            <Stack.Screen name="library" options={{ title: 'Séances' }} />
             <Stack.Screen name="calisthenics" options={{ title: 'Callisthénie' }} />
             <Stack.Screen name="recovery" options={{ title: 'Récupération' }} />
             <Stack.Screen name="nutrition" options={{ title: 'Nutrition' }} />

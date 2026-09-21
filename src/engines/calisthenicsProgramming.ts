@@ -38,6 +38,35 @@ export const CALISTHENICS_GOAL_OPTIONS: Array<{
 
 type MovementPattern = 'push' | 'pull' | 'legs' | 'core' | 'skill';
 
+/** Zone du corps travaillée : tout le corps, le haut ou le bas. */
+export type CalisScope = 'full' | 'upper' | 'lower';
+/** Cible précise (plusieurs possibles) : quand elle est choisie, elle prime sur la zone. */
+export type CalisTarget = 'abs' | 'back' | 'arms' | 'legs' | 'chest';
+
+export const CALIS_SCOPE_OPTIONS: Array<{ id: CalisScope; label: string; desc: string }> = [
+  { id: 'full', label: 'Ensemble du corps', desc: 'Pousser, tirer, jambes, abdos : tout est travaillé' },
+  { id: 'upper', label: 'Haut du corps', desc: 'Pectoraux, épaules, dos, bras, abdos' },
+  { id: 'lower', label: 'Bas du corps', desc: 'Cuisses, fessiers, mollets' },
+];
+
+export const CALIS_TARGET_OPTIONS: Array<{ id: CalisTarget; label: string }> = [
+  { id: 'abs', label: 'Abdos' },
+  { id: 'back', label: 'Dos' },
+  { id: 'arms', label: 'Bras' },
+  { id: 'legs', label: 'Jambes' },
+  { id: 'chest', label: 'Pectoraux & épaules' },
+];
+
+export function parseCalisScope(raw?: string | null): CalisScope {
+  return raw === 'upper' || raw === 'lower' ? raw : 'full';
+}
+
+export function parseCalisTargets(raw?: string[] | string | null): CalisTarget[] {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
+  const ok = new Set<string>(CALIS_TARGET_OPTIONS.map((t) => t.id));
+  return list.map((x) => x.trim()).filter((x): x is CalisTarget => ok.has(x));
+}
+
 export type CalisExerciseId =
   | 'pushup'
   | 'pike_pushup'
@@ -48,12 +77,32 @@ export type CalisExerciseId =
   | 'lunge'
   | 'plank'
   | 'hollow'
-  | 'scapular';
+  | 'scapular'
+  | 'wide_pushup'
+  | 'diamond_pushup'
+  | 'chinup'
+  | 'leg_raise'
+  | 'crunch'
+  | 'bicycle'
+  | 'dead_bug'
+  | 'mountain_climber'
+  | 'side_plank'
+  | 'superman'
+  | 'bird_dog'
+  | 'bulgarian'
+  | 'glute_bridge'
+  | 'calf_raise'
+  | 'wall_sit'
+  | 'jump_squat'
+  | 'single_leg_rdl'
+  | 'hanging_knee_raise';
 
 type CalisExercise = {
   id: CalisExerciseId;
   name: string;
   pattern: MovementPattern;
+  /** Muscles ciblés (sert aux séances « abdos », « dos », « bras »…). */
+  targets?: CalisTarget[];
   /** true = séries chronométrées (jamais en « reps ») */
   isometric?: boolean;
   cue: string;
@@ -65,6 +114,7 @@ type CalisExercise = {
 const LIBRARY: CalisExercise[] = [
   {
     id: 'pushup',
+    targets: ['chest', 'arms'],
     name: 'Pompes',
     pattern: 'push',
     cue: 'Corps gainé, coudes ~45°, poitrine près du sol, poussée contrôlée.',
@@ -73,6 +123,7 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'pike_pushup',
+    targets: ['chest', 'arms'],
     name: 'Pompes pike',
     pattern: 'push',
     cue: 'Bassin haut, tête entre les mains — travail d’épaules type développé.',
@@ -81,6 +132,7 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'dip',
+    targets: ['arms', 'chest'],
     name: 'Dips (barres ou banc)',
     pattern: 'push',
     cue: 'Épaules basses, descendre ~90° aux coudes, remonter sans se balancer.',
@@ -89,6 +141,7 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'pullup',
+    targets: ['back', 'arms'],
     name: 'Tractions',
     pattern: 'pull',
     cue: 'Omoplates engagées, menton au-dessus de la barre, descente contrôlée.',
@@ -97,24 +150,28 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'row',
+    targets: ['back'],
     name: 'Rowings australiens',
     pattern: 'pull',
     cue: 'Corps gainé sous la barre, poitrine vers la barre, dos serré.',
   },
   {
     id: 'squat',
+    targets: ['legs'],
     name: 'Squats poids du corps',
     pattern: 'legs',
     cue: 'Pieds largeur d’épaules, genoux dans l’axe, hanches sous les genoux si mobilité OK.',
   },
   {
     id: 'lunge',
+    targets: ['legs'],
     name: 'Fentes arrière',
     pattern: 'legs',
     cue: 'Grand pas en arrière, genou avant stable, torse droit — alterne chaque jambe.',
   },
   {
     id: 'plank',
+    targets: ['abs'],
     name: 'Planche avant',
     pattern: 'core',
     isometric: true,
@@ -122,6 +179,7 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'hollow',
+    targets: ['abs'],
     name: 'Hollow body hold',
     pattern: 'core',
     isometric: true,
@@ -131,10 +189,154 @@ const LIBRARY: CalisExercise[] = [
   },
   {
     id: 'scapular',
+    targets: ['back'],
     name: 'Suspension active (scapular pulls)',
     pattern: 'skill',
     isometric: true,
     cue: 'Pendu bras tendus : baisse / lève les omoplates sans plier les coudes.',
+  },
+  {
+    id: 'wide_pushup',
+    targets: ['chest'],
+    name: 'Pompes larges',
+    pattern: 'push',
+    cue: 'Mains plus larges que les épaules, poitrine vers le sol, corps gainé.',
+    beginnerName: 'Pompes larges sur les genoux',
+    beginnerCue: 'Genoux au sol, dos droit, descente contrôlée.',
+  },
+  {
+    id: 'diamond_pushup',
+    targets: ['arms', 'chest'],
+    name: 'Pompes diamant',
+    pattern: 'push',
+    cue: 'Mains rapprochées sous la poitrine, coudes le long du corps — triceps.',
+    beginnerName: 'Pompes diamant sur les genoux',
+    beginnerCue: 'Genoux au sol, mains rapprochées, amplitude courte.',
+  },
+  {
+    id: 'chinup',
+    targets: ['arms', 'back'],
+    name: 'Tractions supination',
+    pattern: 'pull',
+    cue: 'Paumes vers toi, tire les coudes vers les hanches — biceps et dos.',
+    beginnerName: 'Tractions supination négatives',
+    beginnerCue: 'Monte en sautant, descends en 3–5 s.',
+  },
+  {
+    id: 'leg_raise',
+    targets: ['abs'],
+    name: 'Relevés de jambes',
+    pattern: 'core',
+    cue: 'Allongé, bas du dos plaqué, monte les jambes tendues sans cambrer.',
+    beginnerName: 'Relevés de genoux allongé',
+    beginnerCue: 'Genoux pliés, bas du dos plaqué, mouvement lent.',
+  },
+  {
+    id: 'crunch',
+    targets: ['abs'],
+    name: 'Crunchs',
+    pattern: 'core',
+    cue: 'Enroule le buste, menton neutre, expire en montant.',
+  },
+  {
+    id: 'bicycle',
+    targets: ['abs'],
+    name: 'Crunchs bicyclette',
+    pattern: 'core',
+    cue: 'Coude vers le genou opposé, jambe tendue, rythme contrôlé.',
+  },
+  {
+    id: 'dead_bug',
+    targets: ['abs'],
+    name: 'Dead bug',
+    pattern: 'core',
+    cue: 'Bras et jambe opposés descendent lentement, bas du dos collé au sol.',
+  },
+  {
+    id: 'mountain_climber',
+    targets: ['abs', 'legs'],
+    name: 'Mountain climbers',
+    pattern: 'core',
+    cue: 'En appui sur les mains, ramène les genoux vers la poitrine, hanches basses.',
+  },
+  {
+    id: 'side_plank',
+    targets: ['abs'],
+    name: 'Planche latérale',
+    pattern: 'core',
+    isometric: true,
+    cue: 'Sur l’avant-bras, corps aligné, hanches hautes — change de côté à chaque série.',
+  },
+  {
+    id: 'superman',
+    targets: ['back'],
+    name: 'Superman (extension du dos)',
+    pattern: 'core',
+    isometric: true,
+    cue: 'À plat ventre, bras et jambes décollés, regard au sol — serre le dos et les fessiers.',
+  },
+  {
+    id: 'bird_dog',
+    targets: ['back', 'abs'],
+    name: 'Bird dog',
+    pattern: 'core',
+    cue: 'À quatre pattes, tends bras et jambe opposés, dos plat, sans balancer.',
+  },
+  {
+    id: 'bulgarian',
+    targets: ['legs'],
+    name: 'Fentes bulgares',
+    pattern: 'legs',
+    cue: 'Pied arrière sur un banc, descends verticalement, genou avant dans l’axe.',
+    beginnerName: 'Fentes avant statiques',
+    beginnerCue: 'Un grand pas, descends droit, remonte en poussant sur le talon.',
+  },
+  {
+    id: 'glute_bridge',
+    targets: ['legs'],
+    name: 'Pont fessier',
+    pattern: 'legs',
+    cue: 'Allongé, pousse les hanches vers le haut, serre les fessiers 1 s en haut.',
+  },
+  {
+    id: 'calf_raise',
+    targets: ['legs'],
+    name: 'Montées sur pointes',
+    pattern: 'legs',
+    cue: 'Monte haut sur la pointe des pieds, descends lentement, sur une marche si possible.',
+  },
+  {
+    id: 'wall_sit',
+    targets: ['legs'],
+    name: 'Chaise contre le mur',
+    pattern: 'legs',
+    isometric: true,
+    cue: 'Dos plaqué au mur, cuisses parallèles au sol, genoux à 90°.',
+  },
+  {
+    id: 'jump_squat',
+    targets: ['legs'],
+    name: 'Squats sautés',
+    pattern: 'legs',
+    cue: 'Descends en squat, saute, réceptionne en souplesse.',
+    beginnerName: 'Montées sur pointes dynamiques',
+    beginnerCue: 'Petits rebonds sur les pointes, genoux souples.',
+  },
+  {
+    id: 'single_leg_rdl',
+    targets: ['legs', 'back'],
+    name: 'Soulevé de terre une jambe',
+    pattern: 'legs',
+    cue: 'Bascule le buste en levant une jambe derrière, dos plat, hanches alignées.',
+  },
+  {
+    id: 'hanging_knee_raise',
+    targets: ['abs'],
+    name: 'Relevés de genoux suspendu',
+    pattern: 'core',
+    cue: 'Pendu à la barre, monte les genoux vers la poitrine sans balancer.',
+    beginnerName: 'Relevés de genoux allongé',
+    beginnerCue: 'Genoux pliés, bas du dos plaqué, mouvement lent.',
   },
 ];
 
@@ -301,59 +503,114 @@ function prescriptionFor(
   };
 }
 
+const REGION_OF_PATTERN: Record<MovementPattern, 'upper' | 'lower' | 'core'> = {
+  push: 'upper',
+  pull: 'upper',
+  legs: 'lower',
+  core: 'core',
+  skill: 'upper',
+};
+
+/** Séances ciblées : exercices de la bibliothèque qui travaillent les cibles demandées, en alternant. */
+function targetedSlot(
+  scope: CalisScope,
+  targets: CalisTarget[],
+  slotIndex: number,
+  level: AthleticLevel,
+): { title: string; ids: CalisExerciseId[] } {
+  const want = level === 'debutant' ? 4 : level === 'intermediaire' ? 5 : 6;
+  const allowed = LIBRARY.filter((e) => {
+    const region = REGION_OF_PATTERN[e.pattern];
+    if (scope === 'upper') return region !== 'lower';
+    if (scope === 'lower') return region !== 'upper';
+    return true;
+  });
+  // Une liste par cible : les exercices dont c'est la cible PRINCIPALE d'abord.
+  const lists = targets.map((t) => {
+    const hits = allowed.filter((e) => e.targets?.includes(t));
+    const primary = hits.filter((e) => e.targets![0] === t);
+    const rest = hits.filter((e) => e.targets![0] !== t);
+    return [...primary, ...rest].map((e) => e.id);
+  });
+  const chosen: CalisExerciseId[] = [];
+  // Rotation : chaque séance de la semaine commence à un endroit différent de la liste.
+  let round = 0;
+  while (chosen.length < want && round < 12) {
+    for (let t = 0; t < lists.length && chosen.length < want; t++) {
+      const list = lists[t]!;
+      if (list.length === 0) continue;
+      const id = list[(slotIndex * 2 + round) % list.length]!;
+      if (!chosen.includes(id)) chosen.push(id);
+    }
+    round += 1;
+  }
+  const label = targets.map((t) => CALIS_TARGET_OPTIONS.find((o) => o.id === t)!.label).join(' + ');
+  return { title: label, ids: chosen };
+}
+
 /** Ordre fixe type coach callisthénie — pas un tirage aléatoire. */
 function sessionExerciseIds(
   trainingDaysCount: number,
   slotIndex: number,
   level: AthleticLevel,
+  scope: CalisScope = 'full',
+  targets: CalisTarget[] = [],
+  weekIndex = 0,
 ): { title: string; ids: CalisExerciseId[] } {
   const trim = (ids: CalisExerciseId[]): CalisExerciseId[] => {
     if (level === 'debutant') return ids.slice(0, 4);
     if (level === 'intermediaire') return ids.slice(0, 5);
     return ids;
   };
+  // Gainage qui change d'une semaine à l'autre : les abdos ne se réduisent pas à la planche.
+  const CORE_ROT: CalisExerciseId[] = ['plank', 'leg_raise', 'hollow', 'side_plank', 'dead_bug'];
+  const core = (k = 0) => CORE_ROT[(weekIndex + slotIndex + k) % CORE_ROT.length]!;
+
+  if (targets.length > 0) return targetedSlot(scope, targets, slotIndex, level);
+
+  if (scope === 'upper') {
+    const mod = slotIndex % 3;
+    if (mod === 0) return { title: 'Haut du corps · poussée', ids: trim(['pushup', 'dip', 'pike_pushup', 'diamond_pushup', core()]) };
+    if (mod === 1) return { title: 'Haut du corps · tirage', ids: trim(['pullup', 'row', 'chinup', 'scapular', 'superman']) };
+    return { title: 'Haut du corps · bras & abdos', ids: trim(['diamond_pushup', 'chinup', 'dip', 'row', core(1)]) };
+  }
+
+  if (scope === 'lower') {
+    const mod = slotIndex % 3;
+    if (mod === 0) return { title: 'Jambes · force', ids: trim(['squat', 'bulgarian', 'lunge', 'calf_raise', 'wall_sit']) };
+    if (mod === 1) return { title: 'Jambes · fessiers', ids: trim(['glute_bridge', 'single_leg_rdl', 'lunge', 'jump_squat', 'calf_raise']) };
+    return { title: 'Jambes + gainage', ids: trim(['squat', 'glute_bridge', 'wall_sit', core(), 'leg_raise']) };
+  }
 
   if (trainingDaysCount <= 2) {
-    return {
-      title: 'Full body',
-      ids: trim(['pushup', 'row', 'squat', 'plank', 'lunge', 'hollow']),
-    };
+    // Full body A / B : chaque séance couvre pousser, tirer, jambes ET abdos.
+    return slotIndex % 2 === 0
+      ? { title: 'Full body', ids: trim(['pushup', 'row', 'squat', core(), 'lunge', 'hollow']) }
+      : { title: 'Full body', ids: trim(['pullup', 'dip', 'bulgarian', 'leg_raise', 'glute_bridge', 'superman']) };
   }
 
   if (trainingDaysCount === 3) {
     const mod = slotIndex % 3;
     if (mod === 0) {
-      return {
-        title: 'Push + core',
-        ids: trim(['pushup', 'dip', 'pike_pushup', 'plank', 'hollow']),
-      };
+      return { title: 'Push + core', ids: trim(['pushup', 'dip', 'pike_pushup', 'diamond_pushup', core()]) };
     }
     if (mod === 1) {
-      return {
-        title: 'Pull + core',
-        ids: trim(['pullup', 'row', 'scapular', 'hollow', 'plank']),
-      };
+      return { title: 'Pull + core', ids: trim(['pullup', 'row', 'chinup', 'superman', core(1)]) };
     }
-    return {
-      title: 'Legs + core',
-      ids: trim(['squat', 'lunge', 'plank', 'hollow', 'row']),
-    };
+    return { title: 'Legs + core', ids: trim(['squat', 'lunge', 'glute_bridge', core(), 'calf_raise']) };
   }
 
   const mod = slotIndex % 4;
   if (mod === 0) {
-    return { title: 'Poussées', ids: trim(['pushup', 'dip', 'pike_pushup', 'plank', 'hollow']) };
+    return { title: 'Poussées', ids: trim(['pushup', 'dip', 'pike_pushup', 'diamond_pushup', core()]) };
   }
   if (mod === 1) {
-    return { title: 'Tirages', ids: trim(['pullup', 'row', 'scapular', 'hollow', 'plank']) };
+    return { title: 'Tirages', ids: trim(['pullup', 'row', 'chinup', 'scapular', 'superman']) };
   }
   if (mod === 2) {
-    return { title: 'Jambes', ids: trim(['squat', 'lunge', 'plank', 'hollow']) };
+    return { title: 'Jambes', ids: trim(['squat', 'bulgarian', 'glute_bridge', 'calf_raise', 'wall_sit']) };
   }
-  return {
-    title: 'Technique & gainage',
-    ids: trim(['scapular', 'pike_pushup', 'row', 'hollow', 'plank']),
-  };
+  return { title: 'Bras & abdos', ids: trim(['diamond_pushup', 'chinup', 'leg_raise', 'side_plank', 'crunch']) };
 }
 
 function resolveExercise(
@@ -392,8 +649,19 @@ export function buildCalisthenicsSession(opts: {
   block: PeriodizationBlock;
   goal: CalisthenicsGoalFocus;
   weekIndex?: number;
+  /** Zone du corps (défaut : ensemble). */
+  scope?: CalisScope;
+  /** Cibles précises (abdos, dos, bras, jambes, pectoraux) : priment sur la zone. */
+  targets?: CalisTarget[];
 }): PlannedWorkout {
-  const slot = sessionExerciseIds(opts.trainingDaysCount, opts.slotIndex, opts.level);
+  const slot = sessionExerciseIds(
+    opts.trainingDaysCount,
+    opts.slotIndex,
+    opts.level,
+    opts.scope ?? 'full',
+    opts.targets ?? [],
+    opts.weekIndex ?? 0,
+  );
   // Légère rotation semaine : permute le 1er accessoire, garde le pattern
   const rotatedIds =
     (opts.weekIndex ?? 0) % 2 === 1 && slot.ids.length >= 3

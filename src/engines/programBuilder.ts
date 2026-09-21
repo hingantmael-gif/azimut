@@ -44,6 +44,9 @@ export interface ProgramBuildInput {
   strengthGoal?: string;
   /** Musculation : upper | lower | full */
   strengthBodyFocus?: string;
+  /** Callisthénie : zone (full | upper | lower) et cibles précises (abs, back, arms, legs, chest). */
+  calisScope?: string;
+  calisTargets?: string[];
   /** Musculation : pas de date limite — calendrier glissant */
   ongoing?: boolean;
   /** Intention course (démarrage doux si start / reprise) */
@@ -211,6 +214,8 @@ function resolveTemplate(input: ProgramBuildInput): {
     strengthEquipment: input.strengthEquipment,
     strengthGoal: input.strengthGoal,
     strengthBodyFocus: input.strengthBodyFocus,
+    calisScope: input.calisScope,
+    calisTargets: input.calisTargets,
     connectGarmin: true,
     connectStrava: true,
     runIntent: input.runIntent,

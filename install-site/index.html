@@ -160,8 +160,8 @@
   <body>
     <main>
       <div class="card">
-        <img class="icon" src="./icon.png" width="104" height="104" alt="Logo Azimut" />
-        <h1>Azimut</h1>
+        <img class="icon" src="./icon.png" width="104" height="104" alt="Logo Mova" />
+        <h1>Mova</h1>
         <p class="tag">Application Android native</p>
         <p class="pitch" id="pitch">
           Une vraie app (icône logo Mova sur l’écran d’accueil) — pas un site web.
@@ -175,12 +175,12 @@
         </div>
 
         <div class="qr-wrap" id="qrWrap">
-          <img id="qr" alt="QR code vers la page d’installation Azimut" width="180" height="180" />
+          <img id="qr" alt="QR code vers la page d’installation Mova" width="180" height="180" />
         </div>
 
         <ol class="steps" id="androidSteps">
           <li data-n="1">Appuie sur <strong>Installer l’application</strong> (ci-dessous).</li>
-          <li data-n="2">Quand le téléchargement est fini, ouvre la notification ou le dossier Téléchargements → <strong>azimut.apk</strong>.</li>
+          <li data-n="2">Quand le téléchargement est fini, ouvre la notification ou le dossier Téléchargements → <strong>mova.apk</strong>.</li>
           <li data-n="3">Si Android demande, autorise l’installation (sources inconnues / Chrome).</li>
           <li data-n="4">Appuie sur <strong>Installer</strong> — l’icône <strong>logo Mova</strong> apparaît sur l’écran d’accueil.</li>
         </ol>
@@ -196,7 +196,7 @@
     </main>
     <script>
       (function () {
-        var APK = 'https://github.com/hingantmael-gif/azimut/releases/latest/download/azimut.apk';
+        var APK = '/mova.apk';
         var PAGE = location.origin + '/';
         var ua = navigator.userAgent || '';
         var isAndroid = /Android/i.test(ua);
@@ -222,13 +222,13 @@
           copy.hidden = false;
           btn.textContent = 'Ouvrir le téléchargement (réservé Android)';
           pitch.textContent =
-            'Pour avoir Azimut sur l’écran d’accueil, installe-la depuis un téléphone Android.';
+            'Pour avoir Mova sur l’écran d’accueil, installe-la depuis un téléphone Android.';
           hint.textContent =
             'Sur PC, le fichier .apk ne peut pas s’ouvrir. Utilise le QR ou copie le lien vers ton téléphone.';
         } else if (isIOS) {
           btn.hidden = true;
           pitch.textContent =
-            'Azimut est une application Android pour l’instant (hors App Store Apple).';
+            'Mova est une application Android pour l’instant (hors App Store Apple).';
           hint.textContent =
             'Ouvre cette page sur un téléphone Android pour installer l’app avec l’icône logo.';
         } else if (isAndroid) {
@@ -236,7 +236,7 @@
           pitch.textContent =
             'Sur ce téléphone : télécharge, puis installe. L’icône logo Mova arrive sur l’écran d’accueil.';
           hint.textContent =
-            'Après Installer, cherche « Azimut » dans tes applications — ce n’est plus un site.';
+            'Après Installer, cherche « Mova » dans tes applications — ce n’est plus un site.';
         }
 
         copy.addEventListener('click', function () {
@@ -256,7 +256,7 @@
           if (isIOS) return;
           if (isPC) {
             hint.innerHTML =
-              'Le téléchargement PC ne permet <strong>pas</strong> d’installer Azimut. Scanne le QR avec ton Android, puis appuie sur Installer <em>sur le téléphone</em>.';
+              'Le téléchargement PC ne permet <strong>pas</strong> d’installer Mova. Scanne le QR avec ton Android, puis appuie sur Installer <em>sur le téléphone</em>.';
             // Still allow download if they insist (USB transfer to phone later)
             window.open(APK, '_blank');
             return;
@@ -264,13 +264,13 @@
           btn.setAttribute('aria-busy', 'true');
           btn.textContent = 'Téléchargement…';
           hint.textContent =
-            'Téléchargement en cours… Ensuite : notification ou Téléchargements → azimut.apk → Installer.';
+            'Téléchargement en cours… Ensuite : notification ou Téléchargements → mova.apk → Installer.';
           window.location.href = APK;
           setTimeout(function () {
             btn.removeAttribute('aria-busy');
             btn.textContent = 'Installer l’application';
             hint.textContent =
-              'Fichier reçu ? Ouvre azimut.apk → Installer. L’icône logo Mova apparaît ensuite.';
+              'Fichier reçu ? Ouvre mova.apk → Installer. L’icône logo Mova apparaît ensuite.';
           }, 2500);
         });
       })();

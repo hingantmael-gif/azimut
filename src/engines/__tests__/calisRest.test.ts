@@ -70,3 +70,47 @@ describe('visuels d’exercices : jamais une photo trompeuse', () => {
     expect(visualKeyFor('Rowing australien')).toBe('row');
   });
 });
+
+describe('callisthénie : zone du corps et cibles', () => {
+  const base = { date: '2026-09-21', trainingDaysCount: 3, level: 'intermediaire' as never, block: 'base' as never, goal: 'hypertrophy' as const };
+  const ids = (w: { steps: Array<{ label?: string }> }) =>
+    w.steps.map((s) => /^\[calis:([a-z_]+)/.exec(s.label ?? '')?.[1]).filter((x): x is string => Boolean(x));
+
+  it('cible « abdos » : tous les exercices travaillent les abdos, et les séances diffèrent', () => {
+    const abs = new Set(['plank', 'hollow', 'leg_raise', 'crunch', 'bicycle', 'dead_bug', 'mountain_climber', 'side_plank', 'hanging_knee_raise', 'bird_dog']);
+    const a = ids(buildCalisthenicsSession({ ...base, slotIndex: 0, targets: ['abs'] }));
+    const b = ids(buildCalisthenicsSession({ ...base, slotIndex: 1, targets: ['abs'] }));
+    expect(a.length).toBeGreaterThanOrEqual(4);
+    expect(a.every((x) => abs.has(x))).toBe(true);
+    expect(a.join()).not.toBe(b.join());
+  });
+
+  it('zone « bas du corps » : aucun exercice du haut du corps', () => {
+    const upper = new Set(['pushup', 'pike_pushup', 'dip', 'pullup', 'row', 'scapular', 'wide_pushup', 'diamond_pushup', 'chinup']);
+    for (let slot = 0; slot < 3; slot++) {
+      const x = ids(buildCalisthenicsSession({ ...base, slotIndex: slot, scope: 'lower' }));
+      expect(x.some((id) => upper.has(id))).toBe(false);
+    }
+  });
+
+  it('zone « haut du corps » : aucun exercice de jambes', () => {
+    const legs = new Set(['squat', 'lunge', 'bulgarian', 'glute_bridge', 'calf_raise', 'wall_sit', 'jump_squat', 'single_leg_rdl']);
+    for (let slot = 0; slot < 3; slot++) {
+      const x = ids(buildCalisthenicsSession({ ...base, slotIndex: slot, scope: 'upper' }));
+      expect(x.some((id) => legs.has(id))).toBe(false);
+    }
+  });
+
+  it('ensemble du corps sur 3 séances : pousser, tirer, jambes et abdos sont tous présents', () => {
+    const all = [0, 1, 2].flatMap((slot) => ids(buildCalisthenicsSession({ ...base, slotIndex: slot })));
+    for (const group of [['pushup'], ['pullup', 'row'], ['squat', 'lunge'], ['plank', 'hollow', 'leg_raise', 'side_plank', 'dead_bug']]) {
+      expect(group.some((g) => all.includes(g))).toBe(true);
+    }
+  });
+
+  it('plusieurs cibles : dos + bras', () => {
+    const x = ids(buildCalisthenicsSession({ ...base, slotIndex: 0, targets: ['back', 'arms'] }));
+    expect(x.some((id) => ['pullup', 'row', 'scapular', 'superman', 'chinup', 'bird_dog', 'single_leg_rdl'].includes(id))).toBe(true);
+    expect(x.some((id) => ['dip', 'chinup', 'diamond_pushup', 'pullup'].includes(id))).toBe(true);
+  });
+});

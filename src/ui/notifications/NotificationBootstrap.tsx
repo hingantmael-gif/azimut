@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toLocalDateIso } from '../../engines/sleepCalendar';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../Text';
 import { useRouter } from 'expo-router';
@@ -62,13 +63,14 @@ export function NotificationBootstrap() {
   const username = state.profile.username;
 
   const today = todayWorkout(state.plan);
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = toLocalDateIso(new Date());
   const sessionDoneToday = state.activities.some(
     (a) => a.startDate.slice(0, 10) === todayIso,
   );
 
   const preCopy = useMemo(() => {
-    if (!today || today.discipline === 'rest') return null;
+    // Pas de rappel « dans 2 h » pour une séance rapide lancée à l'instant.
+    if (!today || today.discipline === 'rest' || today.adHoc) return null;
     return generateReminderCopy({
       sessionTitle: today.title,
       formTsb: state.banister.formTsb,

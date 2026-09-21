@@ -438,7 +438,7 @@ export function buildLiveActivity(opts: {
   const avgPace =
     dist > 20 ? Math.round((moving / (dist / 1000))) : undefined;
   return {
-    id: `azimut-live-${Date.now()}`,
+    id: `mova-live-${Date.now()}`,
     name: opts.workout.title,
     distanceM: Math.round(dist),
     elapsedSec: Math.round(opts.elapsedSec),

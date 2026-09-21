@@ -83,7 +83,7 @@ export default function ActivityDetailScreen() {
   }
   const gpsPoints = activity.streams?.latlng?.length ?? 0;
   const hasGps = gpsPoints >= 1;
-  const isLiveAzimut = activity.id.startsWith('azimut-live-');
+  const isLiveMova = (activity.id.startsWith('mova-live-') || activity.id.startsWith('azimut-live-'));
   const paceCompare = findSimilarPaceCompare(activity, state.activities);
   const vsPlanLearn = compareSessionVsPlan(activity, state.plan);
 
@@ -103,14 +103,14 @@ export default function ActivityDetailScreen() {
         height={hasGps ? 340 : 220}
         zoomControl={false}
         emptyLabel={
-          isLiveAzimut
+          isLiveMova
             ? 'Aucun point GPS enregistré pour cette sortie'
             : 'Pas de tracé GPS — stats ci-dessous'
         }
       />
       {!hasGps ? (
         <Text style={styles.gpsHint}>
-          {isLiveAzimut
+          {isLiveMova
             ? 'Le GPS n’a pas pu enregistrer de position. Distance et chrono restent ci-dessous.'
             : 'Pas de tracé GPS dans ce fichier — les stats restent disponibles ci-dessous.'}
         </Text>

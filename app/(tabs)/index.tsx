@@ -11,9 +11,11 @@ import {
 } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { mixHex, radii, readableOn, rgba, spacing } from '../../src/theme/tokens';
+import { toLocalDateIso } from '../../src/engines/sleepCalendar';
 import { InstallBanner } from '../../src/ui/home/InstallBanner';
 import { TopProgramsStrip } from '../../src/ui/program/TopProgramsStrip';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Card, StatTile } from '../../src/ui/primitives';
 import { DISCIPLINE_META, supportsActivityImport } from '../../src/constants/disciplines';
 import { summarizeWorkout } from '../../src/engines/workoutPresentation';
@@ -56,7 +58,7 @@ export default function HomeDashboard() {
   /** Session-local — stress vie pour readiness (non persisté). */
   const [lifeStress01, setLifeStress01] = useState<number | null>(null);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = toLocalDateIso(new Date());
   const today = todayWorkout(state.plan);
   const isTodayTraining = Boolean(today && today.discipline !== 'rest');
   const focus = isTodayTraining
@@ -179,9 +181,10 @@ export default function HomeDashboard() {
       };
     }
     if (!isTodayTraining && focus) {
+      // Pas de séance aujourd'hui : on propose d'en faire une TOUT DE SUITE plutôt que d'attendre.
       return {
-        label: 'Voir le plan',
-        onPress: () => router.navigate('/calendar'),
+        label: 'Faire une séance maintenant',
+        onPress: () => router.push('/library?quick=1'),
         color: discColor,
       };
     }
@@ -271,47 +274,6 @@ export default function HomeDashboard() {
             </Text>
           </View>
         </FadeInUp>
-
-        <DayStatusBanner
-          adjustment={adjustment}
-          onPress={() => router.navigate('/(tabs)/body')}
-        />
-
-        {adjustment.whyLine ? <WhyCoachExpand whyLine={adjustment.whyLine} /> : null}
-
-        <View style={styles.homeChipRow}>
-          <DayStateChip
-            confidence={twin.modelConfidence}
-            lifeStress01={lifeStress01}
-            onToggleStress={() =>
-              setLifeStress01((prev) => (prev == null ? 0.65 : null))
-            }
-          />
-        </View>
-
-        <HomeStatusStack
-          sentinel={sentinel}
-          coachBanner={
-            (adjustment.kind === 'adapt' || adjustment.kind === 'rest') &&
-            adjustment.coachMessage
-              ? {
-                  title: 'Ajustement coach',
-                  body: adjustment.coachMessage,
-                  onPress: () =>
-                    adjustment.kind === 'adapt'
-                      ? applyScaledAndGo(adjustment.volumeFactor || 0.7)
-                      : setTimeModeOpen(true),
-                }
-              : state.coachAdaptations?.[0]
-                ? {
-                    title: learnInsight ? 'Apprentissage' : 'Ajustement coach',
-                    body: state.coachAdaptations[0],
-                    onPress: () => router.navigate('/calendar'),
-                    pulse: learnPulse,
-                  }
-                : null
-          }
-        />
 
         <FadeInUp delay={100}>
           <LinearGradient
@@ -491,6 +453,9 @@ export default function HomeDashboard() {
                     <Text style={[styles.primaryBtnText, { color: readableOn(primary.color) }]}>{primary.label}</Text>
                   </PressableScale>
                 </SoftPulse>
+                <PressableScale variant="subtle" style={styles.secondaryLink} onPress={() => router.navigate('/calendar')}>
+                  <Text style={styles.secondaryLinkText}>Voir le plan</Text>
+                </PressableScale>
               </>
             ) : (
               <>
@@ -508,14 +473,82 @@ export default function HomeDashboard() {
                 <PressableScale
                   variant="subtle"
                   style={styles.secondaryLink}
-                  onPress={() => router.navigate('/(tabs)/record')}
+                  onPress={() => router.push('/library?quick=1')}
                 >
-                  <Text style={styles.secondaryLinkText}>Ou sortie libre</Text>
+                  <Text style={styles.secondaryLinkText}>Ou faire une séance maintenant</Text>
                 </PressableScale>
               </>
             )}
           </LinearGradient>
         </FadeInUp>
+
+        {/* Faire une séance TOUT DE SUITE, sans attendre le prochain jour du plan. */}
+        <View style={styles.quickRow}>
+          {(
+            [
+              { label: 'Rapide', sub: 'Selon ton temps', icon: 'flash', href: '/library?quick=1' },
+              { label: 'Séances', sub: 'Toute la biblio', icon: 'albums', href: '/library' },
+              { label: 'Sortie libre', sub: 'GPS', icon: 'navigate', href: '/(tabs)/record' },
+            ] as const
+          ).map((q) => (
+            <PressableScale
+              key={q.label}
+              variant="pop"
+              style={styles.quickTileWrap}
+              contentStyle={[styles.quickTile, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+              onPress={() => router.push(q.href as never)}
+              accessibilityLabel={q.label}
+            >
+              <View style={[styles.quickIcon, { backgroundColor: colors.accentLight }]}>
+                <Ionicons name={q.icon} size={18} color={colors.accent} />
+              </View>
+              <Text style={[styles.quickLabel, { color: colors.text }]} numberOfLines={1}>{q.label}</Text>
+              <Text style={[styles.quickSub, { color: colors.textMuted }]} numberOfLines={1}>{q.sub}</Text>
+            </PressableScale>
+          ))}
+        </View>
+
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>ÉTAT DU JOUR</Text>
+        <DayStatusBanner
+          adjustment={adjustment}
+          onPress={() => router.navigate('/(tabs)/body')}
+        />
+
+        {adjustment.whyLine ? <WhyCoachExpand whyLine={adjustment.whyLine} /> : null}
+
+        <View style={styles.homeChipRow}>
+          <DayStateChip
+            confidence={twin.modelConfidence}
+            lifeStress01={lifeStress01}
+            onToggleStress={() =>
+              setLifeStress01((prev) => (prev == null ? 0.65 : null))
+            }
+          />
+        </View>
+
+        <HomeStatusStack
+          sentinel={sentinel}
+          coachBanner={
+            (adjustment.kind === 'adapt' || adjustment.kind === 'rest') &&
+            adjustment.coachMessage
+              ? {
+                  title: 'Ajustement coach',
+                  body: adjustment.coachMessage,
+                  onPress: () =>
+                    adjustment.kind === 'adapt'
+                      ? applyScaledAndGo(adjustment.volumeFactor || 0.7)
+                      : setTimeModeOpen(true),
+                }
+              : state.coachAdaptations?.[0]
+                ? {
+                    title: learnInsight ? 'Apprentissage' : 'Ajustement coach',
+                    body: state.coachAdaptations[0],
+                    onPress: () => router.navigate('/calendar'),
+                    pulse: learnPulse,
+                  }
+                : null
+          }
+        />
 
         <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.sm }}>
           <InstallBanner />
@@ -722,6 +755,13 @@ function makeStyles(colors: ColorPalette) {
       color: colors.accent,
       fontSize: 13,
     },
+    quickRow: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm },
+    quickTileWrap: { flex: 1 },
+    quickTile: { borderRadius: radii.lg, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'flex-start', gap: 2 },
+    quickIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+    quickLabel: { fontSize: 12.5, fontWeight: '800' },
+    quickSub: { fontSize: 10.5 },
+    sectionKicker: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginHorizontal: spacing.md, marginTop: spacing.md },
     todayCard: {
       borderRadius: radii.xxl,
       padding: spacing.lg,

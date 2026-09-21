@@ -87,7 +87,7 @@ function isHoldExercise(name: string, calisId?: string | null): boolean {
  * Variantes de pompes / squats sans visuel exact : on préfère l'image neutre à une photo trompeuse
  * (une pompe pike n'est pas une pompe classique, une pompe déclinée non plus).
  */
-const VARIANT_WITHOUT_IMAGE = /pike|d[ée]clin|sur[ée]lev|archer|diamant|hindou|pseudo|pistol|sissy|explosi|claquée|une main|à un bras/i;
+const VARIANT_WITHOUT_IMAGE = /pike|d[ée]clin|sur[ée]lev|archer|diamant|larges?|hindou|pseudo|pistol|sissy|explosi|claquée|une main|à un bras|saut[ée]s?|jump|bulgare|lat[ée]rale/i;
 
 export function visualKeyFor(name: string, calisId?: string | null): GuidedVisualKey {
   if (calisId === 'pike_pushup') return 'generic';
@@ -101,7 +101,7 @@ export function visualKeyFor(name: string, calisId?: string | null): GuidedVisua
   if (calisId === 'row') return 'row';
 
   const n = name.toLowerCase();
-  if (/pompe|push.?up|squat|fente|lunge/.test(n) && VARIANT_WITHOUT_IMAGE.test(n)) return 'generic';
+  if (/pompe|push.?up|squat|fente|lunge|planche/.test(n) && VARIANT_WITHOUT_IMAGE.test(n)) return 'generic';
   if (/chaise|wall.?sit/.test(n)) return 'wallsit';
   if (/hollow/.test(n)) return 'hollow';
   if (/planche|gainage latéral|gainage/.test(n)) return 'plank';

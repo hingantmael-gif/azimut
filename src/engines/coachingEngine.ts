@@ -58,6 +58,8 @@ import {
 import {
   buildCalisthenicsSession,
   dedupeCalisthenicsPerDay,
+  parseCalisScope,
+  parseCalisTargets,
   parseCalisthenicsGoal,
 } from './calisthenicsProgramming';
 
@@ -537,6 +539,8 @@ function makeCalisthenics(
     trainingDaysCount?: number;
     calisthenicsGoal?: string;
     weekIndex?: number;
+    calisScope?: string;
+    calisTargets?: string[];
   },
 ): PlannedWorkout {
   return finalize(
@@ -548,6 +552,8 @@ function makeCalisthenics(
       block,
       goal: parseCalisthenicsGoal(opts?.calisthenicsGoal),
       weekIndex: opts?.weekIndex,
+      scope: parseCalisScope(opts?.calisScope),
+      targets: parseCalisTargets(opts?.calisTargets),
     }),
   );
 }
@@ -731,6 +737,8 @@ export function generateCoachedWeek(
           trainingDaysCount: days.length,
           calisthenicsGoal: answers.strengthGoal ?? answers.goal,
           weekIndex: opts.weekIndex,
+          calisScope: answers.calisScope,
+          calisTargets: answers.calisTargets,
         }),
       );
       continue;
@@ -873,3 +881,16 @@ export function generateCoachedWeek(
     )
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** Constructeurs de séances exposés à la bibliothèque / aux séances rapides (mêmes séances que les plans). */
+export const sessionBuilders = {
+  bikeEndurance: makeBikeEndurance,
+  bikeVo2: makeBikeVo2,
+  swimAerobic: makeSwimAerobic,
+  swimCss: makeSwimCss,
+  strength: makeStrength,
+  calisthenics: makeCalisthenics,
+  mobility: makeMobility,
+  ftpFromLevel: ftpWattsFromLevel,
+  swimPaceFromLevel: swimPaceSecPer100,
+};
