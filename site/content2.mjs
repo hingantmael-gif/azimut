@@ -265,6 +265,7 @@ export const GLOSSARY = [
 ];
 
 export const NEWS = [
+  ['Septembre 2026', 'Coach par algorithme mis en avant', 'Programme sur plusieurs mois, adaptation quotidienne au sommeil, à la HRV et à la charge, intensité réduite ou relevée : toutes les règles sont détaillées sur le site.'],
   ['Septembre 2026', 'Site vitrine, avis et outils gratuits', 'Nouveau site avec les captures de l’application, des calculateurs (VMA, allure, zones cardiaques, FTP, CSS), des guides et un espace pour donner ton avis.'],
   ['Septembre 2026', 'Personnalisation complète (Premium)', '12 thèmes, 20 fonds d’écran animés, couleurs libres, boutons, cartes, police et taille du texte. Les contrastes se corrigent automatiquement.'],
   ['Septembre 2026', 'Jauge d’allure en demi-cercle', 'Trois zones (rouge, vert, rouge) et un point qui suit ton allure en direct, mis à jour chaque seconde. Allure visée affichée en grand.'],

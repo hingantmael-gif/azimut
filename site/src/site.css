@@ -302,3 +302,14 @@ main > section:not(.hero) { content-visibility: auto; contain-intrinsic-size: au
 .toc a { text-decoration: none; font-weight: 800; font-size: .85rem; padding: 6px 12px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
 .toc a:hover { border-color: var(--mint); color: var(--mint); }
 table.plan-table td:first-child { white-space: nowrap; font-weight: 800; color: var(--text); }
+
+/* Frise de périodisation */
+.tls { display: grid; gap: 14px; }
+.tl { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.tl-title { font-weight: 800; margin-bottom: 10px; }
+.tl-bar { display: flex; height: 44px; border-radius: 12px; overflow: hidden; gap: 3px; }
+.tl-bar i { display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 800; font-size: .78rem; color: #04140f; white-space: nowrap; overflow: hidden; padding: 0 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 16px; color: var(--muted); font-weight: 700; font-size: .88rem; }
+.legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 8px; vertical-align: -2px; }
+.tablewrap td b { color: var(--text); }
+@media (max-width: 560px) { .tl-bar i { font-size: .66rem; padding: 0 3px; } }

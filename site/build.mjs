@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { API, HOME, OUT, SITE, asset, buildAssets, crumbs, ctaBanner, faqBlock, faqLd, icon, installBlock, page, phone, rawIcon, reviewsBlock, squeeze } from './lib.mjs';
 import { FAQ_HOME, GUIDES, SPORT_PAGES } from './content.mjs';
 import { BACKGROUNDS, GLOSSARY, MORE_GUIDES, NEWS, THEMES } from './content2.mjs';
+import { buildCoachPages, coachLanding } from './coach.mjs';
 
 const OUTDIR = OUT;
 const out = (name, html) => {
@@ -47,11 +48,15 @@ const APP_LD = {
   description: 'Application de coaching multi-sport : plans d’entraînement personnalisés, tracker GPS avec jauge d’allure, séance rapide, récupération et communauté.',
   offers: [{ '@type': 'Offer', price: '0', priceCurrency: 'EUR', name: 'Mova gratuit' }, { '@type': 'Offer', price: '9.99', priceCurrency: 'EUR', name: 'Mova Premium (mensuel)' }],
   screenshot: ['accueil', 'jauge-allure', 'plan-entrainement', 'seance-rapide-intensite', 'theme-aurore'].map((s) => `${SITE}${asset(`img:${s}`)}`),
-  featureList: ['Plans d’entraînement personnalisés', 'Tracker GPS avec jauge d’allure en temps réel', 'Séance rapide : type, durée, intensité', 'Export des séances au format FIT pour montre Garmin', 'Suivi de la récupération et de la charge', 'Prédiction de chrono', 'Classement et badges', 'Personnalisation complète (Premium)'],
+  featureList: ['Programme sur plusieurs mois jusqu’à la course', 'Séance adaptée chaque jour au sommeil, à la HRV et à la charge', 'Intensité réduite ou relevée automatiquement', 'Plans d’entraînement personnalisés', 'Tracker GPS avec jauge d’allure en temps réel', 'Séance rapide : type, durée, intensité', 'Export des séances au format FIT pour montre Garmin', 'Suivi de la récupération et de la charge', 'Prédiction de chrono', 'Classement et badges', 'Personnalisation complète (Premium)'],
 };
 const ORG_LD = { '@context': 'https://schema.org', '@type': 'Organization', name: 'Mova', url: HOME, logo: `${SITE}/icon-512.png` };
 
 const ALT = {
+  'coach-adapte': 'Accueil Mova un mauvais jour : séance du jour à alléger, bouton Voir l’ajustement, readiness 65 % et sommeil faible',
+  'coach-explique': 'Explication du coach : readiness 65 %, version allégée à environ 70 % et raison affichée',
+  'sommeil-score': 'Écran sommeil de Mova : score de 47 sur 100, nuit médiocre, planning du sommeil',
+  'recuperation-hrv': 'Suivi de la récupération avec sommeil, HRV et prêt à s’entraîner',
   accueil: 'Écran d’accueil de Mova avec la séance du jour',
   'plan-entrainement': 'Calendrier du plan d’entraînement dans Mova',
   'seance-rapide-sport': 'Séance rapide : choix du sport',
@@ -75,6 +80,9 @@ const ALT = {
 const A = (k) => ALT[k];
 
 const SHOTS = [
+  ['coach-adapte', 'Coach du jour', 'Séance allégée après une mauvaise nuit'],
+  ['coach-explique', 'Pourquoi ?', 'La raison de chaque décision'],
+  ['sommeil-score', 'Sommeil', 'Score, planning, moyenne'],
   ['accueil', 'Accueil', 'Ta séance du jour d’un coup d’œil'],
   ['plan-entrainement', 'Plan', 'Le calendrier de ton programme'],
   ['seance-rapide-type', 'Séance rapide', 'Choisis le type de séance'],
@@ -109,12 +117,14 @@ ${withHead ? '<div class="head center reveal"><span class="eyebrow">Tarifs</span
 
 // ————————————————————— Page d'accueil du site —————————————————————
 const FEATURES = [
+  ['moon', 'Il lit ton sommeil et ta forme', 'Sommeil médiocre : séance raccourcie d’environ 45 % et allure ralentie. HRV en baisse, charge trop haute : Mova lève le pied. Bien reposé : elle relève le rythme.', '/coach-personnel.html'],
+  ['calendar', 'Programme sur plusieurs mois', 'De 3 à 36 semaines jusqu’à ta course : base, travail spécifique, semaines d’allègement, affûtage, sorties longues progressives.', '/programme-course-plusieurs-mois.html'],
+  ['sparkle', 'Il apprend de toi', 'Ton jumeau numérique affine ta récupération, ta sensibilité à la HRV et au sommeil, et la charge que tu tolères.', '/coach-personnel.html#jumeau'],
   ['target', 'Allures calculées sur toi', 'Chrono, VMA, volume ou activités importées : Mova déduit tes zones (footing, seuil, VMA…) et les applique à chaque séance.', '/application-course-a-pied.html'],
-  ['calendar', 'Plans personnalisés', '5 km, 10 km, semi, marathon, vélo, natation, triathlon, Ironman, musculation : un calendrier adapté à ton niveau et à tes jours libres.', '/plan-entrainement-10km.html'],
   ['bolt', 'Séance rapide', 'Sport, type de séance, durée, intensité : ta séance prête en 10 secondes, avec contrôle de cohérence.', '/seance-rapide.html'],
   ['pin', 'Tracker GPS et jauge d’allure', 'Un demi-cercle vert et rouge et un point qui suit ton allure en direct. Départ instantané, pause auto, coach vocal.', '/tracker-gps-course.html'],
   ['watch', 'Envoi sur ta montre', 'Séances structurées au format FIT pour Garmin, et formats adaptés aux autres marques.', '/envoyer-seance-montre-garmin.html'],
-  ['moon', 'Récupération & sommeil', 'Charge d’entraînement, forme, sommeil, étirements et mobilité guidés avec chronomètre.', '/guide-recuperation-sommeil.html'],
+  ['heart', 'Récupération guidée', 'Étirements, mobilité et foam rolling avec chronomètre pour récupérer entre les séances.', '/guide-recuperation-sommeil.html'],
   ['trend', 'Prédiction de course', 'Estime tes chronos sur 5 km, 10 km, semi et marathon d’après tes performances.', '/calculateur-allure.html'],
   ['award', 'Rangs, badges, classement', 'De Bronze à Champion : gagne de l’XP à chaque séance, débloque des badges, défie la communauté.', '/fonctionnalites.html#motivation'],
   ['users', 'Communauté', 'Fil d’actualité, clubs, partage de séances et de programmes, athlètes certifiés.', '/fonctionnalites.html#motivation'],
@@ -144,30 +154,32 @@ const USE_CASES = [
 const landing = `
 <section class="hero"><div class="wrap"><div class="grid">
 <div>
-<span class="eyebrow">Coaching multi-sport · Gratuit</span>
-<h1>Ton coach de <em>course à pied, vélo, natation</em> et musculation</h1>
-<p class="lead">Mova génère ton plan d’entraînement personnalisé, règle tes allures sur ton vrai niveau, te guide en direct avec le tracker GPS et suit ta récupération. Une seule application pour tous tes sports.</p>
-<div class="cta-row"><a class="btn primary" href="/">${rawIcon('bolt')} Commencer gratuitement</a><a class="btn ghost" href="#captures">Voir l’application</a></div>
-${trust(['Gratuit', 'Sans carte bancaire', 'Prêt en 2 minutes', 'iPhone & Android'])}
+<span class="eyebrow">Coach personnel par algorithme · Gratuit</span>
+<h1>Ton <em>coach personnel</em> qui adapte chaque séance à ta forme du jour</h1>
+<p class="lead">Mova prépare ta course sur plusieurs mois, puis règle chaque séance sur ton sommeil, ta récupération et ta charge : mauvaise nuit, l’intensité baisse ; grande forme, elle monte. Course, vélo, natation, triathlon, musculation.</p>
+<div class="cta-row"><a class="btn primary" href="/">${rawIcon('bolt')} Créer mon programme gratuitement</a><a class="btn ghost" href="/coach-personnel.html">Voir comment il s’adapte</a></div>
+${trust(['Programme jusqu’à 36 semaines', 'Adapté à ton sommeil et à ta HRV', 'Gratuit, sans carte bancaire', 'iPhone & Android'])}
 </div>
 <div class="hero-shots">
-${phone('seance-rapide-intensite', A('seance-rapide-intensite'), 'p1')}
-${phone('accueil', A('accueil'), 'p2', true)}
-${phone('jauge-allure', A('jauge-allure'), 'p3')}
+${phone('coach-explique', A('coach-explique'), 'p1')}
+${phone('coach-adapte', A('coach-adapte'), 'p2', true)}
+${phone('sommeil-score', A('sommeil-score'), 'p3')}
 </div>
 </div>
 <div class="stats reveal">
+<div class="stat"><b data-count="36">36</b><span>semaines de programme maximum</span></div>
+<div class="stat"><b data-count="6">6</b><span>signaux de forme analysés</span></div>
+<div class="stat"><b data-count="16">16</b><span>groupes musculaires suivis</span></div>
 <div class="stat"><b data-count="7">7</b><span>disciplines couvertes</span></div>
-<div class="stat"><b data-count="4">4</b><span>plans : 5 km, 10 km, semi, marathon</span></div>
-<div class="stat"><b data-count="20">20</b><span>fonds animés (Premium)</span></div>
-<div class="stat"><b data-count="12">12</b><span>thèmes de couleurs (Premium)</span></div>
 </div></div></section>
 
-<section class="alt"><div class="wrap">
-<div class="head center reveal"><span class="eyebrow">Pourquoi Mova</span><h2>Fini les plans génériques et les allures au hasard</h2><p>La plupart des plans téléchargés ignorent ton niveau réel. Mova part de toi.</p></div>
+${coachLanding(A)}
+
+<section><div class="wrap">
+<div class="head center reveal"><span class="eyebrow">Pourquoi Mova</span><h2>Fini les plans figés qui ignorent ta nuit</h2><p>Un plan téléchargé ne sait pas que tu as mal dormi, que tu es fatigué ou que tu progresses vite. Mova, si.</p></div>
 <div class="versus">
-<div class="col bad reveal"><h3>Sans Mova</h3><ul>${li(['Un plan PDF identique pour tout le monde', 'Des allures trop lentes ou trop rapides, faute de repères', 'Une application par sport, des données éparpillées', 'Une séance improvisée quand le temps manque', 'Aucun suivi de la fatigue ni de la récupération'], 'bad')}</ul></div>
-<div class="col good reveal"><h3>Avec Mova</h3><ul>${li(['Un plan bâti sur ton objectif, tes jours et ton niveau', 'Des allures calculées sur ton chrono, ta VMA ou ta FTP', 'Course, vélo, natation, musculation : un seul calendrier', 'Séance rapide : type, durée et intensité en 4 touches', 'Charge, forme, sommeil et conseils de récupération'])}</ul></div>
+<div class="col bad reveal"><h3>Sans Mova</h3><ul>${li(['Un plan PDF identique pour tout le monde, qui ne bouge jamais', 'Tu t’entraînes de la même façon après une mauvaise nuit', 'Des allures trop lentes ou trop rapides, faute de repères', 'Une application par sport, des données éparpillées', 'Aucun suivi de la fatigue, jusqu’à la blessure'], 'bad')}</ul></div>
+<div class="col good reveal"><h3>Avec Mova</h3><ul>${li(['Un programme sur des mois, bâti sur ton objectif et ta date de course', 'Intensité réduite si ton sommeil est mauvais, relevée quand tu es prêt', 'Des allures calculées sur ton chrono, ta VMA ou ta FTP, recalées à chaque progrès', 'Course, vélo, natation, musculation : un seul calendrier', 'Charge, HRV, forme et récupération surveillées chaque jour'])}</ul></div>
 </div>
 </div></section>
 
@@ -251,9 +263,9 @@ out(
   'index.html',
   page({
     slug: 'index.html',
-    title: 'Mova : application de coaching multi-sport (course, vélo, natation)',
-    description: 'Mova génère ton plan d’entraînement personnalisé (5 km, 10 km, semi, marathon, triathlon, musculation), règle tes allures, te guide avec un tracker GPS et suit ta récupération. Gratuit, sur iPhone et Android.',
-    keywords: ['application course à pied', 'plan d’entraînement running', 'coach sportif application', 'application triathlon', 'entraînement vélo watts', 'application natation', 'plan marathon', 'plan 10 km', 'calcul VMA', 'tracker GPS running', 'séance de sport rapide', 'musculation callisthénie', 'coaching multi-sport', 'application sport gratuite', 'Mova'],
+    title: 'Mova : coach personnel qui adapte ton entraînement à ta forme',
+    description: 'Programme sur plusieurs mois pour ta course, intensité réduite si ton sommeil est mauvais, relevée quand tu es prêt. Coach par algorithme : course, vélo, natation, triathlon, musculation.',
+    keywords: ['coach sportif personnalisé', 'plan d’entraînement adaptatif', 'entraînement adapté au sommeil', 'programme d’entraînement plusieurs mois', 'application course à pied', 'plan d’entraînement running', 'coach sportif application', 'application triathlon', 'entraînement vélo watts', 'application natation', 'plan marathon', 'plan 10 km', 'calcul VMA', 'tracker GPS running', 'séance de sport rapide', 'musculation callisthénie', 'coaching multi-sport', 'application sport gratuite', 'Mova'],
     body: landing,
     preload: 'accueil',
     reviews: true,
@@ -261,6 +273,7 @@ out(
   }),
 );
 reg('index.html', '1.0', 'weekly');
+buildCoachPages({ out, reg, A, APP_LD });
 
 // ————————————————————— Fonctionnalités —————————————————————
 {
@@ -272,6 +285,7 @@ reg('index.html', '1.0', 'weekly');
 <section class="hero" style="padding-top:30px;padding-bottom:10px"><div class="wrap"><span class="eyebrow">Fonctionnalités</span><h1 style="font-size:clamp(2rem,4.8vw,3.4rem)">Tout ce que fait <em>Mova</em>, en détail</h1>
 <p class="lead">Planifier, s’entraîner, récupérer, se motiver, personnaliser : voici les fonctions de l’application, avec des captures réelles.</p>
 <div class="cta-row"><a class="btn primary" href="/">Essayer gratuitement</a><a class="btn ghost" href="/tarifs.html">Voir les tarifs</a></div></div></section>
+${block('adaptation', 'Adapter', 'Un coach qui ajuste chaque séance', 'Chaque matin, Mova lit ton sommeil, ta HRV, ta charge et ton ressenti. Elle réduit l’intensité quand il le faut, la relève quand tu es prêt, et te dit pourquoi.', ['Sommeil médiocre : séance raccourcie d’environ 45 % et allure ralentie', 'HRV en baisse, charge trop haute, surcharge détectée : allègement ou repos', 'Bien reposé et séances faciles : allure relevée, zones recalées', 'Jumeau numérique : elle apprend tes seuils à chaque séance'], ['coach-adapte', 'coach-explique'], true)}
 ${block('planification', 'Planifier', 'Un plan qui part de toi', 'Objectif, niveau, jours disponibles, date de course : Mova construit un calendrier de séances détaillées et le fait évoluer avec toi.', ['Plans 5 km, 10 km, semi, marathon, vélo, natation, triathlon, Ironman, musculation', 'Allures et zones calculées sur ton chrono, ta VMA, ta FTP ou ton allure au 100 m', 'Périodisation, semaines d’allègement et affûtage', 'Prédiction de chrono d’après tes performances'], ['plan-entrainement', 'prediction-course'], false)}
 ${block('seance', 'S’entraîner', 'Séance rapide et tracker GPS', 'Peu de temps ou envie de liberté ? Compose une séance en 4 touches puis lance-la avec le tracker GPS et sa jauge d’allure.', ['Séance rapide : sport, type, durée (avec contrôle de cohérence), intensité', 'Jauge d’allure en demi-cercle, allure visée en grand, étapes détaillées', 'Départ instantané, pause automatique, coach vocal', 'Mode séance libre avec carte et données réglables'], ['seance-rapide-intensite', 'jauge-allure'], true)}
 ${block('recuperation', 'Récupérer', 'Charge, forme et récupération', 'Pour progresser sans t’épuiser, Mova suit ta charge d’entraînement et te propose des séances de récupération guidées.', ['État de forme, charge et fatigue', 'Étirements, mobilité et foam rolling avec chronomètre', 'Suivi du sommeil (avec une montre compatible)', 'Conseils adaptés à ta fatigue'], ['recuperation', 'seances-recuperation'], false)}
@@ -517,7 +531,7 @@ ${installBlock()}`;
 // ————————————————————— Plan du site —————————————————————
 {
   const groups = [
-    ['Mova', [['Accueil du site', '/apropos.html'], ['Fonctionnalités', '/fonctionnalites.html'], ['Tarifs', '/tarifs.html'], ['Personnaliser l’application', '/personnalisation.html'], ['Nouveautés', '/nouveautes.html'], ['Avis', '/avis.html'], ['Installer l’application', '/telecharger.html'], ['Ouvrir l’application web', '/']]],
+    ['Mova', [['Accueil du site', '/apropos.html'], ['Coach personnel', '/coach-personnel.html'], ['Programme sur plusieurs mois', '/programme-course-plusieurs-mois.html'], ['Sommeil et entraînement', '/sommeil-readiness-entrainement.html'], ['Fonctionnalités', '/fonctionnalites.html'], ['Tarifs', '/tarifs.html'], ['Personnaliser l’application', '/personnalisation.html'], ['Nouveautés', '/nouveautes.html'], ['Avis', '/avis.html'], ['Installer l’application', '/telecharger.html'], ['Ouvrir l’application web', '/']]],
     ['Disciplines & plans', SPORT_PAGES.map((p) => [p.crumb, `/${p.slug}`])],
     ['Outils', [['Tous les outils', '/outils.html'], ['Calculateur de VMA', '/calculateur-vma.html'], ['Calculateur d’allure', '/calculateur-allure.html'], ['Zones cardiaques', '/calculateur-frequence-cardiaque.html'], ['Calculateur de FTP', '/calculateur-ftp.html'], ['Calculateur de CSS', '/calculateur-css-natation.html']]],
     ['Guides', [['Tous les guides', '/guides.html'], ['Glossaire', '/glossaire.html'], ...ALL_GUIDES.map((g) => [g.crumb, `/${g.slug}`])]],

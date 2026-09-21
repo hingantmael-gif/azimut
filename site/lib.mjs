@@ -139,9 +139,9 @@ export function phone(img, alt, cls = '', eager = false) {
 }
 
 export const NAV = [
+  ['Coach personnel', '/coach-personnel.html'],
   ['Fonctionnalités', '/fonctionnalites.html'],
   ['Disciplines', '/apropos.html#disciplines'],
-  ['Personnaliser', '/personnalisation.html'],
   ['Outils', '/outils.html'],
   ['Tarifs', '/tarifs.html'],
   ['Avis', '/avis.html'],
@@ -156,12 +156,13 @@ const FOOT_SPORTS = [
   ['Callisthénie', '/application-callisthenie.html'],
 ];
 const FOOT_PLANS = [
+  ['Coach personnel', '/coach-personnel.html'],
+  ['Programme sur plusieurs mois', '/programme-course-plusieurs-mois.html'],
+  ['Sommeil et entraînement', '/sommeil-readiness-entrainement.html'],
   ['Courir 5 km (débutant)', '/plan-course-debutant.html'],
-  ['Plan 5 km', '/plan-entrainement-5km.html'],
   ['Plan 10 km', '/plan-entrainement-10km.html'],
   ['Plan semi-marathon', '/plan-entrainement-semi-marathon.html'],
   ['Plan marathon', '/plan-entrainement-marathon.html'],
-  ['Séance rapide', '/seance-rapide.html'],
 ];
 const FOOT_TOOLS = [
   ['Tous les outils', '/outils.html'],
@@ -196,7 +197,7 @@ ${col('Plans & séances', FOOT_PLANS)}
 ${col('Outils & guides', FOOT_TOOLS)}
 </div>
 <div class="fgrid" style="margin-top:26px">
-${col('Mova', [['Fonctionnalités', '/fonctionnalites.html'], ['Personnaliser l’app', '/personnalisation.html'], ['Tarifs', '/tarifs.html'], ['Nouveautés', '/nouveautes.html']])}
+${col('Mova', [['Fonctionnalités', '/fonctionnalites.html'], ['Personnaliser l’app', '/personnalisation.html'], ['Séance rapide', '/seance-rapide.html'], ['Tarifs', '/tarifs.html'], ['Nouveautés', '/nouveautes.html']])}
 ${col('Communauté', [['Avis des utilisateurs', '/avis.html'], ['Donner mon avis', '/avis.html#donner-mon-avis'], ['Installer l’application', '/telecharger.html'], ['Ouvrir l’app web', '/']])}
 ${col('Légal', [['Confidentialité', '/privacy.html'], ['Conditions d’utilisation', '/terms.html'], ['Plan du site', '/plan-du-site.html']])}
 </div>
