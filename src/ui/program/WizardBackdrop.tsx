@@ -89,7 +89,7 @@ export function DriftBlob({
 /**
  * Fond unique de l'assistant « Nouveau programme », à toutes les étapes :
  * encre nuit + (photo du programme fondue, si choisie) + halos qui dérivent + courbes de
- * niveau mobiles, teintés selon le sport. Le mouvement est volontairement lisible.
+ * niveau mobiles. Fond NEUTRE de l'assistant (il ne change pas selon la discipline choisie). Le mouvement est volontairement lisible.
  */
 export function WizardBackdrop({
   sport,
@@ -103,8 +103,6 @@ export function WizardBackdrop({
   const { width, height } = useWindowDimensions();
   const w = Math.max(320, width);
   const h = Math.max(560, height);
-  // Couleur de marque constante : le sport ne change pas la teinte du fond (jamais de violet / ambre).
-  void sport;
   const [accent, accent2] = tintForSport('run');
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -131,9 +129,9 @@ export function WizardBackdrop({
           />
         </>
       ) : null}
-      <DriftBlob size={w * 1.5} color={accent} opacity={0.4} dx={46} dy={34} ms={7600} style={{ top: -h * 0.12, left: -w * 0.55 }} />
-      <DriftBlob size={w * 1.4} color={accent2} opacity={0.36} dx={40} dy={44} ms={9200} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
-      <DriftBlob size={w * 1.1} color={accent} opacity={0.22} dx={34} dy={30} ms={11000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
+      <DriftBlob size={w * 1.5} color={accent} opacity={0.4} dx={64} dy={48} ms={6000} style={{ top: -h * 0.12, left: -w * 0.55 }} />
+      <DriftBlob size={w * 1.4} color={accent2} opacity={0.36} dx={56} dy={62} ms={7400} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
+      <DriftBlob size={w * 1.1} color={accent} opacity={0.22} dx={48} dy={42} ms={9000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
       <AuroraPattern
         kind={patternForSport(sport)}
         color={accent}

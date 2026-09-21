@@ -16,17 +16,14 @@ type Ctx = {
   setOverride: (sport: string | null) => void;
 };
 
-/** Teinte fixe du fond de l'app. */
-const BRAND_TINT: SportTint = tintForSport('run');
-
 const AmbientContext = createContext<Ctx>({
   sport: 'run',
-  tint: BRAND_TINT,
+  tint: tintForSport('run'),
   setOverride: () => undefined,
 });
 
 /**
- * Sport « ambiant » : choisit le MOTIF du fond animé (la couleur, elle, ne change pas).
+ * Sport « ambiant » : couleur, motif et animation du fond de toute l'app.
  * Par défaut = sport du programme actif (sinon séance du jour) ; un écran peut le remplacer
  * (assistant de programme, détail d'activité…) via `useAmbientSport`.
  */
@@ -34,15 +31,16 @@ export function AmbientSportProvider({ children }: { children: ReactNode }) {
   const { state } = useApp();
   const [override, setOverride] = useState<string | null>(null);
 
-  const fallback = sportKeyFrom(
-    state.profile.activeProgram?.sportCategory ?? todayWorkout(state.plan)?.discipline,
-  );
-  const sport = override ?? fallback;
+  // Fond « neutre » (jade + courbes) tant qu'aucun sport n'a été choisi ; ensuite : la DERNIÈRE discipline choisie
+  // (inscription, programme créé, séance lancée) donne sa couleur, son motif et son animation à tous les écrans.
+  const program = state.profile.activeProgram?.sportCategory;
+  const sport =
+    override ??
+    state.profile.lastSport ??
+    (program ? (program === 'other' ? 'calisthenics' : sportKeyFrom(program)) : 'run');
 
   const value = useMemo<Ctx>(
-    // La COULEUR du fond reste celle de la marque (jade / cyan) quel que soit le sport : seul le MOTIF change
-    // (courbes, traînées, vagues, hexagones…). Un fond violet pour la muscu jurait avec le reste de l'app.
-    () => ({ sport, tint: BRAND_TINT, setOverride }),
+    () => ({ sport, tint: tintForSport(sport), setOverride }),
     [sport],
   );
   return <AmbientContext.Provider value={value}>{children}</AmbientContext.Provider>;
@@ -58,13 +56,6 @@ export function useAmbientSportKey(): string {
 }
 
 /** Impose le sport de l'écran affiché (pris en compte tant que l'écran est au premier plan). */
-export function useAmbientSport(sport?: string | null) {
-  const { setOverride } = useContext(AmbientContext);
-  const focused = useIsFocused();
-  const key = sport ? sportKeyFrom(sport) : null;
-  useEffect(() => {
-    if (!key || !focused) return;
-    setOverride(key);
-    return () => setOverride(null);
-  }, [key, focused, setOverride]);
+export function useAmbientSport(_sport?: string | null) {
+  // Volontairement sans effet : le fond suit la DERNIÈRE discipline choisie, identique sur tous les écrans.
 }

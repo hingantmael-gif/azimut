@@ -552,6 +552,8 @@ export interface AthleteProfile {
    * - paid = abonnement payant (non modifiable par l’owner)
    */
   premiumSource?: 'owner' | 'gift' | 'paid' | null;
+  /** Dernière discipline choisie (inscription, programme créé, séance lancée) : pilote couleur + motif du fond partout. */
+  lastSport?: string;
   /**
    * État d’abonnement store (Play / App Store / sync API).
    * Source de vérité pour grace_period / on_hold / canceled.

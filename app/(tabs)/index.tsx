@@ -12,6 +12,7 @@ import {
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { mixHex, radii, readableOn, rgba, spacing } from '../../src/theme/tokens';
 import { toLocalDateIso } from '../../src/engines/sleepCalendar';
+import { FloatingActionButton } from '../../src/ui/FloatingActionButton';
 import { TopProgramsStrip } from '../../src/ui/program/TopProgramsStrip';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -630,6 +631,7 @@ export default function HomeDashboard() {
           </PressableScale>
         ) : null}
       </AppScrollView>
+      <FloatingActionButton />
     </View>
   );
 }

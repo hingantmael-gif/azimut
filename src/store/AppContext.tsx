@@ -51,6 +51,8 @@ import {
   updateBanisterPlus,
 } from '../engines/banisterPlus';
 import { predictSessionRpe } from '../engines/sessionPrediction';
+import { sportKeyFrom } from '../theme/sportTints';
+import { isCalisthenicsWorkout } from '../engines/calisthenicsProgramming';
 import { upsertSleepNight, removeSleepNight, computeSleepStreak, sleepNightsLogged, toLocalDateIso } from '../engines/sleepCalendar';
 import {
   applySleepAdaptiveToWorkout,
@@ -2596,8 +2598,30 @@ export function reduceAppState(state: AppState, action: Action): AppState {
   }
 }
 
+/** Discipline « ambiante » retenue après une action : la dernière discipline que l'utilisateur a choisie. */
+export function lastSportAfter(next: AppState, action: Action): string | undefined {
+  const key = (raw?: string | null, calis = false) => {
+    if (!raw || raw === 'rest') return undefined;
+    if (calis || raw === 'other') return 'calisthenics';
+    return sportKeyFrom(raw);
+  };
+  switch (action.type) {
+    case 'COMPLETE_ONBOARDING':
+      return key(action.answers.sportCategory);
+    case 'CREATE_PROGRAM':
+      return key(next.profile.activeProgram?.sportCategory);
+    case 'ADD_WORKOUT':
+      return key(action.workout.discipline, isCalisthenicsWorkout(action.workout));
+    default:
+      return undefined;
+  }
+}
+
 function reducer(state: AppState, action: Action): AppState {
-  return ensureOwnerAccountInvariants(reduceAppState(state, action));
+  let next = reduceAppState(state, action);
+  const sport = next === state ? undefined : lastSportAfter(next, action);
+  if (sport && next.profile.lastSport !== sport) next = { ...next, profile: { ...next.profile, lastSport: sport } };
+  return ensureOwnerAccountInvariants(next);
 }
 
 const initial: AppState = emptyState();

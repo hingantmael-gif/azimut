@@ -364,7 +364,7 @@ export function AuroraPattern({
     <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={onLayout}>
       {props ? (
         kind === 'topo' ? (
-          <TopoLines color={color} height={props.h} seed={seed} lines={14} opacity={0.24 * opacity} drift={2.2} paused={paused} />
+          <TopoLines color={color} height={props.h} seed={seed} lines={14} opacity={0.3 * opacity} drift={3.6} paused={paused} />
         ) : kind === 'speed' ? (
           <Speed {...props} />
         ) : kind === 'waves' ? (

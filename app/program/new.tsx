@@ -1853,9 +1853,8 @@ export default function NewProgramScreen() {
           router.replace('/(tabs)/calendar');
         }}
       />
-      <WizardBackdrop
-        sport={sport}
-      />
+      {/* Fond neutre : il ne change pas pendant qu'on choisit une discipline. */}
+      <WizardBackdrop sport={null} />
       <View style={styles.heroContent}>{wizardBody}</View>
     </View>
   );

@@ -36,7 +36,7 @@ function AuroraLayer({ tint, sport, isDark, paused }: { tint: SportTint; sport: 
   const [c1, c2] = tint;
   const base = atmosphereBase(tint, isDark);
   // En clair les halos sont plus présents (ils sont la couleur de l'écran), en sombre plus lumineux.
-  const o = isDark ? { a: 0.4, b: 0.36, c: 0.22 } : { a: 0.5, b: 0.44, c: 0.32 };
+  const o = isDark ? { a: 0.46, b: 0.42, c: 0.28 } : { a: 0.55, b: 0.5, c: 0.38 };
   const ink = (c: string) => (isDark ? c : mixHex(c, '#0B1220', 0.4));
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -47,16 +47,16 @@ function AuroraLayer({ tint, sport, isDark, paused }: { tint: SportTint; sport: 
         end={{ x: 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <DriftBlob paused={paused} size={w * 1.5} color={c1} opacity={o.a} dx={46} dy={34} ms={7600} style={{ top: -h * 0.12, left: -w * 0.55 }} />
-      <DriftBlob paused={paused} size={w * 1.4} color={c2} opacity={o.b} dx={40} dy={44} ms={9200} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
-      <DriftBlob paused={paused} size={w * 1.1} color={c1} opacity={o.c} dx={34} dy={30} ms={11000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
+      <DriftBlob paused={paused} size={w * 1.5} color={c1} opacity={o.a} dx={64} dy={48} ms={6000} style={{ top: -h * 0.12, left: -w * 0.55 }} />
+      <DriftBlob paused={paused} size={w * 1.4} color={c2} opacity={o.b} dx={56} dy={62} ms={7400} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
+      <DriftBlob paused={paused} size={w * 1.1} color={c1} opacity={o.c} dx={48} dy={42} ms={9000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
       {/* Motif propre à la discipline : courbes (course), traînées (vélo), vagues (natation)… */}
       <AuroraPattern
         kind={patternForSport(sport)}
         color={ink(c1)}
         color2={ink(c2)}
         seed={seedFromString(`mova-ambient-${sport}`)}
-        opacity={isDark ? 0.8 : 0.7}
+        opacity={isDark ? 1 : 0.95}
         paused={paused}
       />
       {/* Voile en haut : titres et barres de progression restent parfaitement lisibles. */}
