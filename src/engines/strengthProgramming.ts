@@ -526,6 +526,19 @@ function equipmentMatchScore(
   return score;
 }
 
+/** Bras : alterne biceps et triceps pour ne jamais faire une séance « bras » sans triceps (ni sans biceps). */
+function alternateBicepsTriceps(list: ExerciseDef[]): ExerciseDef[] {
+  const isTriceps = (e: ExerciseDef) => /triceps|dips|prise serrée|diamant/i.test(e.name);
+  const triceps = list.filter(isTriceps);
+  const others = list.filter((e) => !isTriceps(e));
+  const out: ExerciseDef[] = [];
+  for (let i = 0; i < Math.max(triceps.length, others.length); i++) {
+    if (others[i]) out.push(others[i]!);
+    if (triceps[i]) out.push(triceps[i]!);
+  }
+  return out;
+}
+
 function rotatePool<T>(items: T[], seed: number): T[] {
   if (items.length <= 1) return items;
   const offset = ((seed % items.length) + items.length) % items.length;
@@ -554,7 +567,7 @@ function exercisesFor(
       pool.filter((e) => e.muscles.includes(m)),
       rotationSeed + m.length * 3,
     );
-    byMuscle.set(m, list);
+    byMuscle.set(m, m === 'arms' ? alternateBicepsTriceps(list) : list);
   }
 
   const picked: ExerciseDef[] = [];

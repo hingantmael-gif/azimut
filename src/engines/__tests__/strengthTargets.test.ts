@@ -38,6 +38,23 @@ describe('musculation : cibles précises', () => {
     expect(n).not.toMatch(/squat|presse|planche/i);
   });
 
+  it('bras : biceps ET triceps, avec chaque matériel', () => {
+    for (const eq of EQUIPMENTS) {
+      const n = names(eq, ['arms']).join(' | ');
+      expect(n, eq.join()).toMatch(/triceps|dips|prise serrée|diamant/i);
+      expect(n, eq.join()).toMatch(/curl|tractions? supination/i);
+    }
+  });
+
+  it('dos + bras : chaque matériel donne du dos ET du triceps ET du biceps', () => {
+    for (const eq of EQUIPMENTS) {
+      const n = names(eq, ['back', 'arms']).join(' | ');
+      expect(n, eq.join()).toMatch(/rowing|tirage|traction|oiseau|pull-apart|face pull/i);
+      expect(n, eq.join()).toMatch(/triceps|dips|prise serrée|diamant/i);
+      expect(n, eq.join()).toMatch(/curl|tractions? supination/i);
+    }
+  });
+
   it('deux séances de la semaine ne sont pas identiques', () => {
     const a = names(['gym'], ['back'], 0).join();
     const b = names(['gym'], ['back'], 1).join();
