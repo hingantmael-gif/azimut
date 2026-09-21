@@ -338,7 +338,7 @@ export function LivePaceGauge({
     const id = setInterval(() => {
       const t = latest.current;
       const prev = shownRef.current;
-      const next = t == null ? null : prev == null ? t : prev + (t - prev) * 0.4;
+      const next = t == null ? null : prev == null ? t : prev + (t - prev) * 0.6;
       shownRef.current = next;
       setShown(next);
     }, 1000);
@@ -1305,7 +1305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   gaugeDotRing: {
-    marginTop: -13,
+    marginTop: -23,
     width: 46,
     height: 46,
     borderRadius: 23,
