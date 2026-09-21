@@ -75,7 +75,7 @@ for (const f of [
 for (const f of fs.readdirSync(path.join(root, 'public'))) {
   if (f.endsWith('.html')) fs.copyFileSync(path.join(root, 'public', f), path.join(dist, f));
 }
-if (fs.existsSync(path.join(root, 'public', 'site'))) fs.cpSync(path.join(root, 'public', 'site'), path.join(dist, 'site'), { recursive: true });
+if (fs.existsSync(path.join(root, 'public', 'site'))) fs.cpSync(path.join(root, 'public', 'site'), path.join(dist, 'site'), { recursive: true, filter: (src) => !src.split(path.sep).join('/').includes('/public/site/src') });
 
 // Version publiée + service worker estampillé (chaque déploiement change les octets de sw.js,
 // donc le navigateur installe la nouvelle version au prochain lancement).

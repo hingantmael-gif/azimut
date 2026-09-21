@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://hingantmael-gif.github.io/apropos.html</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/fonctionnalites.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/tarifs.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/personnalisation.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://hingantmael-gif.github.io/application-course-a-pied.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://hingantmael-gif.github.io/plan-entrainement-5km.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://hingantmael-gif.github.io/plan-entrainement-10km.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
@@ -18,8 +21,25 @@
   <url><loc>https://hingantmael-gif.github.io/guide-fractionne.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://hingantmael-gif.github.io/guide-sortie-longue.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://hingantmael-gif.github.io/guide-recuperation-sommeil.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/plan-course-debutant.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-fartlek.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-seuil-tempo.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-affutage.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-echauffement.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-ftp.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-css-natation.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-callisthenie-debutant.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-nutrition-endurance.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guide-prevenir-blessures-course.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://hingantmael-gif.github.io/calculateur-vma.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://hingantmael-gif.github.io/calculateur-allure.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/calculateur-frequence-cardiaque.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/calculateur-ftp.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/calculateur-css-natation.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/outils.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/guides.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/glossaire.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://hingantmael-gif.github.io/nouveautes.html</loc><lastmod>2026-09-21</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://hingantmael-gif.github.io/avis.html</loc><lastmod>2026-09-21</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
   <url><loc>https://hingantmael-gif.github.io/plan-du-site.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.3</priority></url>
   <url><loc>https://hingantmael-gif.github.io/telecharger.html</loc><lastmod>2026-09-21</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
