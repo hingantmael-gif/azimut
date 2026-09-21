@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../Text';
@@ -14,6 +15,7 @@ const SNOOZE_MS = 7 * 24 * 3600_000;
  */
 export function InstallBanner() {
   const { colors } = useThemeColors();
+  const router = useRouter();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function InstallBanner() {
         style={{ flex: 1 }}
         accessibilityRole="button"
         accessibilityLabel="Installer Mova sur l’écran d’accueil"
-        onPress={() => window.location.assign('/telecharger.html')}
+        onPress={() => router.push('/install')}
       >
         <Text style={[styles.title, { color: colors.text }]}>Installer Mova</Text>
         <Text style={[styles.sub, { color: colors.textMuted }]}>Sur ton écran d’accueil, comme une vraie appli — plus rapide, plein écran.</Text>

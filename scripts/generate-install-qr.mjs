@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const site = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
-const url = `${site}/telecharger.html`;
+// L'écran d'installation est DANS l'application (/install) : le QR y mène directement.
+const url = `${site}/install`;
 const out = path.join(root, 'public', 'qr-install.png');
 
 await QRCode.toFile(out, url, {

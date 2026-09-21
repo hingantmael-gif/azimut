@@ -249,7 +249,7 @@ export default function SettingsIndex() {
                   label="Installer sur l'écran d'accueil"
                   value="QR code"
                   icon={{ name: 'download', color: '#0B8262' }}
-                  onPress={() => window.location.assign('/telecharger.html')}
+                  onPress={() => router.push('/install')}
                 />
               ) : null}
               <SettingsRow label="Centre d'aide" onPress={() => router.push('/settings/help')} />

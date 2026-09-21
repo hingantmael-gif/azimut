@@ -44,9 +44,9 @@ export const ART_LOOKS: Record<ArtKind, Look> = {
   run: { from: '#052E2B', to: '#0E7C66', accent: '#5EF2B4', icon: 'walk' },
   bike: { from: '#3A1A05', to: '#B45309', accent: '#FCD34D', icon: 'bicycle' },
   swim: { from: '#041B3B', to: '#0369A1', accent: '#7DD3FC', icon: 'water' },
-  triathlon: { from: '#1E1145', to: '#5B21B6', accent: '#C4B5FD', icon: 'trophy' },
+  triathlon: { from: '#062B36', to: '#0891B2', accent: '#A7F3D0', icon: 'trophy' },
   ironman: { from: '#3B0A14', to: '#B91C1C', accent: '#FDBA74', icon: 'flame' },
-  strength: { from: '#2A0F3D', to: '#9D174D', accent: '#F9A8D4', icon: 'barbell' },
+  strength: { from: '#15261A', to: '#4D7C0F', accent: '#D9F99D', icon: 'barbell' },
   calisthenics: { from: '#3B1204', to: '#C2410C', accent: '#FDE68A', icon: 'body' },
   other: { from: '#0F172A', to: '#334155', accent: '#94A3B8', icon: 'ellipse' },
 };

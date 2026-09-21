@@ -85,7 +85,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 /** Écrans qui dessinent déjà leur propre fond (auth, tracker, navigateurs imbriqués). */
-const OWN_BACKDROP = new Set(['program', '(auth)', '(tabs)', 'install', 'session/guided', 'session/live']);
+const OWN_BACKDROP = new Set(['program', '(auth)', '(tabs)', 'session/guided', 'session/live']);
 
 function AppShell() {
   const { colors, isDark } = useThemeColors();
@@ -125,7 +125,7 @@ function AppShell() {
             <Stack.Screen name="program" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="install" options={{ headerShown: false, title: 'Installer Mova' }} />
+            <Stack.Screen name="install" options={{ title: 'Installer Mova' }} />
             <Stack.Screen name="import-activity" options={{ title: 'Importer Strava' }} />
             <Stack.Screen name="activity/[id]" options={{ title: 'Activité' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Activité' }} />

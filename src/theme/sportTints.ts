@@ -3,10 +3,10 @@ export const SPORT_TINTS: Record<string, readonly [string, string]> = {
   run: ['#3DFF9A', '#22D3EE'],
   bike: ['#FBBF24', '#F97316'],
   swim: ['#38BDF8', '#6366F1'],
-  triathlon: ['#A78BFA', '#22D3EE'],
+  triathlon: ['#22D3EE', '#5EEAD4'],
   ironman: ['#FB923C', '#F43F5E'],
-  strength: ['#C084FC', '#F472B6'],
-  calisthenics: ['#F472B6', '#FBBF24'],
+  strength: ['#A3E635', '#4ADE80'],
+  calisthenics: ['#FB923C', '#FBBF24'],
   other: ['#94A3B8', '#3DFF9A'],
 };
 

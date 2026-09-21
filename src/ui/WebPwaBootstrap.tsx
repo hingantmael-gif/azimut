@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { hardReload } from './RouteError';
+import { initPwaInstall } from '../services/pwaInstall';
 
 /** Signatures d'un fichier de page introuvable / périmé (ancienne version en cache). */
 const CHUNK_ERROR = /chunk|dynamically imported|fetchThenEval|Importing a module script failed|Failed to fetch|Requiring unknown module/i;
@@ -55,6 +56,8 @@ export function WebPwaBootstrap() {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     // Ferme la popup OAuth Google même si la page de retour n’importe pas googleAuth
     WebBrowser.maybeCompleteAuthSession();
+    // Garde l'invite d'installation du navigateur pour l'écran « Installer Mova » (elle n'est émise qu'une fois).
+    initPwaInstall();
 
     // Une page qui ne se charge pas (fichier d'une ancienne version) : on vide le cache et on
     // recharge UNE fois, automatiquement — plus de page vide à réparer à la main.

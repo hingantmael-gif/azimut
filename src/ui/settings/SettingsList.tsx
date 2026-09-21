@@ -35,7 +35,7 @@ const ICON_RULES: [RegExp, IconSpec][] = [
   [/abonnement|premium/i, { name: 'diamond', color: '#B8860B' }],
   [/e-?mail|courriel/i, { name: 'mail', color: '#0891B2' }],
   [/mot de passe|sécurité|2fa|compte/i, { name: 'shield-checkmark', color: '#2563EB' }],
-  [/mode sombre|thème|apparence/i, { name: 'moon', color: '#6D4CFF' }],
+  [/mode sombre|thème|apparence/i, { name: 'moon', color: '#3B82F6' }],
   [/langue/i, { name: 'language', color: '#0EA5E9' }],
   [/unités|carte|distance/i, { name: 'map', color: '#16A34A' }],
   [/notif|rappel|alerte/i, { name: 'notifications', color: '#F59E0B' }],
@@ -45,7 +45,7 @@ const ICON_RULES: [RegExp, IconSpec][] = [
   [/cgu|conditions|politique|légal|mentions/i, { name: 'document-text', color: '#64748B' }],
   [/objectif|niveau|sportif|forme|perf|entra/i, { name: 'trophy', color: '#0B8262' }],
   [/profil|identité|photo|fond/i, { name: 'person', color: '#0B8262' }],
-  [/horaire|planning|jours|agenda/i, { name: 'calendar', color: '#7C3AED' }],
+  [/horaire|planning|jours|agenda/i, { name: 'calendar', color: '#0EA5E9' }],
 ];
 
 export function iconForLabel(label: string): IconSpec {

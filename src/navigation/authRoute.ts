@@ -49,7 +49,8 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   ) {
     return '/(auth)/onboarding';
   }
-  if (session.authToken && session.onboardingCompleted && (inAuth || inInstall)) {
+  // /install reste ouverte aux comptes connectés (écran « Installer Mova » dans l'app, avec flèche retour).
+  if (session.authToken && session.onboardingCompleted && inAuth) {
     return '/(tabs)';
   }
   return null;

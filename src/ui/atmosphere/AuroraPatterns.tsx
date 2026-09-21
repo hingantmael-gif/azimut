@@ -150,7 +150,7 @@ function Orbits({ w, h, color, color2, opacity, paused }: P) {
   const cy = h * 0.26;
   const radii = [70, 125, 185, 250, 325];
   const speeds = [30000, 42000, 56000, 38000, 70000];
-  const third = '#A78BFA';
+  const third = '#5EEAD4';
   const cols = [color, color2, third, color, color2];
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity, overflow: 'hidden' }]}>
