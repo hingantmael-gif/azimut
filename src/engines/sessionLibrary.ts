@@ -25,6 +25,8 @@ import {
   type StrengthBodyFocus,
   type StrengthEquipment,
   type StrengthGoalFocus,
+  type StrengthTarget,
+  STRENGTH_TARGET_OPTIONS,
 } from './strengthProgramming';
 
 /**
@@ -182,6 +184,23 @@ export function buildLibrary(ctx: LibContext, date: string, opts?: { calisGoal?:
     }
   }
 
+  // Musculation : séances ciblées (abdos, dos, bras, jambes, pectoraux & épaules)
+  for (const t of STRENGTH_TARGET_OPTIONS) {
+    for (let slot = 0; slot < 2; slot++) {
+      const w = buildStrengthSession({
+        date,
+        slotIndex: slot,
+        trainingDaysCount: 4,
+        level: ctx.level,
+        block: 'developpement_general',
+        equipment: ctx.equipment,
+        strengthGoal: 'hypertrophy',
+        targets: [t.id],
+      });
+      add('strength', `Cible · ${t.label}`, `target-${t.id}-${slot}`, w);
+    }
+  }
+
   // ——— Callisthénie : zone et cibles ———
   const goal = opts?.calisGoal ?? 'hypertrophy';
   const calis = (group: string, key: string, o: { scope?: CalisScope; targets?: CalisTarget[]; slot: number }) =>
@@ -204,6 +223,8 @@ export type QuickOptions = {
   calisGoal?: CalisthenicsGoalFocus;
   strengthFocus?: StrengthBodyFocus;
   strengthGoal?: StrengthGoalFocus;
+  /** Musculation : cibles précises. */
+  strengthTargets?: StrengthTarget[];
 };
 
 /** « Séance rapide » : une séance adaptée au sport et au temps dont on dispose, prête à démarrer. */
@@ -232,6 +253,7 @@ export function buildQuickSession(ctx: LibContext, date: string, o: QuickOptions
           equipment: ctx.equipment,
           strengthGoal: o.strengthGoal ?? 'fitness',
           bodyFocus: o.strengthFocus ?? 'full',
+          targets: o.strengthTargets,
         }),
         o.minutes,
       );

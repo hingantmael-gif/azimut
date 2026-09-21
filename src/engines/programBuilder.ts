@@ -44,6 +44,8 @@ export interface ProgramBuildInput {
   strengthGoal?: string;
   /** Musculation : upper | lower | full */
   strengthBodyFocus?: string;
+  /** Musculation : cibles précises (abs, back, arms, legs, chest). */
+  strengthTargets?: string[];
   /** Callisthénie : zone (full | upper | lower) et cibles précises (abs, back, arms, legs, chest). */
   calisScope?: string;
   calisTargets?: string[];
@@ -214,6 +216,7 @@ function resolveTemplate(input: ProgramBuildInput): {
     strengthEquipment: input.strengthEquipment,
     strengthGoal: input.strengthGoal,
     strengthBodyFocus: input.strengthBodyFocus,
+    strengthTargets: input.strengthTargets,
     calisScope: input.calisScope,
     calisTargets: input.calisTargets,
     connectGarmin: true,

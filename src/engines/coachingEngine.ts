@@ -51,6 +51,7 @@ import { resolveWeekLoadProfile } from './volumeProgression';
 import {
   buildStrengthSession,
   normalizeStrengthEquipment,
+  parseStrengthTargets,
   type StrengthBodyFocus,
   type StrengthEquipment,
   type StrengthGoalFocus,
@@ -508,6 +509,7 @@ function makeStrength(
     equipment?: string | string[];
     strengthGoal?: string;
     strengthBodyFocus?: string;
+    strengthTargets?: string[];
     weekIndex?: number;
   },
 ): PlannedWorkout {
@@ -524,6 +526,7 @@ function makeStrength(
           ? 'fitness'
           : parseStrengthGoal(opts?.strengthGoal ?? (focus === 'hypertrophy' ? 'hypertrophy' : undefined)),
       bodyFocus: parseStrengthBodyFocus(opts?.strengthBodyFocus),
+      targets: focus === 'ppg' ? [] : parseStrengthTargets(opts?.strengthTargets),
       ppgLite: focus === 'ppg',
       weekIndex: opts?.weekIndex,
     }),
@@ -860,6 +863,7 @@ export function generateCoachedWeek(
           equipment: answers.strengthEquipment,
           strengthGoal: answers.strengthGoal,
           strengthBodyFocus: answers.strengthBodyFocus,
+          strengthTargets: answers.strengthTargets,
           weekIndex: opts.weekIndex,
         }),
       );

@@ -103,6 +103,8 @@ import {
   STRENGTH_GOAL_OPTIONS,
   normalizeStrengthEquipment,
   type StrengthBodyFocus,
+  type StrengthTarget,
+  STRENGTH_TARGET_OPTIONS,
   type StrengthEquipment,
   type StrengthGoalFocus,
 } from '../../src/engines/strengthProgramming';
@@ -259,6 +261,7 @@ export default function NewProgramScreen() {
     'equipment' | 'goal' | 'focus'
   >(() => (hasProfileEquipment ? 'goal' : 'equipment'));
   const [strengthBodyFocus, setStrengthBodyFocus] = useState<StrengthBodyFocus | null>(null);
+  const [strengthTargets, setStrengthTargets] = useState<StrengthTarget[]>([]);
   // Callisthénie : objectif, puis « que veux-tu travailler ? » (zone + cibles précises).
   const [calisPhase, setCalisPhase] = useState<'goal' | 'area'>('goal');
   const [calisScope, setCalisScope] = useState<CalisScope | null>(null);
@@ -809,6 +812,7 @@ export default function NewProgramScreen() {
         isStrength && strengthEquipment.length > 0 ? strengthEquipment : undefined,
       strengthGoal: isBodyProgram ? strengthGoal ?? undefined : undefined,
       strengthBodyFocus: isStrength ? strengthBodyFocus ?? undefined : undefined,
+      strengthTargets: isStrength && strengthTargets.length > 0 ? strengthTargets : undefined,
       calisScope: isCalis ? calisScope ?? 'full' : undefined,
       calisTargets: isCalis && calisTargets.length > 0 ? calisTargets : undefined,
       isPremium: true,
@@ -828,7 +832,9 @@ export default function NewProgramScreen() {
     : isStrength
     ? [
         'Musculation',
-        STRENGTH_BODY_FOCUS_OPTIONS.find((f) => f.id === strengthBodyFocus)?.label,
+        strengthTargets.length > 0
+          ? strengthTargets.map((id) => STRENGTH_TARGET_OPTIONS.find((o) => o.id === id)?.label).join(' + ')
+          : STRENGTH_BODY_FOCUS_OPTIONS.find((f) => f.id === strengthBodyFocus)?.label,
         STRENGTH_GOAL_OPTIONS.find((g) => g.id === strengthGoal)?.label,
       ]
         .filter(Boolean)
@@ -980,7 +986,7 @@ export default function NewProgramScreen() {
       : step === S.setup && isStrength && strengthSetupPhase === 'goal'
         ? strengthGoal === 'fitness' || strengthGoal === 'hypertrophy' || strengthGoal === 'power'
         : step === S.setup && isStrength && strengthSetupPhase === 'focus'
-          ? strengthBodyFocus != null
+          ? strengthBodyFocus != null || strengthTargets.length > 0
           : step === S.setup && isStrength && strengthSetupPhase === 'equipment'
       ? strengthEquipment.length >= 1
       : step === S.sessions
@@ -1439,12 +1445,36 @@ export default function NewProgramScreen() {
         )}
 
         {step === S.setup && isStrength && strengthSetupPhase === 'focus' && (
-          <StrengthBodyFocusPicker
-            selected={strengthBodyFocus}
-            onSelect={(id) => setStrengthBodyFocus(id)}
-            accent={colors.accent}
-            tone="hero"
-          />
+          <>
+            <StrengthBodyFocusPicker
+              selected={strengthBodyFocus}
+              onSelect={(id) => setStrengthBodyFocus(id)}
+              accent={colors.accent}
+              tone="hero"
+            />
+            <Body style={[{ marginTop: spacing.md, marginBottom: spacing.xs, fontWeight: '800' }, styles.bodyOnHero]}>
+              Cible précise (facultatif)
+            </Body>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {STRENGTH_TARGET_OPTIONS.map((t) => (
+                <WizardPill
+                  key={t.id}
+                  label={t.label}
+                  selected={strengthTargets.includes(t.id)}
+                  onPress={() =>
+                    setStrengthTargets((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : [...cur, t.id]))
+                  }
+                  accent={colors.accent}
+                  tone="hero"
+                />
+              ))}
+            </View>
+            {strengthTargets.length > 0 ? (
+              <Muted style={[{ marginTop: spacing.sm }, styles.mutedOnHero]}>
+                Toutes tes séances travailleront : {strengthTargets.map((id) => STRENGTH_TARGET_OPTIONS.find((o) => o.id === id)!.label.toLowerCase()).join(' + ')}.
+              </Muted>
+            ) : null}
+          </>
         )}
 
         {step === S.sessions && (

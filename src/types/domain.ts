@@ -442,6 +442,8 @@ export interface OnboardingAnswers {
    * upper | lower | full
    */
   strengthBodyFocus?: string;
+  /** Musculation — cibles précises : abs | back | arms | legs | chest */
+  strengthTargets?: string[];
   /** Callisthénie — zone : full | upper | lower */
   calisScope?: string;
   /** Callisthénie — cibles précises : abs | back | arms | legs | chest */

@@ -11,7 +11,7 @@ import { radii, spacing } from '../src/theme/tokens';
 import type { PlannedWorkout } from '../src/types/domain';
 import { resolveAthletePaceZones, summarizeWorkout } from '../src/engines/workoutPresentation';
 import { resolvePaceZones } from '../src/engines/paceZones';
-import { normalizeStrengthEquipment, type StrengthBodyFocus } from '../src/engines/strengthProgramming';
+import { normalizeStrengthEquipment, STRENGTH_TARGET_OPTIONS, type StrengthBodyFocus, type StrengthTarget } from '../src/engines/strengthProgramming';
 import { toLocalDateIso, addDaysIso } from '../src/engines/sleepCalendar';
 import {
   buildLibrary,
@@ -65,6 +65,7 @@ export default function LibraryScreen() {
   const [minutes, setMinutes] = useState(30);
   const [scope, setScope] = useState<CalisScope | null>(null);
   const [targets, setTargets] = useState<CalisTarget[]>([]);
+  // Mêmes cibles pour la musculation et la callisthénie (mêmes identifiants).
   const [strengthFocus, setStrengthFocus] = useState<StrengthBodyFocus>('full');
   const [calisGoal, setCalisGoal] = useState<CalisthenicsGoalFocus>('hypertrophy');
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export default function LibraryScreen() {
       targets,
       calisGoal,
       strengthFocus,
+      strengthTargets: sport === 'strength' ? (targets as StrengthTarget[]) : undefined,
     });
     launch(w, 'now');
   };
@@ -114,7 +116,7 @@ export default function LibraryScreen() {
 
         <View style={styles.chips}>
           {LIB_SPORTS.map((s) => (
-            <Chip key={s.id} label={s.label} selected={sport === s.id} onPress={() => { setSport(s.id); setOpenKey(null); }} />
+            <Chip key={s.id} label={s.label} selected={sport === s.id} onPress={() => { setSport(s.id); setOpenKey(null); setTargets([]); }} />
           ))}
         </View>
 
@@ -136,7 +138,18 @@ export default function LibraryScreen() {
               <Text style={styles.label}>Zone du corps</Text>
               <View style={styles.chips}>
                 {STRENGTH_FOCUS.map((f) => (
-                  <Chip key={f.id} label={f.label} selected={strengthFocus === f.id} onPress={() => setStrengthFocus(f.id)} />
+                  <Chip key={f.id} label={f.label} selected={targets.length === 0 && strengthFocus === f.id} onPress={() => { setStrengthFocus(f.id); setTargets([]); }} />
+                ))}
+              </View>
+              <Text style={styles.label}>Ou cible précise</Text>
+              <View style={styles.chips}>
+                {STRENGTH_TARGET_OPTIONS.map((t) => (
+                  <Chip
+                    key={t.id}
+                    label={t.label}
+                    selected={targets.includes(t.id)}
+                    onPress={() => setTargets((cur) => (cur.includes(t.id) ? cur.filter((x) => x !== t.id) : [...cur, t.id]))}
+                  />
                 ))}
               </View>
             </>
