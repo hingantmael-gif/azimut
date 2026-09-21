@@ -103,7 +103,9 @@ export function WizardBackdrop({
   const { width, height } = useWindowDimensions();
   const w = Math.max(320, width);
   const h = Math.max(560, height);
-  const [accent, accent2] = tintForSport(sport);
+  // Couleur de marque constante : le sport ne change pas la teinte du fond (jamais de violet / ambre).
+  void sport;
+  const [accent, accent2] = tintForSport('run');
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient

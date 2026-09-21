@@ -11,7 +11,7 @@ import { AuroraPattern, patternForSport } from './AuroraPatterns';
 
 /**
  * Fond « aurore » Mova, commun à tout l'app : dégradé + halos qui dérivent + courbes de niveau.
- * Sa couleur suit le sport (course = jade, vélo = ambre, natation = bleu, muscu = violet…).
+ * Couleur fixe (jade de la marque) ; seul le motif suit le sport (courbes, traînées, vagues, hexagones…).
  * Clair : pastel coloré · Sombre : nuit profonde. Ne capte aucun toucher.
  */
 

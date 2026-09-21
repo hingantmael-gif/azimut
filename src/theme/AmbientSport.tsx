@@ -16,14 +16,17 @@ type Ctx = {
   setOverride: (sport: string | null) => void;
 };
 
+/** Teinte fixe du fond de l'app. */
+const BRAND_TINT: SportTint = tintForSport('run');
+
 const AmbientContext = createContext<Ctx>({
   sport: 'run',
-  tint: tintForSport('run'),
+  tint: BRAND_TINT,
   setOverride: () => undefined,
 });
 
 /**
- * Sport « ambiant » : couleur du fond animé de toute l'app.
+ * Sport « ambiant » : choisit le MOTIF du fond animé (la couleur, elle, ne change pas).
  * Par défaut = sport du programme actif (sinon séance du jour) ; un écran peut le remplacer
  * (assistant de programme, détail d'activité…) via `useAmbientSport`.
  */
@@ -37,7 +40,9 @@ export function AmbientSportProvider({ children }: { children: ReactNode }) {
   const sport = override ?? fallback;
 
   const value = useMemo<Ctx>(
-    () => ({ sport, tint: tintForSport(sport), setOverride }),
+    // La COULEUR du fond reste celle de la marque (jade / cyan) quel que soit le sport : seul le MOTIF change
+    // (courbes, traînées, vagues, hexagones…). Un fond violet pour la muscu jurait avec le reste de l'app.
+    () => ({ sport, tint: BRAND_TINT, setOverride }),
     [sport],
   );
   return <AmbientContext.Provider value={value}>{children}</AmbientContext.Provider>;
