@@ -16,6 +16,12 @@ export type GoalType =
   | 'forme'
   | 'vma';
 
+/**
+ * Objectif d'entraînement course : oriente les séances qualité générées.
+ * 'balanced' (ou absent) = comportement historique (rotation VMA/seuil/fartlek/tempo/allure 5K).
+ */
+export type RunTrainingFocus = 'balanced' | 'endurance' | 'speed_power' | 'hills';
+
 export type SubscriptionPlan = 'free' | 'premium_monthly' | 'premium_yearly';
 export type ProfileVisibility = 'public' | 'private' | 'masked' | 'followers_only';
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -461,6 +467,8 @@ export interface OnboardingAnswers {
   terrainFocus?: 'route' | 'trail';
   /** Type d'entraînement (côte / plat) */
   trainingTerrain?: 'hills' | 'mixed' | 'flat';
+  /** Objectif d'entraînement course choisi à la création du programme (par défaut : équilibré). */
+  runFocus?: RunTrainingFocus;
   /** Ancienneté course */
   runningExperience?: 'lt1' | '1_3' | '3_5' | '5plus';
   /** Blessure 12 derniers mois */

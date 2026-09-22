@@ -3,7 +3,7 @@
  * Rotation par phase et semaine (VMA → seuil → fartlek → cruise → allure 5 km).
  */
 
-import type { AthleticLevel, GoalType, PeriodizationBlock, PlannedWorkout, WorkoutStep } from '../types/domain';
+import type { AthleticLevel, GoalType, PeriodizationBlock, PlannedWorkout, RunTrainingFocus, WorkoutStep } from '../types/domain';
 import { paceBandForRunKind, type PaceZones, type RunPaceKind, warmupBandForMain } from './paceZones';
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -101,6 +101,8 @@ export type RunSessionContext = {
   goal?: GoalType;
   isDeload?: boolean;
   qualitySlot?: 0 | 1;
+  /** Objectif d'entraînement choisi (défaut : 'balanced' → comportement historique inchangé). */
+  focus?: RunTrainingFocus;
 };
 
 /** Sortie longue endurance — allure facile/longue constante. */
@@ -656,26 +658,122 @@ export function makeStridesSession(ctx: RunSessionContext): PlannedWorkout {
   );
 }
 
+/**
+ * Côtes / dénivelé — effort en montée (pas d'allure cible : le relief invalide la pace plate),
+ * redescente en trot très facile pour la récup. Pour le focus 'hills'.
+ */
+export function makeHillRepeats(ctx: RunSessionContext): PlannedWorkout {
+  const variant = ctx.weekIndex % 2;
+  let reps: number;
+  let repSec: number;
+  let recoverySec: number;
+  let title: string;
+
+  if (ctx.isDeload) {
+    reps = ctx.level === 'debutant' ? 4 : 5;
+    repSec = 45;
+    recoverySec = 90;
+    title = 'Côtes allégées (décharge)';
+  } else if (variant === 0) {
+    reps = ctx.level === 'debutant' ? 5 : ctx.level === 'intermediaire' ? 7 : 9;
+    repSec = 60;
+    recoverySec = 120;
+    title = 'Côtes courtes · 60 s';
+  } else {
+    reps = ctx.level === 'debutant' ? 4 : ctx.level === 'intermediaire' ? 5 : 6;
+    repSec = 90;
+    recoverySec = 150;
+    title = 'Côtes longues · 90 s';
+  }
+
+  const loadScale = ctx.isDeload ? 0.7 : clamp(0.85 + ctx.load * 0.15, 0.85, 1.1);
+  reps = Math.max(3, Math.round(reps * loadScale));
+
+  const steps: WorkoutStep[] = [
+    warmupStep('wu', ctx.zones, {
+      durationSec: 15 * 60,
+      label: 'Échauffement 15 min · footing facile + 3 lancés progressifs',
+      mainKind: 'interval',
+    }),
+    {
+      id: 'rep',
+      type: 'active',
+      label: `${reps} × ${repSec} s en côte · effort dur (sensation, pas l’allure)`,
+      endCondition: 'duration',
+      durationSec: repSec,
+      repeat: reps,
+    },
+    {
+      id: 'rest',
+      type: 'rest',
+      label: 'Redescente en trot très facile · récup complète',
+      endCondition: 'duration',
+      durationSec: recoverySec,
+      repeat: reps,
+      target: paceTarget(paceBandForRunKind(ctx.zones, 'recovery')),
+    },
+    cooldownStep('cd', ctx.zones, 10 * 60, 'Retour au calme 10 min · footing très facile'),
+  ];
+
+  return finalize(
+    {
+      id: `w-${ctx.date}-run-hills`,
+      title,
+      date: ctx.date,
+      discipline: 'run',
+      expectedRpe: ctx.isDeload ? 6 : 8,
+      periodization: ctx.block,
+    },
+    steps,
+  );
+}
+
 const RACE_GOALS: GoalType[] = ['5k', '10k', 'vma', 'semi', 'marathon', 'trail'];
 
 /** Choisit la séance qualité selon phase, semaine et objectif. */
 export function pickQualitySession(ctx: RunSessionContext): PlannedWorkout {
   const slot = ctx.qualitySlot ?? 0;
+  const focus = ctx.focus ?? 'balanced';
 
   if (ctx.block === 'affutage') {
     return slot === 0 ? makeStridesSession(ctx) : makeRecoveryRun(ctx, 5000);
   }
 
   if (ctx.isDeload) {
-    const deloadVariants = [
-      makeFiveKPaceIntervals,
-      makeVmaIntervals,
-      makeCruiseThreshold,
-      makeFartlek,
-    ];
+    const deloadVariants =
+      focus === 'hills'
+        ? [makeHillRepeats, makeFartlek, makeCruiseThreshold]
+        : focus === 'speed_power'
+          ? [makeVmaIntervals, makeFiveKPaceIntervals, makeFartlek]
+          : focus === 'endurance'
+            ? [makeCruiseThreshold, makeTempoContinuous, makeFartlek]
+            : [makeFiveKPaceIntervals, makeVmaIntervals, makeCruiseThreshold, makeFartlek];
     return deloadVariants[(ctx.weekIndex + slot) % deloadVariants.length](ctx);
   }
 
+  // Objectif dénivelé : côtes en séance qualité principale, seuil/fartlek en complément.
+  if (focus === 'hills') {
+    if (slot === 0) return makeHillRepeats(ctx);
+    return ctx.weekIndex % 2 === 0 ? makeFartlek(ctx) : makeCruiseThreshold(ctx);
+  }
+
+  // Objectif puissance / vitesse : VMA dominante, allure 5 km en alternance.
+  if (focus === 'speed_power') {
+    if (slot === 0) {
+      return ctx.weekIndex % 2 === 0 ? makeVmaIntervals(ctx) : makeFiveKPaceIntervals(ctx);
+    }
+    return ctx.weekIndex % 2 === 0 ? makeFiveKPaceIntervals(ctx) : makeVmaIntervals(ctx);
+  }
+
+  // Objectif endurance : seuil / tempo dominants, VMA rare.
+  if (focus === 'endurance') {
+    if (slot === 0) {
+      return ctx.weekIndex % 2 === 0 ? makeCruiseThreshold(ctx) : makeTempoContinuous(ctx);
+    }
+    return ctx.weekIndex % 3 === 0 ? makeVmaIntervals(ctx) : makeFartlek(ctx);
+  }
+
+  // focus === 'balanced' (défaut) — comportement historique inchangé.
   // Une séance « allure 5 km » max / semaine (slot 0), tous programmes course.
   if (slot === 0 && ctx.weekIndex % 2 === 0) {
     return makeFiveKPaceIntervals(ctx);

@@ -53,6 +53,8 @@ export interface ProgramBuildInput {
   ongoing?: boolean;
   /** Intention course (démarrage doux si start / reprise) */
   runIntent?: OnboardingAnswers['runIntent'];
+  /** Objectif d'entraînement course (endurance / puissance-vitesse / dénivelé / équilibré) */
+  runFocus?: OnboardingAnswers['runFocus'];
   /** Horodatage de génération (tests) — défaut : maintenant */
   generatedAt?: Date;
 }
@@ -222,6 +224,7 @@ function resolveTemplate(input: ProgramBuildInput): {
     connectGarmin: true,
     connectStrava: true,
     runIntent: input.runIntent,
+    runFocus: input.runFocus,
   };
 
   return {

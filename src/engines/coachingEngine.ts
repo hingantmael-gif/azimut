@@ -696,6 +696,7 @@ export function generateCoachedWeek(
     weekIndex: opts.weekIndex,
     goal: answers.goal,
     isDeload: weekLoad.isDeload,
+    focus: answers.runFocus ?? (answers.trainingTerrain === 'hills' ? 'hills' : undefined),
   });
 
   for (const [dow, role] of roles) {

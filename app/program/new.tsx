@@ -133,11 +133,24 @@ import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
 import { AppScrollView } from '../../src/ui/scrolling';
+import type { RunTrainingFocus } from '../../src/types/domain';
 
 const VISIBLE_PROGRAM_COUNT = 5;
 
-/** 0 sport · (+1 venue natation) · objectif · séances · dispos · renforcement · temps · durée */
+/** 0 sport · (+1 venue natation) · objectif · séances · dispos · (+1 focus course) · renforcement · temps · durée */
 const BASE_STEP_COUNT = 7;
+
+const RUN_FOCUS_OPTIONS: ReadonlyArray<{
+  id: RunTrainingFocus;
+  title: string;
+  subtitle: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}> = [
+  { id: 'balanced', title: 'Équilibré', subtitle: 'Un peu de tout · recommandé par défaut', icon: 'sync' },
+  { id: 'endurance', title: 'Endurance', subtitle: 'Seuil & tempo dominants, fond solide', icon: 'infinite' },
+  { id: 'speed_power', title: 'Puissance / vitesse', subtitle: 'VMA & allure 5 km dominantes', icon: 'flash' },
+  { id: 'hills', title: 'Dénivelé', subtitle: 'Côtes en séance qualité principale', icon: 'trending-up' },
+];
 
 function formatDistanceQuestion(km?: number, sport?: ProgramSportCategory | null): string {
   if (km == null || !(km > 0)) {
@@ -244,6 +257,10 @@ export default function NewProgramScreen() {
   const [longRunDay, setLongRunDay] = useState(
     () => onboarding?.longRunDay ?? 6,
   );
+  /** Objectif d'entraînement course — proposé à chaque programme, pas seulement à l'onboarding. */
+  const [runFocus, setRunFocus] = useState<RunTrainingFocus>(
+    () => onboarding?.runFocus ?? (onboarding?.trainingTerrain === 'hills' ? 'hills' : 'balanced'),
+  );
 
   const [weeklyKmInput, setWeeklyKmInput] = useState('');
   const [includePpg, setIncludePpg] = useState(onboarding?.includePpg ?? false);
@@ -295,10 +312,12 @@ export default function NewProgramScreen() {
   const isCalis = sport === 'other';
   const isBodyProgram = isStrength || isCalis;
   const isSwim = sport === 'swim';
-  /** Décalage d’étapes : natation ajoute Piscine / Eau libre */
+  const isRun = sport === 'run';
+  /** Décalage d’étapes : natation ajoute Piscine / Eau libre, course ajoute l'objectif d'entraînement */
   const swimShift = isSwim ? 1 : 0;
+  const runFocusShift = isRun ? 1 : 0;
   /** Musculation / callisthénie : sport → setup → séances → jours → niveau → semaines */
-  const STEP_COUNT = isBodyProgram ? 6 : BASE_STEP_COUNT + swimShift;
+  const STEP_COUNT = isBodyProgram ? 6 : BASE_STEP_COUNT + swimShift + runFocusShift;
   /** Index d’étape logique (indépendant du décalage natation) */
   const S = isBodyProgram
     ? {
@@ -308,6 +327,7 @@ export default function NewProgramScreen() {
         setup: 1,
         sessions: 2,
         days: 3,
+        focus: -1,
         ppg: -1,
         time: -1,
         level: 4,
@@ -321,6 +341,7 @@ export default function NewProgramScreen() {
           setup: -1,
           sessions: 3,
           days: 4,
+          focus: -1,
           ppg: 5,
           time: 6,
           level: -1,
@@ -333,10 +354,11 @@ export default function NewProgramScreen() {
           setup: -1,
           sessions: 2,
           days: 3,
-          ppg: 4,
-          time: 5,
+          focus: isRun ? 4 : -1,
+          ppg: isRun ? 5 : 4,
+          time: isRun ? 6 : 5,
           level: -1,
-          duration: 6,
+          duration: isRun ? 7 : 6,
         };
   const countedIds =
     state.profile.programUsageCountedIds ?? state.profile.programUsageCountedId;
@@ -808,6 +830,7 @@ export default function NewProgramScreen() {
       includePpg: isBodyProgram ? false : includePpg,
       ongoing: isStrength ? strengthDurationMode === 'ongoing' : undefined,
       runIntent: state.profile.onboarding?.runIntent,
+      runFocus: isRun ? runFocus : undefined,
       strengthEquipment:
         isStrength && strengthEquipment.length > 0 ? strengthEquipment : undefined,
       strengthGoal: isBodyProgram ? strengthGoal ?? undefined : undefined,
@@ -872,15 +895,26 @@ export default function NewProgramScreen() {
           `Votre temps sur ${distanceQuestion}`,
           'Durée du programme',
         ]
-      : [
-          'Quel sport ?',
-          'Quel objectif ?',
-          'Combien de séances / semaine ?',
-          'Vos disponibilités',
-          'Renforcement musculaire',
-          `Votre temps sur ${distanceQuestion}`,
-          'Durée du programme',
-        ];
+      : isRun
+        ? [
+            'Quel sport ?',
+            'Quel objectif ?',
+            'Combien de séances / semaine ?',
+            'Vos disponibilités',
+            'Sur quoi veux-tu progresser ?',
+            'Renforcement musculaire',
+            `Votre temps sur ${distanceQuestion}`,
+            'Durée du programme',
+          ]
+        : [
+            'Quel sport ?',
+            'Quel objectif ?',
+            'Combien de séances / semaine ?',
+            'Vos disponibilités',
+            'Renforcement musculaire',
+            `Votre temps sur ${distanceQuestion}`,
+            'Durée du programme',
+          ];
 
   const strengthStep2Title =
     strengthSetupPhase === 'focus'
@@ -966,6 +1000,7 @@ export default function NewProgramScreen() {
   const showContinue =
     step === S.sessions ||
     step === S.days ||
+    step === S.focus ||
     step === S.ppg ||
     (step === S.program && selectedTemplate === 'custom') ||
     (isBodyProgram && step === S.level) ||
@@ -993,9 +1028,11 @@ export default function NewProgramScreen() {
         ? weeklySessionsTarget >= 1
         : step === S.days
           ? trainingDays.length === weeklySessionsTarget
-          : step === S.ppg
+          : step === S.focus
             ? true
-            : step === S.level && isBodyProgram
+            : step === S.ppg
+              ? true
+              : step === S.level && isBodyProgram
               ? true
               : step === S.program && selectedTemplate === 'custom'
                 ? parseDistanceKm(customDistance) != null
@@ -1585,6 +1622,27 @@ export default function NewProgramScreen() {
                 {daysSpacingCoach.body}
               </WizardHint>
             ) : null}
+          </WizardStepShell>
+        )}
+
+        {step === S.focus && isRun && (
+          <WizardStepShell resetKey={`focus-${sport}-${step}`}>
+            {RUN_FOCUS_OPTIONS.map((opt, idx) => (
+              <WizardOptionCard
+                key={opt.id}
+                index={idx}
+                title={opt.title}
+                subtitle={opt.subtitle}
+                icon={opt.icon}
+                selected={runFocus === opt.id}
+                onPress={() => setRunFocus(opt.id)}
+                accent={colors.accent}
+                tone="hero"
+              />
+            ))}
+            <WizardHint tone="ok" surface="hero">
+              Chaque séance qualité s’adapte à ce choix (côtes, VMA / allure 5 km, seuil / tempo).
+            </WizardHint>
           </WizardStepShell>
         )}
 
