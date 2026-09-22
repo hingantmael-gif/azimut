@@ -206,8 +206,10 @@ const privacy: LegalDoc = {
           title: 'Ton consentement compte',
           text:
             'Les données de santé sont des données sensibles au sens du RGPD. Mova les traite uniquement pour ' +
-            'personnaliser ton entraînement, avec ton accord. Tu peux les masquer sur ton profil, les exporter ou ' +
-            'les supprimer, et retirer ton consentement à tout moment sans conséquence sur le reste de l’app.',
+            'personnaliser ton entraînement, avec ton accord. Réglages → Confidentialité → Autorisations de ' +
+            'l’app → « Données de santé » : un interrupteur retire ton consentement à tout moment — sommeil, ' +
+            'HRV, FC repos et charge sont alors supprimés de Mova, sans conséquence sur le reste de l’app ' +
+            '(programme, activités, progrès conservés). Tu peux aussi les exporter avant de les retirer.',
         },
         {
           type: 'p',
@@ -551,6 +553,7 @@ const permissions: LegalDoc = {
                 { label: 'Pourquoi', value: 'Distance, allure et tracé de tes sorties dans le tracker' },
                 { label: 'Quand', value: 'Uniquement pendant un enregistrement lancé par toi' },
                 { label: 'Si tu refuses', value: 'Tu peux saisir ta séance manuellement ou importer un fichier' },
+                { label: 'Réglage', value: 'Réglages → Autorisations de l’app → Localisation (GPS)' },
               ],
             },
             {
@@ -572,6 +575,7 @@ const permissions: LegalDoc = {
         {
           type: 'steps',
           items: [
+            'Dans Mova : Réglages → Confidentialité → Autorisations de l’app — active ou refuse chaque accès (notifications, localisation, caméra, photos, données de santé).',
             'iPhone : Réglages → Mova (ou Safari → Réglages du site) → Notifications / Localisation.',
             'Android : Paramètres → Applications → Mova → Autorisations.',
             'Navigateur : icône de cadenas à côté de l’adresse → Paramètres du site.',

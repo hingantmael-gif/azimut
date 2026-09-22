@@ -251,6 +251,7 @@ type Action =
   | { type: 'INGEST_HEALTH'; health: HealthSnapshot }
   | { type: 'UPSERT_SLEEP'; night: SleepMetrics }
   | { type: 'CLEAR_SLEEP'; date: string }
+  | { type: 'WITHDRAW_HEALTH_CONSENT' }
   | { type: 'SET_WATCH'; brandId: WatchBrandId | null }
   | { type: 'SIMULATE_STRAVA_SYNC' }
   | { type: 'SUBMIT_RPE'; feedback: RpeFeedback }
@@ -1581,6 +1582,8 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       };
     }
     case 'INGEST_HEALTH': {
+      // Consentement santé retiré : aucune nouvelle donnée n’est stockée tant qu’il n’est pas redonné.
+      if (state.profile.healthDataConsent === false) return state;
       let health = action.health;
       if (health.sleep) {
         health = upsertSleepNight(
@@ -1591,6 +1594,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       return withReminders({ ...state, health });
     }
     case 'UPSERT_SLEEP': {
+      if (state.profile.healthDataConsent === false) return state;
       const health = upsertSleepNight(state.health, action.night);
       const todayIso = action.night.date || new Date().toISOString().slice(0, 10);
       const target = findWorkoutToAdaptForSleep(state.plan, todayIso);
@@ -1626,6 +1630,11 @@ export function reduceAppState(state: AppState, action: Action): AppState {
     case 'CLEAR_SLEEP': {
       const health = removeSleepNight(state.health, action.date);
       return withReminders({ ...state, health });
+    }
+    case 'WITHDRAW_HEALTH_CONSENT': {
+      // RGPD — retrait du consentement santé : purge sommeil / HRV / FC repos / charge,
+      // sans conséquence sur le reste de l’app (programme, activités, progrès conservés).
+      return withReminders({ ...state, health: emptyHealth });
     }
     case 'SET_WATCH': {
       if (action.brandId == null) {

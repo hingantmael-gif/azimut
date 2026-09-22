@@ -68,4 +68,51 @@ describe('reducer AppContext', () => {
     expect(s1.authToken).toBeNull();
     expect(s1.activities).toHaveLength(0);
   });
+
+  const night = (date: string) => ({
+    totalMinutes: 420,
+    lightMinutes: 220,
+    deepMinutes: 100,
+    remMinutes: 100,
+    score: 72,
+    date,
+  });
+
+  it('WITHDRAW_HEALTH_CONSENT purge le sommeil sans toucher au reste de l’état', async () => {
+    const reduce = await load();
+    const s0 = buildFreshAccountState('tok', { onboardingCompleted: true });
+    const s1 = reduce(s0, { type: 'UPSERT_SLEEP', night: night('2026-09-20') });
+    expect(s1.health.sleep?.date).toBe('2026-09-20');
+    const s2 = reduce(s1, { type: 'WITHDRAW_HEALTH_CONSENT' });
+    expect(s2.health).toEqual({});
+    expect(s2.profile.id).toBe(s1.profile.id);
+    expect(s2.plan).toEqual(s1.plan);
+  });
+
+  it('healthDataConsent: false bloque toute nouvelle ingestion santé (UPSERT_SLEEP et INGEST_HEALTH)', async () => {
+    const reduce = await load();
+    const s0 = buildFreshAccountState('tok', { onboardingCompleted: true });
+    const withdrawn = {
+      ...s0,
+      profile: { ...s0.profile, healthDataConsent: false as const },
+    };
+    const s1 = reduce(withdrawn, { type: 'UPSERT_SLEEP', night: night('2026-09-20') });
+    expect(s1.health.sleep).toBeUndefined();
+    const s2 = reduce(withdrawn, {
+      type: 'INGEST_HEALTH',
+      health: { sleep: night('2026-09-21') },
+    });
+    expect(s2.health.sleep).toBeUndefined();
+  });
+
+  it('réactiver le consentement (healthDataConsent: true) laisse de nouveau l’ingestion passer', async () => {
+    const reduce = await load();
+    const s0 = buildFreshAccountState('tok', { onboardingCompleted: true });
+    const reenabled = {
+      ...s0,
+      profile: { ...s0.profile, healthDataConsent: true as const },
+    };
+    const s1 = reduce(reenabled, { type: 'UPSERT_SLEEP', night: night('2026-09-22') });
+    expect(s1.health.sleep?.date).toBe('2026-09-22');
+  });
 });

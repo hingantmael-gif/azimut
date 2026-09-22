@@ -634,6 +634,11 @@ export interface AthleteProfile {
   pushPermissionAsked?: boolean;
   /** Permission système accordée (iOS/Android). */
   pushEnabled?: boolean;
+  /**
+   * Consentement au traitement des données de santé (sommeil, HRV, FC repos, charge).
+   * Par défaut true (comportement historique) ; false = ingestion bloquée, données purgées.
+   */
+  healthDataConsent?: boolean;
   integrations: IntegrationStatus[];
   /** Montre choisie pour l’import sommeil (questionnaire 1ʳᵉ fois) */
   watch?: WatchPreference | null;

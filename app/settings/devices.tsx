@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Linking, Platform, View } from 'react-native';
-import { Alert } from '../../src/utils/appAlert';
+import { View } from 'react-native';
 import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import {
@@ -36,17 +35,6 @@ export default function DevicesScreen() {
   useEffect(() => {
     void syncFromServer();
   }, [syncFromServer]);
-
-  const openOsSettings = () => {
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Localisation',
-        'Sur le web, autorise la localisation dans les paramètres du navigateur si une activité GPS le demande.',
-      );
-      return;
-    }
-    void Linking.openSettings();
-  };
 
   return (
     <SettingsScreen>
@@ -89,14 +77,14 @@ export default function DevicesScreen() {
 
         <SettingsSection title="Santé & localisation">
           <SettingsRow
-            label="Données de santé"
-            value="Via les apps ci-dessus"
-            showChevron={false}
+            label="Consentement données de santé"
+            value="Activer / retirer"
+            onPress={() => router.push('/settings/data-permissions')}
           />
           <SettingsRow
             label="Localisation (GPS)"
-            value="Réglages système"
-            onPress={openOsSettings}
+            value="Activer / retirer"
+            onPress={() => router.push('/settings/data-permissions')}
           />
           <SettingsRow
             label="Historique de synchronisation"
