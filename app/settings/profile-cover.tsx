@@ -22,12 +22,13 @@ import { Chip } from '../../src/ui/primitives';
 import { isTrialAccount } from '../../src/utils/demoAuth';
 import { hasPremiumAccess } from '../../src/premium/entitlement';
 import { PaywallSheet } from '../../src/ui/premium';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 
 type CoverTab = 'styles' | 'premium' | 'run' | 'bike' | 'swim' | 'ranks';
 
 const TABS: { id: CoverTab; label: string }[] = [
   { id: 'styles', label: 'Styles' },
-  { id: 'premium', label: 'Premium' },
+  { id: 'premium', label: isPremiumUiVisible() ? 'Premium' : 'Animés' },
   { id: 'run', label: 'Course' },
   { id: 'bike', label: 'Vélo' },
   { id: 'swim', label: 'Natation' },
@@ -83,7 +84,9 @@ export default function ProfileCoverSettingsScreen() {
       ? 'Fonds de base — dégradés et animations.'
       : tab === 'premium'
         ? unlockOpts.premium
-          ? 'Fonds Premium débloqués — animations maximales.'
+          ? isPremiumUiVisible()
+            ? 'Fonds Premium débloqués — animations maximales.'
+            : 'Fonds animés — animations maximales.'
           : 'Réservés aux abonnés Premium (ou cadeau Premium).'
         : tab === 'run'
           ? 'Le record s’affiche en premier, puis les paliers (5K, 10K…).'

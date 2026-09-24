@@ -328,7 +328,7 @@ export function ladderOutcomeLabel(
   if (outcome === 'shielded') {
     const left =
       shieldsLeft != null ? ` · ${shieldsLeft} bouclier${shieldsLeft > 1 ? 's' : ''} restant${shieldsLeft > 1 ? 's' : ''}` : '';
-    return `Bouclier Premium — ligue sauvée${left}.`;
+    return `Bouclier — ligue sauvée${left}.`;
   }
   if (outcome === 'held') {
     return 'Ligue maintenue.';

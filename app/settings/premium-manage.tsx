@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../src/ui/Text';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, Redirect } from 'expo-router';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 import {
   SettingsRow,
   SettingsScreen,
@@ -28,7 +29,7 @@ import {
  * Owner only — gérer les Premium offerts (cadeaux).
  * Les abonnements payants ne figurent pas ici et ne sont pas modifiables.
  */
-export default function PremiumManageScreen() {
+function PremiumManageScreenImpl() {
   const router = useRouter();
   const { state } = useApp();
   const { colors } = useThemeColors();
@@ -223,3 +224,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
 });
+
+/** Écran désactivé tant que Premium est masqué (featureFlags.ts) : retour aux réglages. */
+export default function PremiumManageScreen() {
+  if (!isPremiumUiVisible()) return <Redirect href="/settings" />;
+  return <PremiumManageScreenImpl />;
+}

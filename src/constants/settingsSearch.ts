@@ -1,4 +1,8 @@
 import type { Href } from 'expo-router';
+import { isPremiumUiVisible } from '../premium/featureFlags';
+
+/** Entrées liées à l'abonnement : invisibles tant que Premium est désactivé (featureFlags.ts). */
+const PREMIUM_ONLY_IDS = new Set(['subscription', 'premium-manage']);
 
 export type SettingsSearchItem = {
   id: string;
@@ -235,7 +239,7 @@ export function searchSettings(query: string): SettingsSearchItem[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const tokens = q.split(/\s+/).filter(Boolean);
-  const scored = SETTINGS_SEARCH_CATALOG.map((item) => {
+  const scored = SETTINGS_SEARCH_CATALOG.filter((item) => isPremiumUiVisible() || !PREMIUM_ONLY_IDS.has(item.id)).map((item) => {
     const hay = `${item.label} ${item.path} ${item.keywords.join(' ')}`.toLowerCase();
     const match = tokens.every((t) => hay.includes(t));
     if (!match) return null;

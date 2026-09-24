@@ -28,6 +28,8 @@ export function hasPremiumAccess(opts: {
   subscription?: ProfileSubscription | null;
   premiumSource?: 'owner' | 'gift' | 'paid' | null;
 }): boolean {
+  // Premium désactivé (voir featureFlags.ts) : tout le monde a accès à tout.
+  if (!isPremiumGateActive()) return true;
   if (
     opts.premiumSource === 'owner' ||
     opts.premiumSource === 'gift' ||

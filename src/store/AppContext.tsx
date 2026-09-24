@@ -92,7 +92,7 @@ import { buildDailyReminders } from '../engines/notifications';
 import { toStravaCreateActivityPayload } from '../engines/stravaExport';
 import { normalizeIntegrations } from '../services/integrationLinks';
 import { isRemoteAuthToken, apiFetchIntegrations } from '../services/integrationsApi';
-import { isPremium, withPremiumXpBonus } from '../engines/subscription';
+import { hasPremiumPerks, isPremium, withPremiumXpBonus } from '../engines/subscription';
 import {
   applyOwnerPremiumPolicy,
   forceOwnerChampionRank,
@@ -582,7 +582,7 @@ function applyBadgeUnlocks(
   opts?: { awardXp?: boolean },
 ): { achievements: Achievement[]; ranked: RankedProgress; badgeXpAwarded: number } {
   const awardXp = opts?.awardXp !== false;
-  const premium = isPremium(state.profile.plan);
+  const premium = hasPremiumPerks(state.profile.plan);
   let nextRanked = ranked;
   let workingState = state;
   let totalBadgeXp = 0;
@@ -829,7 +829,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       } else if (profile.premiumSource === 'gift' && isPremium(profile.plan)) {
         // Cadeau déjà sur le profil — conservé jusqu’à SYNC_PREMIUM_ENTITLEMENT
       }
-      if (isPremium(profile.plan) && profile.ranked.relegationShieldsLeft == null) {
+      if (hasPremiumPerks(profile.plan) && profile.ranked.relegationShieldsLeft == null) {
         profile = {
           ...profile,
           ranked: {
@@ -1506,7 +1506,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
         };
       }
       if (action.patch.plan != null && patch.plan != null) {
-        if (isPremium(profile.plan)) {
+        if (hasPremiumPerks(profile.plan)) {
           if (profile.ranked.relegationShieldsLeft == null) {
             profile = {
               ...profile,
@@ -1826,7 +1826,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       ranked = applyKmOdysseyXp(
         ranked,
         lifetimeDistances(lifetime),
-        isPremium(state.profile.plan),
+        hasPremiumPerks(state.profile.plan),
       );
       const unlocked = applyBadgeUnlocks(
         { ...state, lifetime, feedbacks: state.feedbacks },
@@ -2371,7 +2371,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
       const prev = state.profile.ranked;
       let ranked = normalizeRankedLadder(prev);
       const current = ladderWeekKey();
-      const premium = isPremium(state.profile.plan);
+      const premium = hasPremiumPerks(state.profile.plan);
       let ladderTouched = false;
       if (!prev.ladderWeekKey) {
         ranked = {
@@ -2467,7 +2467,7 @@ export function reduceAppState(state: AppState, action: Action): AppState {
         state.profile.ranked,
         withPremiumXpBonus(action.xp, isPremium(state.profile.plan)),
       );
-      if (action.shieldBonus && isPremium(state.profile.plan)) {
+      if (action.shieldBonus && hasPremiumPerks(state.profile.plan)) {
         const cur = ranked.relegationShieldsLeft ?? 0;
         ranked = {
           ...ranked,

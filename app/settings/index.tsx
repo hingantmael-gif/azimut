@@ -25,6 +25,7 @@ import { localeLabel } from '../../src/i18n/locales';
 import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
 import { apiAdminMessages } from '../../src/services/contactApi';
 import { hasPremiumAccess } from '../../src/premium/entitlement';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 
 /**
  * Hub paramètres — préférences app uniquement (comme Strava / Apple Fitness).
@@ -135,7 +136,7 @@ export default function SettingsIndex() {
                   onPress={() => router.push('/settings/community-rules')}
                 />
               ) : null}
-              {isOwnerPremiumEmail(state.profile.email) ? (
+              {isPremiumUiVisible() && isOwnerPremiumEmail(state.profile.email) ? (
                 <SettingsRow
                   label="Gestion compte premium"
                   value="Cadeaux Premium"
@@ -229,19 +230,21 @@ export default function SettingsIndex() {
             </SettingsSection>
 
             <SettingsSection title="Explorer">
-              <SettingsRow
-                label="Abonnement Premium"
-                value={
-                  hasPremiumAccess({
-                    plan: state.profile.plan,
-                    subscription: state.profile.subscription,
-                    premiumSource: state.profile.premiumSource,
-                  })
-                    ? 'Actif'
-                    : 'Gratuit'
-                }
-                onPress={() => router.push('/settings/subscription')}
-              />
+              {isPremiumUiVisible() ? (
+                <SettingsRow
+                  label="Abonnement Premium"
+                  value={
+                    hasPremiumAccess({
+                      plan: state.profile.plan,
+                      subscription: state.profile.subscription,
+                      premiumSource: state.profile.premiumSource,
+                    })
+                      ? 'Actif'
+                      : 'Gratuit'
+                  }
+                  onPress={() => router.push('/settings/subscription')}
+                />
+              ) : null}
               <SettingsRow
                 label="Donner mon avis"
                 value="Sur le site Mova"
@@ -251,11 +254,13 @@ export default function SettingsIndex() {
                   void Linking.openURL(`${site}/avis.html`);
                 }}
               />
-              <SettingsRow
-                label="Tout explorer"
-                value="Outils inclus"
-                onPress={() => router.push('/settings/subscription')}
-              />
+              {isPremiumUiVisible() ? (
+                <SettingsRow
+                  label="Tout explorer"
+                  value="Outils inclus"
+                  onPress={() => router.push('/settings/subscription')}
+                />
+              ) : null}
             </SettingsSection>
 
             <SettingsSection title="Aide">

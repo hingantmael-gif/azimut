@@ -1,4 +1,8 @@
 import type { RankTier } from '../types/domain';
+import { isPremiumUiVisible } from '../premium/featureFlags';
+
+/** Suffixe des descriptions de fonds animés : le mot « Premium » n'apparaît que si Premium est activé. */
+const PREM_TAG = isPremiumUiVisible() ? ' — Premium.' : '.';
 import { formatRankLabel, type RankDivision } from './rankedLadder';
 import { rankStepIndex } from './rankedSeason';
 
@@ -449,7 +453,7 @@ export const PROFILE_COVERS: ProfileCoverDef[] = [
   {
     id: 'prem-aurora',
     title: 'Voile d’aurore',
-    description: 'Aurore jade/mint à parallaxe — Premium.',
+    description: `Aurore jade/mint à parallaxe${PREM_TAG}`,
     unlock: { type: 'premium' },
     visual: 'aurora-veil',
     colors: ['#07111F', '#0A6B54', '#3DFF9A'],
@@ -457,7 +461,7 @@ export const PROFILE_COVERS: ProfileCoverDef[] = [
   {
     id: 'prem-neon',
     title: 'Hex néon',
-    description: 'Grille hexagonale mint/lime — Premium.',
+    description: `Grille hexagonale mint/lime${PREM_TAG}`,
     unlock: { type: 'premium' },
     visual: 'cyber-hex',
     colors: ['#07111F', '#0E8F6F', '#D4FF3F'],
@@ -465,7 +469,7 @@ export const PROFILE_COVERS: ProfileCoverDef[] = [
   {
     id: 'prem-ocean',
     title: 'Maelström',
-    description: 'Tourbillon océanique jade → turquoise — Premium.',
+    description: `Tourbillon océanique jade → turquoise${PREM_TAG}`,
     unlock: { type: 'premium' },
     visual: 'maelstrom',
     colors: ['#07111F', '#0A6B54', '#06B6D4'],
@@ -473,7 +477,7 @@ export const PROFILE_COVERS: ProfileCoverDef[] = [
   {
     id: 'prem-ember',
     title: 'Inferno',
-    description: 'Brasier premium + fumée + chaleur — Premium.',
+    description: `Brasier + fumée + chaleur${PREM_TAG}`,
     unlock: { type: 'premium' },
     visual: 'inferno',
     colors: ['#07111F', '#7C2D12', '#F97316'],
@@ -578,7 +582,7 @@ export function isProfileCoverUnlocked(
 
 export function profileCoverLockHint(cover: ProfileCoverDef): string {
   if (cover.unlock.type === 'premium') {
-    return 'Premium';
+    return isPremiumUiVisible() ? 'Premium' : 'Animé';
   }
   if (cover.unlock.type === 'rank') {
     return formatRankLabel(cover.unlock.tier, cover.unlock.division);

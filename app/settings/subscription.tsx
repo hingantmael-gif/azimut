@@ -7,7 +7,8 @@ import {
 } from 'react-native';
 import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter, Redirect } from 'expo-router';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 import {
   SettingsRow,
   SettingsScreen,
@@ -76,7 +77,7 @@ const COMPARE: CompareRow[] = [
  * Page d’abonnement + catalogue d’exploration.
  * Achats Play via RevenueCat sur build Android ; web = présentation + restore info.
  */
-export default function SubscriptionScreen() {
+function SubscriptionScreenImpl() {
   const { state, dispatch } = useApp();
   const router = useRouter();
   const { colors } = useThemeColors();
@@ -475,4 +476,10 @@ function makeStyles(colors: ColorPalette) {
       color: colors.textMuted,
     },
   });
+}
+
+/** Écran désactivé tant que Premium est masqué (featureFlags.ts) : retour aux réglages. */
+export default function SubscriptionScreen() {
+  if (!isPremiumUiVisible()) return <Redirect href="/settings" />;
+  return <SubscriptionScreenImpl />;
 }

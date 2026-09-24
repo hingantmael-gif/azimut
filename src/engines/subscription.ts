@@ -1,8 +1,14 @@
 import type { SubscriptionPlan, WatchBrandId } from '../types/domain';
 import { watchResendLabel, watchSendLabel } from './watchExport';
+import { isPremiumGateActive } from '../premium/featureFlags';
 
 export function isPremium(plan?: SubscriptionPlan): boolean {
   return plan === 'premium_monthly' || plan === 'premium_yearly';
+}
+
+/** Avantages (boucliers ladder…) : tout le monde quand Premium est désactivé, sinon abonnés seulement. */
+export function hasPremiumPerks(plan?: SubscriptionPlan): boolean {
+  return !isPremiumGateActive() || isPremium(plan);
 }
 
 /** Bonus XP Premium : désactivé sur le compétitif (anti pay-to-win — brief §5). */

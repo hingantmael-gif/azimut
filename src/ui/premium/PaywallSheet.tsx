@@ -13,6 +13,7 @@ import {
   BILLING_DISPLAY_PRICES,
 } from '../../premium/quotas';
 import { ProCrown } from './ProCrown';
+import { isPremiumUiVisible } from '../../premium/featureFlags';
 
 type Props = {
   visible: boolean;
@@ -35,6 +36,7 @@ export function PaywallSheet({
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const copy = PAYWALL_COPY[reason] ?? PAYWALL_COPY.generic;
+  if (!isPremiumUiVisible()) return null;
 
   const goSubscribe = () => {
     onClose();
