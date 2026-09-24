@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Text } from '../Text';
 import { PhoneModal } from '../PhoneModal';
 import { PrimaryButton, SecondaryButton } from '../primitives';
@@ -13,7 +13,19 @@ import type { WatchSendOutcome } from '../../utils/watchWorkoutExport';
  * Résultat d'un envoi vers la montre : UNE feuille, des étapes numérotées, un bouton par action possible.
  * Remplace la pile d'alertes système (souvent vides ou illisibles sur le web).
  */
-export function WatchSendSheet({ outcome, busy, onClose }: { outcome: WatchSendOutcome | null; busy: boolean; onClose: () => void }) {
+export function WatchSendSheet({
+  outcome,
+  busy,
+  linking = false,
+  onLinkGarmin,
+  onClose,
+}: {
+  outcome: WatchSendOutcome | null;
+  busy: boolean;
+  linking?: boolean;
+  onLinkGarmin?: (workoutId: string) => void;
+  onClose: () => void;
+}) {
   const { colors } = useThemeColors();
   const router = useRouter();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -44,9 +56,22 @@ export function WatchSendSheet({ outcome, busy, onClose }: { outcome: WatchSendO
               <View style={styles.center}>
                 <Ionicons name={outcome.delivered ? 'checkmark-circle' : 'download-outline'} size={44} color={colors.accent} />
                 <Text style={styles.title}>{outcome.title}</Text>
-                <Text style={styles.body}>Ta séance est prête. Voici comment la mettre sur ta montre :</Text>
+                <Text style={styles.body}>
+                  {outcome.note ?? 'Ta séance est prête. Voici comment la mettre sur ta montre :'}
+                </Text>
               </View>
-              <View style={{ gap: 10, marginVertical: spacing.md }}>
+              {outcome.canLinkGarmin && onLinkGarmin ? (
+                <View style={{ marginTop: spacing.md }}>
+                  <PrimaryButton
+                    label={linking ? 'Connexion à Garmin…' : 'Lier Garmin Connect et envoyer'}
+                    onPress={() => onLinkGarmin(outcome.workoutId)}
+                  />
+                </View>
+              ) : null}
+              <Text style={[styles.body, { marginTop: spacing.md, fontWeight: '700', color: colors.text }]}>
+                {outcome.brandId === 'garmin' ? 'Sans lier : par câble USB' : 'Étapes'}
+              </Text>
+              <View style={{ gap: 10, marginVertical: spacing.sm }}>
                 {outcome.steps.map((s, i) => (
                   <View key={i} style={styles.step}>
                     <View style={styles.stepN}>
@@ -65,12 +90,12 @@ export function WatchSendSheet({ outcome, busy, onClose }: { outcome: WatchSendO
                   }}
                 />
               ) : null}
-              {outcome.canLinkGarmin ? (
+              {outcome.brandId === 'garmin' ? (
                 <SecondaryButton
-                  label="Envoi automatique : lier Garmin Connect"
+                  label="Mode d’emploi Garmin"
                   onPress={() => {
                     onClose();
-                    router.push('/settings/devices');
+                    router.push('/settings/garmin-guide' as Href);
                   }}
                 />
               ) : null}

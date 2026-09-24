@@ -1,6 +1,6 @@
 import type { AppState } from '../data/seed';
 import type { WatchBrandId } from '../types/domain';
-import { autoExportTodayGarminWorkout, pushWorkoutToGarminQuiet } from './garminExport';
+import { autoExportTodayGarminWorkout, pushWorkoutToGarminQuiet, type GarminPushResult } from './garminExport';
 import { isGarminAuthConfigured } from '../services/garminAuth';
 import { buildWatchExportFiles } from '../engines/watchFileFormats';
 import { deliverWatchExportBundle } from './downloadWatchFile';
@@ -62,6 +62,9 @@ export type WatchSendOutcome =
       delivered: boolean;
       /** Garmin : proposer de lier le compte pour un envoi automatique. */
       canLinkGarmin: boolean;
+      /** Pourquoi l'envoi automatique n'a pas eu lieu (une phrase, en clair). */
+      note?: string;
+      workoutId: string;
       retry: () => Promise<boolean>;
     }
   | { status: 'error'; title: string; message: string }
@@ -80,13 +83,33 @@ function fileSteps(brandId: WatchBrandId, filename: string, nextStep: string, de
   return [got, nextStep];
 }
 
+/** Explique en une phrase pourquoi Garmin Connect n'a pas reçu la séance, et si on peut proposer de lier le compte. */
+export function garminFallbackAdvice(push: GarminPushResult | null): { canLink: boolean; note?: string } {
+  if (!push || push.ok) return { canLink: false };
+  const configured = isGarminAuthConfigured();
+  switch (push.reason) {
+    case 'not_linked':
+      return configured
+        ? { canLink: true, note: 'Lie ton compte Garmin Connect une seule fois : ensuite chaque séance arrive sur ta montre sans câble.' }
+        : { canLink: false, note: 'L’envoi automatique Garmin n’est pas encore activé sur cette version de Mova : utilise le fichier ci-dessous.' };
+    case 'no_account':
+      return { canLink: false, note: 'Connecte-toi avec ton compte Mova pour lier Garmin Connect et envoyer sans câble.' };
+    case 'api_error':
+      return { canLink: false, note: `Garmin Connect n’a pas accepté l’envoi (${push.error ?? 'erreur inconnue'}). Réessaie plus tard ou utilise le fichier.` };
+    default:
+      return { canLink: false };
+  }
+}
+
 async function buildOutcomeForFile(opts: {
   brandId: WatchBrandId;
   workoutId: string;
   state: AppState;
   dispatch: WatchExportDispatch;
+  garminPush?: GarminPushResult | null;
 }): Promise<WatchSendOutcome> {
-  const { brandId, workoutId, state, dispatch } = opts;
+  const { brandId, workoutId, state, dispatch, garminPush = null } = opts;
+  const advice = brandId === 'garmin' ? garminFallbackAdvice(garminPush) : { canLink: false };
   const workout = state.plan.find((w) => w.id === workoutId);
   if (!workout || !canSendWorkoutToWatch(workout.discipline)) {
     return { status: 'error', title: 'Envoi impossible', message: 'Cette séance ne peut pas être envoyée à la montre.' };
@@ -101,7 +124,9 @@ async function buildOutcomeForFile(opts: {
     filename: primary.filename,
     steps: fileSteps(brandId, primary.filename, primary.nextStep, delivered > 0),
     delivered: delivered > 0,
-    canLinkGarmin: brandId === 'garmin' && isGarminAuthConfigured() && !state.profile.integrations.some((i) => i.provider === 'garmin' && i.connected),
+    canLinkGarmin: advice.canLink,
+    note: advice.note,
+    workoutId,
     retry: async () => (await deliverWatchExportBundle(primary, extras)).delivered > 0,
   };
 }
@@ -135,15 +160,16 @@ export async function exportWorkoutToSelectedWatch(opts: WatchWorkoutExportOptio
     dispatch({ type: 'SET_WATCH', brandId });
   }
 
+  let garminPush: GarminPushResult | null = null;
   if (brandId === 'garmin') {
-    const pushed = await pushWorkoutToGarminQuiet({ state, dispatch, workoutId });
-    if (pushed.ok) {
-      return { status: 'pushed', brandId, title: 'Sur ton calendrier Garmin', message: pushed.message };
+    garminPush = await pushWorkoutToGarminQuiet({ state, dispatch, workoutId });
+    if (garminPush.ok) {
+      return { status: 'pushed', brandId, title: 'Sur ton calendrier Garmin', message: garminPush.message };
     }
-    // Compte non lié / API indisponible : le fichier prend le relais, sans message d'erreur inutile.
+    // Sinon : le fichier prend le relais, avec une phrase qui explique pourquoi (garminFallbackAdvice).
   }
 
-  return buildOutcomeForFile({ brandId, workoutId, state, dispatch });
+  return buildOutcomeForFile({ brandId, workoutId, state, dispatch, garminPush });
 }
 
 /** Auto-envoi séance du jour — Garmin déjà lié uniquement (zéro clic). */

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Alert } from '../../src/utils/appAlert';
 import { Text } from '../../src/ui/Text';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
@@ -156,6 +156,16 @@ export default function WatchSettingsScreen() {
             onPress={sendToday}
           />
         </SettingsSection>
+
+        {brandId === 'garmin' ? (
+          <SettingsSection title="Garmin">
+            <SettingsRow
+              label="Mode d’emploi : envoyer sur ma Garmin"
+              value="Pas à pas"
+              onPress={() => router.push('/settings/garmin-guide' as Href)}
+            />
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection title="Sommeil">
           <SettingsRow label="Importer manuellement" onPress={() => router.push('/sleep')} />

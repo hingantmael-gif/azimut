@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { Text } from '../../src/ui/Text';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
@@ -53,6 +53,14 @@ export default function DevicesScreen() {
           <SettingsRow
             label="Importer sommeil"
             onPress={() => router.push('/sleep')}
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Garmin">
+          <SettingsRow
+            label="Mode d’emploi Garmin"
+            value="Lier & envoyer"
+            onPress={() => router.push('/settings/garmin-guide' as Href)}
           />
         </SettingsSection>
 
