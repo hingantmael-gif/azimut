@@ -90,7 +90,19 @@ function FileOutcome({
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
+  const isApple = outcome.brandId === 'apple';
   const mobileGarmin = outcome.brandId === 'garmin' && outcome.device !== 'desktop';
+  /** Garmin sur téléphone et Apple Watch : on part de la séance copiée, pas d'un fichier. */
+  const copyFirst = mobileGarmin || isApple;
+  const [appleState, setAppleState] = useState<'idle' | 'busy' | 'done' | 'failed'>('idle');
+  const [appleError, setAppleError] = useState<string | null>(null);
+  const addToAppleWatch = async () => {
+    if (!outcome.apple) return;
+    setAppleState('busy');
+    const res = await outcome.apple.add();
+    setAppleError(res.ok ? null : res.error ?? null);
+    setAppleState(res.ok ? 'done' : 'failed');
+  };
 
   const copy = async () => {
     const ok = await copyTextToClipboard(outcome.briefText);
@@ -111,9 +123,13 @@ function FileOutcome({
         <Text style={styles.title}>{outcome.title}</Text>
         <Text style={styles.body}>
           {outcome.note ??
-            (mobileGarmin
-              ? 'Depuis un téléphone, le plus rapide : copier la séance et la recréer dans Garmin Connect.'
-              : 'Voici comment mettre la séance sur ta montre :')}
+            (isApple
+              ? outcome.apple?.available
+                ? 'Un seul geste : la séance est ajoutée à ton Apple Watch.'
+                : 'Le plus rapide ici : copier la séance et la recréer dans l’app Exercice de la montre.'
+              : mobileGarmin
+                ? 'Depuis un téléphone, le plus rapide : copier la séance et la recréer dans Garmin Connect.'
+                : 'Voici comment mettre la séance sur ta montre :')}
         </Text>
       </View>
 
@@ -137,15 +153,39 @@ function FileOutcome({
         ))}
       </View>
 
-      {mobileGarmin ? (
-        <View style={{ gap: 8 }}>
-          <PrimaryButton label={copied ? 'Séance copiée ✓' : 'Copier la séance'} onPress={() => void copy()} />
-          <SecondaryButton
-            label="Ouvrir Garmin Connect"
-            onPress={() => {
-              void openGarminConnect();
-            }}
+      {isApple && outcome.apple?.available ? (
+        <View style={{ gap: 6, marginBottom: 8 }}>
+          <PrimaryButton
+            label={
+              appleState === 'busy'
+                ? 'Ajout…'
+                : appleState === 'done'
+                  ? 'Ajoutée à l’Apple Watch ✓'
+                  : appleState === 'failed'
+                    ? 'Échec — réessayer'
+                    : 'Ajouter à l’Apple Watch'
+            }
+            onPress={() => void addToAppleWatch()}
           />
+          {appleError ? <Text style={[styles.body, { fontSize: 12 }]}>{appleError}</Text> : null}
+        </View>
+      ) : null}
+
+      {copyFirst ? (
+        <View style={{ gap: 8 }}>
+          {isApple && outcome.apple?.available ? (
+            <SecondaryButton label={copied ? 'Séance copiée ✓' : 'Copier la séance'} onPress={() => void copy()} />
+          ) : (
+            <PrimaryButton label={copied ? 'Séance copiée ✓' : 'Copier la séance'} onPress={() => void copy()} />
+          )}
+          {mobileGarmin ? (
+            <SecondaryButton
+              label="Ouvrir Garmin Connect"
+              onPress={() => {
+                void openGarminConnect();
+              }}
+            />
+          ) : null}
         </View>
       ) : null}
 
@@ -155,7 +195,7 @@ function FileOutcome({
             Un ordinateur avec câble USB ? Le fichier .fit se copie dans GARMIN › NewFiles.
           </Text>
         ) : null}
-        {mobileGarmin ? (
+        {isApple ? null : mobileGarmin ? (
           <SecondaryButton
             label={
               downloaded === 'busy'
@@ -182,12 +222,12 @@ function FileOutcome({
             onPress={() => void download()}
           />
         )}
-        {outcome.brandId === 'garmin' ? (
+        {outcome.brandId === 'garmin' || isApple ? (
           <SecondaryButton
-            label="Mode d’emploi Garmin"
+            label={isApple ? 'Mode d’emploi Apple Watch' : 'Mode d’emploi Garmin'}
             onPress={() => {
               onClose();
-              router.push('/settings/garmin-guide' as Href);
+              router.push((isApple ? '/settings/apple-watch-guide' : '/settings/garmin-guide') as Href);
             }}
           />
         ) : null}

@@ -175,6 +175,7 @@ function AppShell() {
             <Stack.Screen name="settings/subscription" options={{ title: 'Abonnement Premium' }} />
             <Stack.Screen name="settings/watch" options={{ title: 'Montre' }} />
             <Stack.Screen name="settings/garmin-guide" options={{ title: 'Mode d’emploi Garmin' }} />
+            <Stack.Screen name="settings/apple-watch-guide" options={{ title: 'Mode d’emploi Apple Watch' }} />
             <Stack.Screen name="settings/training-schedule" options={{ title: 'Disponibilités' }} />
             <Stack.Screen name="settings/devices" options={{ title: 'Appareils & sync' }} />
             {/* integrations / partners : redirects legacy → devices (pas dans le hub) */}

@@ -163,7 +163,15 @@
       "expo-sqlite",
       "expo-font",
       "expo-task-manager",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.0"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

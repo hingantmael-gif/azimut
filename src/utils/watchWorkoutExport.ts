@@ -5,6 +5,7 @@ import { isGarminAuthConfigured } from '../services/garminAuth';
 import { buildWatchExportFiles } from '../engines/watchFileFormats';
 import { deliverWatchExportBundle } from './downloadWatchFile';
 import { detectDeviceKind, type DeviceKind } from './deviceKind';
+import { isAppleWatchSchedulingAvailable, scheduleOnAppleWatch } from '../services/appleWatch';
 import { buildWatchWorkoutBrief } from '../engines/watchExport';
 import {
   canSendWorkoutToWatch,
@@ -68,6 +69,8 @@ export type WatchSendOutcome =
       download: () => Promise<boolean>;
       /** Note la séance comme préparée pour la montre (copie ou téléchargement faits). */
       markPrepared: () => void;
+      /** Apple Watch : ajout direct (WorkoutKit) possible seulement dans l'app iPhone Mova. */
+      apple?: { available: boolean; add: () => Promise<{ ok: boolean; error?: string }> };
       /** Garmin : proposer de lier le compte pour un envoi automatique. */
       canLinkGarmin: boolean;
       /** Pourquoi l'envoi automatique n'a pas eu lieu (une phrase, en clair). */
@@ -77,7 +80,26 @@ export type WatchSendOutcome =
   | { status: 'error'; title: string; message: string }
   | { status: 'cancelled' };
 
-function fileSteps(brandId: WatchBrandId, filename: string, nextStep: string, device: DeviceKind): string[] {
+function fileSteps(
+  brandId: WatchBrandId,
+  filename: string,
+  nextStep: string,
+  device: DeviceKind,
+  appleNative = false,
+): string[] {
+  if (brandId === 'apple') {
+    if (appleNative) {
+      return [
+        'Touche « Ajouter à l’Apple Watch » : la séance arrive dans l’app Exercice de ta montre, à la date prévue.',
+        'Sur la montre : Exercice › ta séance (la synchronisation se fait toute seule par Bluetooth).',
+      ];
+    }
+    return [
+      'Touche « Copier la séance » : le résumé (étapes, « Répéter N × », allures) est prêt.',
+      'Sur l’Apple Watch : app Exercice › Ajouter une séance (+) › Personnalisé, puis ajoute les étapes du résumé (les intitulés peuvent varier selon la version).',
+      'L’ajout automatique existe dans l’app Mova pour iPhone (pas dans la version web) : voir le mode d’emploi.',
+    ];
+  }
   const getFile = `Touche « Télécharger le fichier » (${filename}) quand tu en as besoin.`;
   if (brandId === 'garmin') {
     if (device !== 'desktop') {
@@ -132,13 +154,28 @@ async function buildOutcomeForFile(opts: {
   }
   const { primary, extras } = buildWatchExportFiles(workout, brandId);
   const device = detectDeviceKind();
+  const appleNative = brandId === 'apple' && isAppleWatchSchedulingAvailable();
   const markPrepared = () => dispatch({ type: 'MARK_GARMIN_EXPORTED', workoutId });
   return {
     status: 'file',
     brandId,
     title: `Vers ${watchBrandShortLabel(brandId)}`,
     filename: primary.filename,
-    steps: fileSteps(brandId, primary.filename, primary.nextStep, device),
+    steps: fileSteps(brandId, primary.filename, primary.nextStep, device, appleNative),
+    apple:
+      brandId === 'apple'
+        ? {
+            available: appleNative,
+            add: async () => {
+              const res = await scheduleOnAppleWatch(workout);
+              if (res.ok) {
+                markPrepared();
+                return { ok: true };
+              }
+              return { ok: false, error: res.reason === 'unsupported' ? 'Indisponible dans cette version.' : res.error };
+            },
+          }
+        : undefined,
     device,
     briefText: buildWatchWorkoutBrief(workout),
     download: async () => {

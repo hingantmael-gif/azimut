@@ -785,6 +785,38 @@ async function refreshGarminTokens(refreshToken) {
   return body;
 }
 
+const GARMIN_WELLNESS = 'https://apis.garmin.com/wellness-api/rest';
+/** Adresses de la Training API : à confirmer dans la spec fournie par Garmin après l'approbation (surchargeables sans toucher au code). */
+const GARMIN_TRAINING_WORKOUT_URL = process.env.GARMIN_TRAINING_WORKOUT_URL || 'https://apis.garmin.com/training-api/workout';
+const GARMIN_TRAINING_SCHEDULE_URL = process.env.GARMIN_TRAINING_SCHEDULE_URL || 'https://apis.garmin.com/training-api/schedule';
+
+/** Permissions réellement accordées par l'utilisateur (il peut décocher « Import de séances » chez Garmin). */
+async function garminPermissions(accessToken) {
+  try {
+    const res = await fetch(`${GARMIN_WELLNESS}/user/permissions`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return Array.isArray(body) ? body : Array.isArray(body?.permissions) ? body.permissions : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Obligatoire côté Garmin : quand l'utilisateur se déconnecte de Mova, on supprime aussi son enregistrement chez eux. */
+async function garminDeleteRegistration(accessToken) {
+  try {
+    const res = await fetch(`${GARMIN_WELLNESS}/user/registration`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return res.ok || res.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 async function garminUserId(accessToken) {
   const res = await fetch('https://apis.garmin.com/wellness-api/rest/user/id', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -823,12 +855,14 @@ async function garminAccessTokenForUser(user) {
   const g = user.oauthIntegrations?.garmin;
   if (!g?.accessToken) return null;
   const expiresAt = g.expiresAt ? Date.parse(g.expiresAt) : 0;
-  if (expiresAt && expiresAt > Date.now() + 60_000) {
+  // Garmin recommande de rafraîchir 10 minutes avant l'expiration.
+  if (expiresAt && expiresAt > Date.now() + 600_000) {
     return g.accessToken;
   }
   if (!g.refreshToken) return g.accessToken;
   const refreshed = await refreshGarminTokens(g.refreshToken);
   g.accessToken = refreshed.access_token;
+  // Garmin renvoie un NOUVEAU refresh token à chaque rafraîchissement : le précédent devient inutilisable.
   g.refreshToken = refreshed.refresh_token || g.refreshToken;
   if (refreshed.expires_in) {
     g.expiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
@@ -856,6 +890,14 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
   try {
     const tokens = await exchangeGarminTokens({ code, codeVerifier, redirectUri });
     const accessToken = tokens.access_token;
+    const permissions = await garminPermissions(accessToken);
+    if (permissions && !permissions.includes('WORKOUT_IMPORT')) {
+      await garminDeleteRegistration(accessToken);
+      return res.status(400).json({
+        error:
+          'Tu n’as pas autorisé « Import de séances » chez Garmin. Relance la liaison et laisse cette case cochée : sans elle, Mova ne peut pas envoyer tes séances.',
+      });
+    }
     const uid = await garminUserId(accessToken);
     user.oauthIntegrations = user.oauthIntegrations || {};
     user.oauthIntegrations.garmin = {
@@ -865,6 +907,7 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : undefined,
       garminUserId: uid,
+      permissions: permissions ?? undefined,
       displayName: uid ? `Garmin #${uid}` : 'Garmin Connect',
       connectedAt: new Date().toISOString(),
     };
@@ -877,10 +920,16 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
   }
 });
 
-app.delete('/integrations/garmin', authMiddleware, (req, res) => {
+app.delete('/integrations/garmin', authMiddleware, async (req, res) => {
   const { users, user } = findAuthedUser(req.authEmail);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
   if (user.oauthIntegrations?.garmin) {
+    try {
+      const token = await garminAccessTokenForUser(user);
+      if (token) await garminDeleteRegistration(token);
+    } catch (e) {
+      console.warn('[garmin] suppression de l’enregistrement impossible', e?.message);
+    }
     delete user.oauthIntegrations.garmin;
     user.updatedAt = new Date().toISOString();
     saveUsers(users);
@@ -947,7 +996,7 @@ app.post('/integrations/garmin/workout', authMiddleware, async (req, res) => {
     }
     saveUsers(users);
 
-    const gRes = await fetch('https://apis.garmin.com/training-api/workout', {
+    const gRes = await fetch(GARMIN_TRAINING_WORKOUT_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -967,7 +1016,7 @@ app.post('/integrations/garmin/workout', authMiddleware, async (req, res) => {
     const dateToSchedule = scheduleDate || new Date().toISOString().slice(0, 10);
 
     if (workoutId) {
-      const schedRes = await fetch('https://apis.garmin.com/training-api/schedule', {
+      const schedRes = await fetch(GARMIN_TRAINING_SCHEDULE_URL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,

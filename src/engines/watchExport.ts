@@ -65,7 +65,7 @@ export function watchExportHint(brandId?: WatchBrandId | null): string {
     case 'garmin':
       return 'Compte Garmin lié : envoi automatique, sans câble. Sinon : sur téléphone, copie la séance et recrée-la dans Garmin Connect ; sur ordinateur, fichier .fit à copier par USB.';
     case 'apple':
-      return 'Export JSON WorkoutKit (+ TCX). Ouvre Fitness / Santé sur iPhone — l’Apple Watch récupère le plan.';
+      return 'App Mova iPhone (iOS 17+) : ajout direct à l’Apple Watch. Ailleurs : copie la séance et recrée-la dans l’app Exercice de la montre.';
     case 'samsung':
       return 'Export TCX Samsung Health (+ JSON). Importe dans Samsung Health puis sync Bluetooth Galaxy Watch.';
     case 'google_fitbit':

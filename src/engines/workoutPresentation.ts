@@ -3,6 +3,7 @@ import { formatDuration, formatPace } from './core';
 import { computeSessionDurationSec } from './coachingEngine';
 import { describePaceZoneSource, resolvePaceZones } from './paceZones';
 import { pickBestRaceReference } from './athleteProfile';
+import { dropOrdinal, findRepeatCycle } from './stepGrouping';
 
 export function resolveAthletePaceZones(
   onboarding?: OnboardingAnswers,
@@ -79,27 +80,6 @@ export type StepLine = {
   group?: { count: number; parts: Array<{ title: string; detail: string }> };
 };
 
-/** Empreinte d'une étape, sans son numéro (« Accélération 3 · … » = « Accélération 1 · … »). */
-function stepSignature(step: WorkoutStep): string {
-  return [
-    step.type,
-    step.endCondition,
-    step.durationSec ?? '',
-    step.distanceMeters ?? '',
-    step.repeat ?? '',
-    (step.label ?? '').replace(/\d+/g, '#'),
-    step.target ? JSON.stringify(step.target) : '',
-  ].join('|');
-}
-
-/** « Accélération 3 · 1 min rapide » → « Accélération · 1 min rapide » (numéro d'ordre retiré dans un bloc répété). */
-function dropOrdinal(title: string): string {
-  return title.replace(/\s\d+(?=\s·)/, '');
-}
-
-const MAX_CYCLE_LEN = 4;
-const MIN_CYCLE_REPEATS = 3;
-
 /**
  * Séance lisible en un coup d'œil : une série d'étapes qui se répète (fartlek, côtes, surges…) devient UNE ligne
  * « Répéter N × … », et « N × effort » suivi de sa récupération devient une seule ligne.
@@ -109,33 +89,18 @@ export function compactStepLines(steps: WorkoutStep[]): StepLine[] {
   const lines: StepLine[] = [];
   let i = 0;
   while (i < steps.length) {
-    let bestLen = 0;
-    let bestCount = 1;
-    for (let len = 1; len <= MAX_CYCLE_LEN && i + len * MIN_CYCLE_REPEATS <= steps.length; len++) {
-      const cycle = steps.slice(i, i + len).map(stepSignature);
-      let count = 1;
-      while (
-        i + (count + 1) * len <= steps.length &&
-        steps.slice(i + count * len, i + (count + 1) * len).every((st, k) => stepSignature(st) === cycle[k])
-      ) {
-        count++;
-      }
-      if (count >= MIN_CYCLE_REPEATS && count * len > bestLen * bestCount) {
-        bestLen = len;
-        bestCount = count;
-      }
-    }
-    if (bestLen > 0) {
-      const parts = steps.slice(i, i + bestLen).map((st) => {
+    const cycle = findRepeatCycle(steps, i);
+    if (cycle) {
+      const parts = steps.slice(i, i + cycle.len).map((st) => {
         const d = describeWorkoutStep(st);
         return { title: dropOrdinal(d.title), detail: d.detail };
       });
       lines.push({
-        title: `Répéter ${bestCount} ×`,
+        title: `Répéter ${cycle.count} ×`,
         detail: parts.map((pt) => (pt.detail && pt.detail !== '—' ? `${pt.title} (${pt.detail})` : pt.title)).join('  →  '),
-        group: { count: bestCount, parts },
+        group: { count: cycle.count, parts },
       });
-      i += bestLen * bestCount;
+      i += cycle.len * cycle.count;
       continue;
     }
     const cur = steps[i];

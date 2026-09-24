@@ -167,6 +167,16 @@ export default function WatchSettingsScreen() {
           </SettingsSection>
         ) : null}
 
+        {brandId === 'apple' ? (
+          <SettingsSection title="Apple Watch">
+            <SettingsRow
+              label="Mode d’emploi : envoyer sur mon Apple Watch"
+              value="Pas à pas"
+              onPress={() => router.push('/settings/apple-watch-guide' as Href)}
+            />
+          </SettingsSection>
+        ) : null}
+
         <SettingsSection title="Sommeil">
           <SettingsRow label="Importer manuellement" onPress={() => router.push('/sleep')} />
           <SettingsRow label="Planning du sommeil" onPress={() => router.push('/sleep')} />
