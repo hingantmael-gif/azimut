@@ -21,6 +21,7 @@ import { WebPwaBootstrap } from '../src/ui/WebPwaBootstrap';
 import { AmbientSportProvider } from '../src/theme/AmbientSport';
 import { InstalledAccountGate } from '../src/ui/auth/InstalledAccountGate';
 import { CloudSyncBootstrap } from '../src/ui/sync/CloudSyncBootstrap';
+import { GarminAutoSync } from '../src/ui/sync/GarminAutoSync';
 import { RemoteConfigBootstrap } from '../src/ui/sync/RemoteConfigBootstrap';
 import { AtmosphereLayer, useHeaderColor } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { NotificationBootstrap } from '../src/ui/notifications/NotificationBootstrap';
@@ -100,6 +101,7 @@ function AppShell() {
           <NotificationBootstrap />
           <InstalledAccountGate />
           <CloudSyncBootstrap />
+          <GarminAutoSync />
           <RemoteConfigBootstrap />
           <SocialInboxBootstrap />
           <PendingProgramReviewModal />
