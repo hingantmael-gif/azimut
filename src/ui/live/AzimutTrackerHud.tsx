@@ -162,20 +162,24 @@ export function LiveFocusBoard({
           </Text>
           <View style={focus.bandIcon} />
         </View>
-      ) : onCollapse ? (
+      ) : (
         <View style={focus.runningTop}>
-          <PressableScale
-            variant="subtle"
-            onPress={onCollapse}
-            accessibilityLabel="Voir la carte"
-            contentStyle={focus.bandIconLight}
-          >
-            <Text style={focus.bandIconLightText}>⤡</Text>
-          </PressableScale>
+          {onCollapse ? (
+            <PressableScale
+              variant="subtle"
+              onPress={onCollapse}
+              accessibilityLabel="Voir la carte"
+              contentStyle={focus.bandIconLight}
+            >
+              <Text style={focus.bandIconLightText}>⤡</Text>
+            </PressableScale>
+          ) : (
+            <View style={focus.bandIcon} />
+          )}
           <Text style={focus.runningKicker}>Cap en cours</Text>
           <View style={focus.bandIcon} />
         </View>
-      ) : null}
+      )}
 
       <Text style={focus.clock}>{clock}</Text>
       <Text style={focus.clockSub}>Chrono</Text>
@@ -192,7 +196,12 @@ export function LiveFocusBoard({
         paceNow={paceNow}
       />
 
-      {cue ? <Text style={focus.cue}>{cue}</Text> : null}
+      {/* Emplacement réservé : le message apparaît / change sans jamais déplacer le reste. */}
+      <View style={focus.cueSlot}>
+        <Text numberOfLines={2} style={focus.cue}>
+          {cue ?? ' '}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -853,7 +862,7 @@ const focus = StyleSheet.create({
     alignSelf: 'stretch',
     marginHorizontal: -spacing.lg,
     marginBottom: 16,
-    paddingVertical: 14,
+    height: 64,
     paddingHorizontal: spacing.md,
     backgroundColor: LIVE_PAUSE_BAND,
     flexDirection: 'row',
@@ -874,7 +883,8 @@ const focus = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 16,
+    height: 64,
   },
   runningKicker: {
     fontSize: 11,
@@ -938,8 +948,8 @@ const focus = StyleSheet.create({
     color: 'rgba(255,255,255,0.42)',
     marginBottom: 22,
   },
+  cueSlot: { alignSelf: 'stretch', minHeight: 48, marginTop: 10, justifyContent: 'center' },
   cue: {
-    marginTop: 10,
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '700',
@@ -995,7 +1005,7 @@ const dock = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-    minHeight: 118,
+    minHeight: 120,
     marginTop: 4,
   },
   side: {
@@ -1004,7 +1014,8 @@ const dock = StyleSheet.create({
     justifyContent: 'flex-end',
     minHeight: 88,
   },
-  pillStack: { marginTop: 4, paddingBottom: 4 },
+  // Même hauteur que la pile « pause » (Reprendre + Terminer) : le bouton ne bouge pas quand on met en pause.
+  pillStack: { marginTop: 4, minHeight: 120 },
   pausePill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1032,6 +1043,7 @@ const dock = StyleSheet.create({
     gap: 12,
     marginTop: 4,
     width: '100%',
+    minHeight: 120,
   },
   resumePill: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import { useAmbientSport } from '../../src/theme/AmbientSport';
-import { useMemo } from 'react';
-import { StyleSheet, View, Image } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View, Image, Pressable } from 'react-native';
 import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -66,6 +66,7 @@ export default function SessionDetailScreen() {
   const focusGarmin = useActionFocus('garmin');
   const focusStrava = useActionFocus('strava');
   const focusRpe = useActionFocus('rpe');
+  const [showFullSteps, setShowFullSteps] = useState(false);
 
   if (!workout) {
     return (
@@ -217,7 +218,29 @@ export default function SessionDetailScreen() {
             avec chrono et images
           </Muted>
         ) : null}
-        {(canGuided ? workout.steps.filter((s) => s.type === 'active') : workout.steps).map(
+        {!canGuided && !isCalis
+          ? (showFullSteps ? summary.fullStepLines : summary.stepLines).map((line, i) => (
+              <View key={`${workout.id}-cline-${i}`} style={styles.step}>
+                <View style={[styles.stepDot, { backgroundColor: discColor }]} />
+                <View style={{ flex: 1 }}>
+                  <Body style={{ fontWeight: '700' }}>{line.title}</Body>
+                  {line.detail ? <Muted>{line.detail}</Muted> : null}
+                </View>
+              </View>
+            ))
+          : null}
+        {!canGuided && !isCalis && summary.fullStepLines.length > summary.stepLines.length ? (
+          <Pressable
+            onPress={() => setShowFullSteps((v) => !v)}
+            accessibilityRole="button"
+            style={{ marginTop: spacing.sm }}
+          >
+            <Body style={{ color: colors.accent, fontWeight: '700' }}>
+              {showFullSteps ? 'Masquer le détail' : 'Voir le détail complet'}
+            </Body>
+          </Pressable>
+        ) : null}
+        {(canGuided || isCalis ? (canGuided ? workout.steps.filter((s) => s.type === 'active') : workout.steps) : []).map(
           (step, i) => {
             const calisId = parseCalisExerciseIdFromStepLabel(step.label);
             const raw = stripCalisStepLabel(step.label ?? '');

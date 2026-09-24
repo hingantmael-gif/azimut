@@ -78,6 +78,7 @@ import {
   createProgramInstanceId,
   mergeProgramPlans,
   removeFutureProgramSessions,
+  prunePlanHistory,
   resolveActivePrograms,
   syncActiveProgramInProfile,
   tagPlanForProgram,
@@ -221,6 +222,7 @@ type Action =
     }
   | { type: 'CANCEL_PROGRAM'; programId?: string }
   | { type: 'PRUNE_FINISHED_PROGRAM' }
+  | { type: 'PRUNE_OLD_PLAN' }
   | { type: 'SYNC_PROGRAM_USAGE' }
   | { type: 'UPDATE_PROFILE'; patch: Partial<AthleteProfile> }
   | { type: 'CONNECT_PROVIDER'; provider: AthleteProfile['integrations'][number]['provider'] }
@@ -672,6 +674,14 @@ function ensureOwnerAccountInvariants(state: AppState): AppState {
     return state;
   }
   return { ...state, profile };
+}
+
+/** Séances du plan réalisées : liées à une activité analysée ou validées par un retour RPE. */
+function doneSessionIds(state: AppState): Set<string> {
+  const ids = new Set<string>();
+  for (const a of state.analyses) ids.add(a.plannedWorkoutId);
+  for (const f of state.feedbacks) ids.add(f.sessionId);
+  return ids;
 }
 
 export function reduceAppState(state: AppState, action: Action): AppState {
@@ -1333,7 +1343,14 @@ export function reduceAppState(state: AppState, action: Action): AppState {
         });
       }
 
-      const plan = removeFutureProgramSessions(state.plan, targetId, today);
+      const plan = prunePlanHistory(
+        removeFutureProgramSessions(state.plan, targetId, today, {
+          doneIds: doneSessionIds(state),
+          includeUnassigned: remaining.length === 0,
+        }),
+        doneSessionIds(state),
+        today,
+      );
       const nextActive = remaining[remaining.length - 1];
       const cancelledCatalog = cancelled
         ? cancelled.catalogId ?? cancelled.id
@@ -1379,6 +1396,10 @@ export function reduceAppState(state: AppState, action: Action): AppState {
           },
         });
       })();
+    }
+    case 'PRUNE_OLD_PLAN': {
+      const plan = prunePlanHistory(state.plan, doneSessionIds(state), new Date().toISOString().slice(0, 10));
+      return plan === state.plan ? state : withReminders({ ...state, plan });
     }
     case 'PRUNE_FINISHED_PROGRAM': {
       if (state.plan.length === 0) return state;
@@ -2735,6 +2756,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!sessionReady || !hydrated.current) return;
     dispatch({ type: 'PRUNE_FINISHED_PROGRAM' });
+    dispatch({ type: 'PRUNE_OLD_PLAN' });
     dispatch({ type: 'SYNC_PROGRAM_USAGE' });
     dispatch({ type: 'SYNC_PLAN_TO_LOAD' });
   }, [sessionReady, dispatch]);

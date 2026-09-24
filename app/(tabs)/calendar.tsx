@@ -44,10 +44,13 @@ export default function PlanScreen() {
   const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
   const [moveMode, setMoveMode] = useState(false);
   const [dropPulse, setDropPulse] = useState(false);
+  /** Détail complet des étapes (une ligne par étape) — replié par défaut : les répétitions sont regroupées. */
+  const [fullDetailId, setFullDetailId] = useState<string | null>(null);
   const dropScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     dispatch({ type: 'PRUNE_FINISHED_PROGRAM' });
+    dispatch({ type: 'PRUNE_OLD_PLAN' });
   }, [dispatch, state.plan.length, state.profile.activeProgram?.id]);
 
   useEffect(() => {
@@ -224,7 +227,7 @@ export default function PlanScreen() {
                                 {workout.coachNote}
                               </Text>
                             ) : null}
-                            {summary.stepLines.map((line, i) => (
+                            {(fullDetailId === workout.id ? summary.fullStepLines : summary.stepLines).map((line, i) => (
                               <FadeInUp
                                 key={`${workout.id}-step-${i}`}
                                 delay={70 + i * 55}
@@ -237,6 +240,17 @@ export default function PlanScreen() {
                                 </View>
                               </FadeInUp>
                             ))}
+                            {summary.fullStepLines.length > summary.stepLines.length || fullDetailId === workout.id ? (
+                              <Pressable
+                                onPress={() => setFullDetailId(fullDetailId === workout.id ? null : workout.id)}
+                                accessibilityRole="button"
+                                style={{ marginTop: spacing.sm }}
+                              >
+                                <Text style={[styles.stepDetail, { color: colors.accent, fontWeight: '700' }]}>
+                                  {fullDetailId === workout.id ? 'Masquer le détail' : 'Voir le détail complet'}
+                                </Text>
+                              </Pressable>
+                            ) : null}
                             <FadeInUp delay={90 + summary.stepLines.length * 45} duration={600}>
                               <View style={styles.actionRow}>
                                 {workout.discipline !== 'rest' && canStartGuidedStrengthSession(workout) ? (

@@ -795,9 +795,11 @@ export default function LiveSessionScreen() {
             </>
           )}
 
-          {coachingCue ? (
-            <Text style={[styles.statusLine, statusStyle]}>{coachingCue}</Text>
-          ) : null}
+          <View style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text numberOfLines={2} style={[styles.statusLine, statusStyle]}>
+              {coachingCue ?? ' '}
+            </Text>
+          </View>
 
           <View style={styles.metricRow}>
             <LiveMetricCell

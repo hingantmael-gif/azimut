@@ -72,6 +72,87 @@ export function describeWorkoutStep(step: WorkoutStep): { title: string; detail:
   return { title, detail };
 }
 
+export type StepLine = {
+  title: string;
+  detail: string;
+  /** Bloc répété (ex. « 8 × ») : les lignes qu'il contient, pour un affichage détaillé à la demande. */
+  group?: { count: number; parts: Array<{ title: string; detail: string }> };
+};
+
+/** Empreinte d'une étape, sans son numéro (« Accélération 3 · … » = « Accélération 1 · … »). */
+function stepSignature(step: WorkoutStep): string {
+  return [
+    step.type,
+    step.endCondition,
+    step.durationSec ?? '',
+    step.distanceMeters ?? '',
+    step.repeat ?? '',
+    (step.label ?? '').replace(/\d+/g, '#'),
+    step.target ? JSON.stringify(step.target) : '',
+  ].join('|');
+}
+
+/** « Accélération 3 · 1 min rapide » → « Accélération · 1 min rapide » (numéro d'ordre retiré dans un bloc répété). */
+function dropOrdinal(title: string): string {
+  return title.replace(/\s\d+(?=\s·)/, '');
+}
+
+const MAX_CYCLE_LEN = 4;
+const MIN_CYCLE_REPEATS = 3;
+
+/**
+ * Séance lisible en un coup d'œil : une série d'étapes qui se répète (fartlek, côtes, surges…) devient UNE ligne
+ * « Répéter N × … », et « N × effort » suivi de sa récupération devient une seule ligne.
+ * Le détail complet reste disponible via describeWorkoutStep sur chaque étape.
+ */
+export function compactStepLines(steps: WorkoutStep[]): StepLine[] {
+  const lines: StepLine[] = [];
+  let i = 0;
+  while (i < steps.length) {
+    let bestLen = 0;
+    let bestCount = 1;
+    for (let len = 1; len <= MAX_CYCLE_LEN && i + len * MIN_CYCLE_REPEATS <= steps.length; len++) {
+      const cycle = steps.slice(i, i + len).map(stepSignature);
+      let count = 1;
+      while (
+        i + (count + 1) * len <= steps.length &&
+        steps.slice(i + count * len, i + (count + 1) * len).every((st, k) => stepSignature(st) === cycle[k])
+      ) {
+        count++;
+      }
+      if (count >= MIN_CYCLE_REPEATS && count * len > bestLen * bestCount) {
+        bestLen = len;
+        bestCount = count;
+      }
+    }
+    if (bestLen > 0) {
+      const parts = steps.slice(i, i + bestLen).map((st) => {
+        const d = describeWorkoutStep(st);
+        return { title: dropOrdinal(d.title), detail: d.detail };
+      });
+      lines.push({
+        title: `Répéter ${bestCount} ×`,
+        detail: parts.map((pt) => (pt.detail && pt.detail !== '—' ? `${pt.title} (${pt.detail})` : pt.title)).join('  →  '),
+        group: { count: bestCount, parts },
+      });
+      i += bestLen * bestCount;
+      continue;
+    }
+    const cur = steps[i];
+    const next = steps[i + 1];
+    const d = describeWorkoutStep(cur);
+    // « N × effort » + sa récupération répétée N fois → une seule ligne.
+    if (cur.repeat && cur.repeat > 1 && next && next.type === 'rest' && next.repeat === cur.repeat) {
+      lines.push({ title: d.title, detail: `${d.detail} · récup ${formatStepMeasure(next)}` });
+      i += 2;
+      continue;
+    }
+    lines.push(d);
+    i += 1;
+  }
+  return lines;
+}
+
 export function formatWorkoutDistance(meters?: number): string | null {
   if (!meters || meters <= 0) return null;
   const km = meters / 1000;
@@ -92,7 +173,10 @@ export function formatPeriodization(block?: string): string {
 export function summarizeWorkout(workout: PlannedWorkout): {
   durationLabel: string;
   distanceLabel: string | null;
-  stepLines: Array<{ title: string; detail: string }>;
+  /** Lignes compactes (répétitions regroupées). */
+  stepLines: StepLine[];
+  /** Une ligne par étape, sans regroupement. */
+  fullStepLines: Array<{ title: string; detail: string }>;
 } {
   const durationSec =
     workout.plannedDurationSec && workout.plannedDurationSec > 0
@@ -102,7 +186,8 @@ export function summarizeWorkout(workout: PlannedWorkout): {
   return {
     durationLabel: formatDuration(durationSec),
     distanceLabel: formatWorkoutDistance(workout.plannedDistanceM),
-    stepLines: workout.steps.map(describeWorkoutStep),
+    stepLines: compactStepLines(workout.steps),
+    fullStepLines: workout.steps.map(describeWorkoutStep),
   };
 }
 
