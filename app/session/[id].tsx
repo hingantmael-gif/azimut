@@ -2,7 +2,7 @@ import { useAmbientSport } from '../../src/theme/AmbientSport';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View, Image, Pressable } from 'react-native';
 import { Text } from '../../src/ui/Text';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import {
   Body,
   Muted,
@@ -67,6 +67,8 @@ export default function SessionDetailScreen() {
   const focusStrava = useActionFocus('strava');
   const focusRpe = useActionFocus('rpe');
   const [showFullSteps, setShowFullSteps] = useState(false);
+  /** Course / vélo / natation : le déroulé est replié (la note du coach et les boutons passent d'abord). */
+  const [showSteps, setShowSteps] = useState(false);
 
   if (!workout) {
     return (
@@ -211,14 +213,27 @@ export default function SessionDetailScreen() {
           </View>
         ) : null}
 
-        <Body style={{ marginTop: spacing.lg, fontWeight: '700' }}>Déroulé</Body>
+        {canGuided || isCalis ? (
+          <Body style={{ marginTop: spacing.lg, fontWeight: '700' }}>Déroulé</Body>
+        ) : null}
         {canGuided ? (
           <Muted style={{ marginTop: 4, marginBottom: 4 }}>
             {workout.steps.filter((s) => s.type === 'active').length} exercices · séance guidée
             avec chrono et images
           </Muted>
         ) : null}
-        {!canGuided && !isCalis
+        {!canGuided && !isCalis && !isRest ? (
+          <Pressable
+            onPress={() => setShowSteps((v) => !v)}
+            accessibilityRole="button"
+            style={{ marginTop: spacing.md }}
+          >
+            <Body style={{ color: colors.accent, fontWeight: '700' }}>
+              {showSteps ? 'Masquer le déroulé ▾' : 'Voir le déroulé ▸'}
+            </Body>
+          </Pressable>
+        ) : null}
+        {!canGuided && !isCalis && showSteps
           ? (showFullSteps ? summary.fullStepLines : summary.stepLines).map((line, i) => (
               <View key={`${workout.id}-cline-${i}`} style={styles.step}>
                 <View style={[styles.stepDot, { backgroundColor: discColor }]} />
@@ -229,7 +244,7 @@ export default function SessionDetailScreen() {
               </View>
             ))
           : null}
-        {!canGuided && !isCalis && summary.fullStepLines.length > summary.stepLines.length ? (
+        {!canGuided && !isCalis && showSteps && summary.fullStepLines.length > summary.stepLines.length ? (
           <Pressable
             onPress={() => setShowFullSteps((v) => !v)}
             accessibilityRole="button"
@@ -314,6 +329,15 @@ export default function SessionDetailScreen() {
               />
             </FocusTarget>
             <Muted style={{ marginTop: 6 }}>{watchHint}</Muted>
+            {!state.profile.watch?.brandId || state.profile.watch.brandId === 'garmin' ? (
+              <Pressable
+                onPress={() => router.push('/settings/garmin-guide' as Href)}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.xs }}
+              >
+                <Body style={{ color: colors.accent, fontWeight: '700' }}>Comment l’envoyer sur ma Garmin ? (sans télécharger)</Body>
+              </Pressable>
+            ) : null}
           </>
         ) : watchHint ? (
           <Muted style={{ marginTop: spacing.md }}>{watchHint}</Muted>

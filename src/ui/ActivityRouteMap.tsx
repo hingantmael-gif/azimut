@@ -1,5 +1,5 @@
-import { createElement, useEffect, useId, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { createElement, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Text';
 import Svg, { Circle, Polyline, Rect } from 'react-native-svg';
 import { BRAND } from '../constants/brand';
@@ -50,7 +50,16 @@ type LeafletHandle = {
   endMk: any | null;
   userMk: any | null;
   accCircle: any | null;
+  /** L'utilisateur a zoomé / déplacé la carte : plus aucun recadrage automatique tant qu'il ne le demande pas. */
+  userAdjusted: boolean;
+  /** Empreinte du dernier tracé cadré (évite de recadrer quand rien n'a changé). */
+  framedSig: string;
 };
+
+function routeSignature(pts: [number, number][]): string {
+  const last = pts[pts.length - 1];
+  return `${pts.length}|${last ? last[0] : ''}|${last ? last[1] : ''}`;
+}
 
 function ensureLeaflet(): Promise<{ L: any }> {
   return new Promise((resolve, reject) => {
@@ -123,6 +132,7 @@ function paintRoute(
   pts: [number, number][],
   follow?: boolean,
   accuracyM?: number | null,
+  recenter?: boolean,
 ) {
   clearLayers(h);
   if (pts.length < 1) return;
@@ -171,11 +181,17 @@ function paintRoute(
       fillOpacity: 1,
     }).addTo(h.map);
 
-    if (follow) {
-      h.map.setView(last, Math.max(h.map.getZoom(), 16), { animate: true });
-    } else {
-      h.map.fitBounds(h.line.getBounds(), { padding: [36, 36], maxZoom: 17 });
+    // Cadrage automatique : jamais une fois que l'utilisateur a pris la main (zoom arrière conservé),
+    // et jamais si le tracé n'a pas changé (un simple re-rendu ne doit pas remettre le zoom initial).
+    const sig = routeSignature(pts);
+    if (!h.userAdjusted && (recenter || h.framedSig !== sig)) {
+      if (follow) {
+        h.map.setView(last, Math.max(h.map.getZoom(), 16), { animate: true });
+      } else {
+        h.map.fitBounds(h.line.getBounds(), { padding: [36, 36], maxZoom: 17 });
+      }
     }
+    h.framedSig = sig;
   } else {
     h.userMk = L.circleMarker(last, {
       radius: 9,
@@ -184,7 +200,8 @@ function paintRoute(
       fillColor: ROUTE_COLOR,
       fillOpacity: 1,
     }).addTo(h.map);
-    h.map.setView(last, 16);
+    if (!h.userAdjusted && (recenter || h.framedSig !== routeSignature(pts))) h.map.setView(last, 16);
+    h.framedSig = routeSignature(pts);
   }
 
   setTimeout(() => h.map.invalidateSize(), 60);
@@ -207,6 +224,8 @@ function LeafletRouteMap({
   const latlngRef = useRef(latlng);
   const followRef = useRef(follow);
   const accuracyRef = useRef(accuracyM);
+  /** Bouton « Recentrer » : visible seulement après un zoom / déplacement manuel. */
+  const [showRecenter, setShowRecenter] = useState(false);
   latlngRef.current = latlng;
   followRef.current = follow;
   accuracyRef.current = accuracyM;
@@ -244,8 +263,21 @@ function LeafletRouteMap({
           endMk: null,
           userMk: null,
           accCircle: null,
+          userAdjusted: false,
+          framedSig: '',
         };
         readyRef.current = true;
+
+        // Toute action de l'utilisateur sur la carte (molette, pinch, glisser, double-clic) fige le cadrage.
+        const markUser = () => {
+          const cur = handleRef.current;
+          if (!cur || cur.userAdjusted) return;
+          cur.userAdjusted = true;
+          setShowRecenter(true);
+        };
+        for (const ev of ['wheel', 'mousedown', 'touchstart', 'dblclick']) {
+          el.addEventListener(ev, markUser, { passive: true });
+        }
 
         const pending = latlngRef.current;
         if (pending.length >= 1) {
@@ -293,6 +325,15 @@ function LeafletRouteMap({
     paintRoute(h, L, latlng, follow, accuracyM);
   }, [latlng, follow, accuracyM]);
 
+  const recenterNow = useCallback(() => {
+    const h = handleRef.current;
+    const L = (window as typeof window & { L?: any }).L;
+    if (!h || !L) return;
+    h.userAdjusted = false;
+    setShowRecenter(false);
+    paintRoute(h, L, latlngRef.current, followRef.current, accuracyRef.current, true);
+  }, []);
+
   return (
     <View style={[styles.map, { height: height ?? '100%' as unknown as number }]}>
       {createElement('div', {
@@ -304,6 +345,11 @@ function LeafletRouteMap({
           touchAction: 'none',
         },
       })}
+      {showRecenter && latlng.length >= 1 ? (
+        <Pressable onPress={recenterNow} accessibilityRole="button" accessibilityLabel="Recentrer la carte" style={styles.recenterBtn}>
+          <Text style={styles.recenterText}>Recentrer</Text>
+        </Pressable>
+      ) : null}
       {latlng.length < 1 ? (
         <View style={styles.emptyOverlay} pointerEvents="none">
           <Text style={styles.emptyText}>
@@ -412,6 +458,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(232,238,242,0.55)',
   },
+  recenterBtn: {
+    ...({ position: 'absolute' as const, right: 12, bottom: 12 }),
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+  },
+  recenterText: { color: '#0F172A', fontSize: 13, fontWeight: '800' },
   emptyText: {
     color: '#374151',
     fontSize: 14,

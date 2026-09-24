@@ -15,6 +15,16 @@ type Block = { title: string; icon: keyof typeof Ionicons.glyphMap; steps: strin
 
 const BLOCKS: Block[] = [
   {
+    title: 'Sans liaison : depuis ton téléphone (sans câble)',
+    icon: 'phone-portrait-outline',
+    steps: [
+      'Garmin n’accepte pas l’import d’un fichier de séance dans Garmin Connect (ni sur téléphone, ni sur le site) : un fichier .fit ne sert donc qu’avec un câble USB.',
+      'Sur téléphone, on recrée la séance en 1 minute : « Envoyer à Garmin » › « Copier la séance ». Le résumé (étapes, « Répéter N × », allures) est prêt à suivre.',
+      'Ouvre Garmin Connect › Plus › Entraînement et plans › Séances › Créer une séance, ajoute les étapes du résumé, enregistre, puis « Envoyer à l’appareil » (les intitulés peuvent varier selon la version).',
+      'La liaison ci-dessous évite tout ça : après la première connexion, tout part tout seul.',
+    ],
+  },
+  {
     title: '1. Lier Garmin (une seule fois)',
     icon: 'link',
     steps: [
@@ -47,7 +57,7 @@ const BLOCKS: Block[] = [
       'La fenêtre Garmin ne s’ouvre pas : autorise les pop-ups pour Mova dans ton navigateur, puis réessaie.',
       'Tu es en mode local (sans compte Mova) : connecte-toi avec ton compte Mova, la liaison en a besoin.',
       'La montre n’apparaît pas dans Garmin Connect : appaire-la d’abord dans l’app Garmin Connect (Bluetooth).',
-      'Toujours rien : utilise le fichier (câble USB) proposé après « Envoyer à Garmin ».',
+      'Toujours rien : copie la séance (téléphone) ou télécharge le fichier (ordinateur + câble USB) depuis « Envoyer à Garmin ».',
     ],
   },
 ];
@@ -93,7 +103,7 @@ export default function GarminGuideScreen() {
             <Text style={styles.warn}>
               {!remoteAuth
                 ? 'Connecte-toi avec ton compte Mova pour lier Garmin.'
-                : 'La liaison automatique Garmin n’est pas encore activée sur cette version de Mova : utilise le fichier (câble USB).'}
+                : 'La liaison automatique Garmin n’est pas encore activée sur cette version de Mova : utilise « Copier la séance » (téléphone) ou le fichier (ordinateur + USB).'}
             </Text>
           )
         ) : null}

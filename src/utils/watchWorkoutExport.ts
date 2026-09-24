@@ -4,6 +4,8 @@ import { autoExportTodayGarminWorkout, pushWorkoutToGarminQuiet, type GarminPush
 import { isGarminAuthConfigured } from '../services/garminAuth';
 import { buildWatchExportFiles } from '../engines/watchFileFormats';
 import { deliverWatchExportBundle } from './downloadWatchFile';
+import { detectDeviceKind, type DeviceKind } from './deviceKind';
+import { buildWatchWorkoutBrief } from '../engines/watchExport';
 import {
   canSendWorkoutToWatch,
   watchBrandShortLabel,
@@ -58,29 +60,43 @@ export type WatchSendOutcome =
       filename: string;
       /** Étapes à suivre, dans l'ordre. */
       steps: string[];
-      /** Le fichier a-t-il pu être remis (téléchargement / partage) ? */
-      delivered: boolean;
+      /** Appareil détecté : les étapes proposées existent vraiment dessus (pas de câble USB sur un téléphone). */
+      device: DeviceKind;
+      /** Résumé prêt à copier : étapes et allures, avec les répétitions regroupées. */
+      briefText: string;
+      /** Télécharge / partage le fichier — seulement quand l'utilisateur le demande, jamais automatiquement. */
+      download: () => Promise<boolean>;
+      /** Note la séance comme préparée pour la montre (copie ou téléchargement faits). */
+      markPrepared: () => void;
       /** Garmin : proposer de lier le compte pour un envoi automatique. */
       canLinkGarmin: boolean;
       /** Pourquoi l'envoi automatique n'a pas eu lieu (une phrase, en clair). */
       note?: string;
       workoutId: string;
-      retry: () => Promise<boolean>;
     }
   | { status: 'error'; title: string; message: string }
   | { status: 'cancelled' };
 
-function fileSteps(brandId: WatchBrandId, filename: string, nextStep: string, delivered: boolean): string[] {
-  const got = delivered ? `Le fichier « ${filename} » est prêt (dossier Téléchargements ou feuille de partage).` : `Touche « Télécharger à nouveau » pour obtenir « ${filename} ».`;
+function fileSteps(brandId: WatchBrandId, filename: string, nextStep: string, device: DeviceKind): string[] {
+  const getFile = `Touche « Télécharger le fichier » (${filename}) quand tu en as besoin.`;
   if (brandId === 'garmin') {
+    if (device !== 'desktop') {
+      // Garmin Connect n'importe pas de fichier de séance depuis le téléphone : on recrée la séance en 1 minute.
+      return [
+        'Touche « Copier la séance » : le résumé (étapes, répétitions, allures) est prêt.',
+        'Ouvre Garmin Connect › Plus › Entraînement et plans › Séances › Créer une séance (les intitulés peuvent varier selon la version).',
+        'Ajoute les étapes : le résumé indique déjà les blocs « Répéter N × ».',
+        'Enregistre puis « Envoyer à l’appareil » : ta montre la reçoit à la synchronisation Bluetooth.',
+      ];
+    }
     return [
-      got,
-      'Branche ta montre à un ordinateur avec son câble USB.',
+      getFile,
+      'Branche ta montre à l’ordinateur avec son câble USB.',
       'Copie le fichier dans le dossier GARMIN › NewFiles de la montre.',
       'Débranche : la séance apparaît dans Entraînement › Séances.',
     ];
   }
-  return [got, nextStep];
+  return [getFile, nextStep];
 }
 
 /** Explique en une phrase pourquoi Garmin Connect n'a pas reçu la séance, et si on peut proposer de lier le compte. */
@@ -115,19 +131,25 @@ async function buildOutcomeForFile(opts: {
     return { status: 'error', title: 'Envoi impossible', message: 'Cette séance ne peut pas être envoyée à la montre.' };
   }
   const { primary, extras } = buildWatchExportFiles(workout, brandId);
-  const { delivered } = await deliverWatchExportBundle(primary, extras);
-  dispatch({ type: 'MARK_GARMIN_EXPORTED', workoutId });
+  const device = detectDeviceKind();
+  const markPrepared = () => dispatch({ type: 'MARK_GARMIN_EXPORTED', workoutId });
   return {
     status: 'file',
     brandId,
     title: `Vers ${watchBrandShortLabel(brandId)}`,
     filename: primary.filename,
-    steps: fileSteps(brandId, primary.filename, primary.nextStep, delivered > 0),
-    delivered: delivered > 0,
+    steps: fileSteps(brandId, primary.filename, primary.nextStep, device),
+    device,
+    briefText: buildWatchWorkoutBrief(workout),
+    download: async () => {
+      const ok = (await deliverWatchExportBundle(primary, extras)).delivered > 0;
+      if (ok) markPrepared();
+      return ok;
+    },
+    markPrepared,
     canLinkGarmin: advice.canLink,
     note: advice.note,
     workoutId,
-    retry: async () => (await deliverWatchExportBundle(primary, extras)).delivered > 0,
   };
 }
 
