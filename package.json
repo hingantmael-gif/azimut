@@ -1,5 +1,5 @@
 {
-  "name": "azimut",
+  "name": "mova",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -12,9 +12,14 @@
     "deploy:install-site": "node scripts/deploy-install-site.mjs",
     "rank-badges": "node scripts/process-rank-frames.mjs",
     "api": "npm run start --prefix backend",
-    "api:dev": "npm run dev --prefix backend"
+    "api:dev": "npm run dev --prefix backend",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint app src --max-warnings=100000",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/metro-runtime": "^57.0.11",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -22,22 +27,32 @@
     "babel-preset-expo": "~57.0.0",
     "expo": "~57.0.14",
     "expo-auth-session": "~57.0.10",
+    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.12",
     "expo-crypto": "~57.0.2",
     "expo-document-picker": "~57.0.1",
+    "expo-file-system": "~57.0.7",
+    "expo-font": "~57.0.4",
     "expo-image-manipulator": "~57.0.16",
     "expo-image-picker": "~57.0.11",
+    "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.8",
     "expo-location": "~57.0.16",
     "expo-notifications": "~57.0.12",
     "expo-router": "~57.0.14",
     "expo-secure-store": "~57.0.1",
+    "expo-sharing": "~57.0.21",
+    "expo-speech": "~57.0.3",
+    "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
+    "expo-task-manager": "~57.0.19",
     "expo-web-browser": "~57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.2",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-purchases": "^8.11.2",
+    "react-native-purchases-ui": "^8.11.2",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -47,9 +62,12 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^57.0.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
   },
   "private": true
 }

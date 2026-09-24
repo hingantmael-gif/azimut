@@ -27,6 +27,7 @@ export function SportCover({
   children,
   scrim = 'rgba(7,17,31,0.42)',
   minHeight = 140,
+  height,
   borderRadius,
   contentStyle,
 }: {
@@ -38,6 +39,8 @@ export function SportCover({
   children?: ReactNode;
   scrim?: string;
   minHeight?: number;
+  /** Hauteur fixe (cartes wizard uniformes) */
+  height?: number;
   borderRadius?: number;
   contentStyle?: StyleProp<ViewStyle>;
 }) {
@@ -46,7 +49,14 @@ export function SportCover({
     (focus === 'upper' ? '50% 28%' : focus === 'athlete' ? '50% 35%' : COVER_CROP_CENTER);
 
   return (
-    <View style={[styles.wrap, { minHeight, borderRadius }, style]}>
+    <View
+      style={[
+        styles.wrap,
+        { minHeight: height ?? minHeight, borderRadius },
+        height != null ? { height } : null,
+        style,
+      ]}
+    >
       <Image
         source={source}
         resizeMode="cover"
@@ -92,12 +102,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   image: {
-    ...StyleSheet.absoluteFill,
+    ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
     width: '100%',
     height: '100%',
   },
   scrim: {
-    ...StyleSheet.absoluteFill,
+    ...({ position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0 }),
   },
   content: {
     zIndex: 1,

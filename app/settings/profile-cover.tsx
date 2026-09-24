@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
+import { Text } from '../../src/ui/Text';
 import { SettingsScreen, SettingsSection } from '../../src/ui/settings/SettingsList';
 import { useApp } from '../../src/store/AppContext';
 import {
@@ -18,15 +20,19 @@ import type { ColorPalette } from '../../src/theme/palettes';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { Chip } from '../../src/ui/primitives';
 import { isTrialAccount } from '../../src/utils/demoAuth';
+import { hasPremiumAccess } from '../../src/premium/entitlement';
+import { PaywallSheet } from '../../src/ui/premium';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 
-type CoverTab = 'styles' | 'run' | 'bike' | 'swim' | 'ranks';
+type CoverTab = 'styles' | 'premium' | 'run' | 'bike' | 'swim' | 'ranks';
 
 const TABS: { id: CoverTab; label: string }[] = [
   { id: 'styles', label: 'Styles' },
-  { id: 'run', label: 'Course à pied' },
+  { id: 'premium', label: isPremiumUiVisible() ? 'Premium' : 'Animés' },
+  { id: 'run', label: 'Course' },
   { id: 'bike', label: 'Vélo' },
   { id: 'swim', label: 'Natation' },
-  { id: 'ranks', label: 'Rangs' },
+  { id: 'ranks', label: 'Classement' },
 ];
 
 /** Choix du fond de profil */
@@ -45,6 +51,7 @@ export default function ProfileCoverSettingsScreen() {
     longestBySport.swim,
   );
   const [tab, setTab] = useState<CoverTab>('styles');
+  const [paywall, setPaywall] = useState(false);
 
   const unlockOpts = {
     tier: p.ranked.tier,
@@ -52,34 +59,51 @@ export default function ProfileCoverSettingsScreen() {
     longestKm,
     longestBySport,
     unlockAll: isTrialAccount(p),
+    premium: hasPremiumAccess({
+      plan: p.plan,
+      subscription: p.subscription,
+      premiumSource: p.premiumSource,
+    }),
   };
 
   const tabList: ProfileCoverDef[] =
     tab === 'styles'
-      ? sections.styles
-      : tab === 'run'
-        ? sections.run
-        : tab === 'bike'
-          ? sections.bike
-          : tab === 'swim'
-            ? sections.swim
-            : sections.ranks;
+      ? sections.styles.filter((c) => c.unlock.type === 'free')
+      : tab === 'premium'
+        ? sections.premium
+        : tab === 'run'
+          ? sections.run
+          : tab === 'bike'
+            ? sections.bike
+            : tab === 'swim'
+              ? sections.swim
+              : sections.ranks;
 
   const tabHint =
     tab === 'styles'
       ? 'Fonds de base — dégradés et animations.'
-      : tab === 'run'
-        ? 'Le record s’affiche en premier, puis les paliers (5K, 10K…).'
-        : tab === 'bike'
-          ? 'Le record s’affiche en premier, puis les paliers (40, 100 km…).'
-          : tab === 'swim'
-            ? 'Le record s’affiche en premier, puis les paliers (1, 2, 5 km…).'
-            : 'Un fond par palier : Bronze 3 → … → Champion.';
+      : tab === 'premium'
+        ? unlockOpts.premium
+          ? isPremiumUiVisible()
+            ? 'Fonds Premium débloqués — animations maximales.'
+            : 'Fonds animés — animations maximales.'
+          : 'Réservés aux abonnés Premium (ou cadeau Premium).'
+        : tab === 'run'
+          ? 'Le record s’affiche en premier, puis les paliers (5K, 10K…).'
+          : tab === 'bike'
+            ? 'Le record s’affiche en premier, puis les paliers (40, 100 km…).'
+            : tab === 'swim'
+              ? 'Le record s’affiche en premier, puis les paliers (1, 2, 5 km…).'
+              : 'Un fond par palier : Bronze 3 → … → Champion.';
 
   const trySelect = (cover: ProfileCoverDef) => {
     const unlocked = isProfileCoverUnlocked(cover, unlockOpts);
     if (!unlocked) {
       const u = cover.unlock;
+      if (u.type === 'premium') {
+        setPaywall(true);
+        return;
+      }
       if (u.type === 'personal_best') {
         Alert.alert(
           'Séance requise',
@@ -160,11 +184,7 @@ export default function ProfileCoverSettingsScreen() {
         </View>
 
         <SettingsSection title="Catégories">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabs}
-          >
+          <View style={styles.tabsWrap}>
             {TABS.map((t) => (
               <Chip
                 key={t.id}
@@ -173,11 +193,16 @@ export default function ProfileCoverSettingsScreen() {
                 onPress={() => setTab(t.id)}
               />
             ))}
-          </ScrollView>
+          </View>
           <Text style={styles.hint}>{tabHint}</Text>
           <View style={styles.pad}>{renderGrid(tabList)}</View>
         </SettingsSection>
       </AppScrollView>
+      <PaywallSheet
+        visible={paywall}
+        reason="premium_cover"
+        onClose={() => setPaywall(false)}
+      />
     </SettingsScreen>
   );
 }
@@ -208,12 +233,15 @@ function makeStyles(colors: ColorPalette) {
       color: colors.text,
     },
     meta: { marginTop: 4, fontSize: 12, color: colors.textMuted },
-    tabs: {
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.sm,
-      gap: 8,
+    /** Toutes les catégories visibles sans scroll horizontal (bug web / nested scroll). */
+    tabsWrap: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xs,
+      gap: 4,
     },
     hint: {
       marginHorizontal: spacing.md,

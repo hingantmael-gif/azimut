@@ -1,10 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { BRAND } from '../../constants/brand';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { spacing } from '../../theme/tokens';
 import { AzimutMark, BrandMark } from '../strava/BrandMark';
+import { PressableScale } from '../motion/softMotion';
 
 /** En-tête Accueil — logo + nom (emplacement standard hub principal). */
 export function HeaderBrand() {
@@ -12,15 +14,18 @@ export function HeaderBrand() {
   const router = useRouter();
 
   return (
-    <Pressable
+    <PressableScale
       onPress={() => router.push('/(tabs)')}
-      style={styles.headerRow}
+      variant="subtle"
       accessibilityRole="header"
-      accessibilityLabel="Azimut, accueil"
+      accessibilityLabel="Mova, accueil"
+      style={styles.headerRow}
     >
-      <AzimutMark size={30} surfaceColor={colors.bg} />
-      <Text style={[styles.headerWord, { color: colors.text }]}>Azimut</Text>
-    </Pressable>
+      <View style={styles.headerInner}>
+        <AzimutMark size={30} surfaceColor={colors.bg} />
+        <Text style={[styles.headerWord, { color: colors.text }]}>Mova</Text>
+      </View>
+    </PressableScale>
   );
 }
 
@@ -59,17 +64,19 @@ export function AuthFlowMark() {
   const { colors } = useThemeColors();
   return (
     <View style={styles.authMark}>
-      <AzimutMark size={36} surfaceColor={colors.bg} />
+      <AzimutMark size={36} surfaceColor="#050B16" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   headerRow: {
+    paddingVertical: 4,
+  },
+  headerInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 4,
   },
   headerWord: {
     fontSize: 20,

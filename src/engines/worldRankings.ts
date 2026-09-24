@@ -120,6 +120,7 @@ function buildWorldPool(opts: {
   ranked: RankedProgress;
   totalKm: number;
   liveTick?: number;
+  hideYouFromBoard?: boolean;
 }): AthleteSeed[] {
   const yourCountry = normalizeCountry(opts.you.country);
   const yourTier = normalizeTier(opts.ranked.tier);
@@ -128,6 +129,7 @@ function buildWorldPool(opts: {
       ? opts.ranked.division
       : divisionFromLevel(opts.ranked.level);
   const liveTick = Math.max(0, Math.floor(opts.liveTick ?? 0));
+  const hideYou = Boolean(opts.hideYouFromBoard);
 
   const you: AthleteSeed = {
     id: opts.you.id,
@@ -210,7 +212,7 @@ function buildWorldPool(opts: {
     });
   }
 
-  return [...rivals, you];
+  return hideYou ? rivals : [...rivals, you];
 }
 
 function placeOf(entries: WorldRankEntry[]): number {
@@ -228,9 +230,11 @@ export function buildWorldRankings(opts: {
   ranked: RankedProgress;
   totalKm: number;
   liveTick?: number;
+  hideYouFromBoard?: boolean;
 }): Record<WorldBoardId, { entries: WorldRankEntry[]; yourPlace: number }> {
   const pool = buildWorldPool(opts);
   const yourCountry = normalizeCountry(opts.you.country);
+  const hideYou = Boolean(opts.hideYouFromBoard);
 
   const mapPool = (
     sorted: AthleteSeed[],
@@ -336,8 +340,9 @@ export function buildWorldRankings(opts: {
               weekXp: Math.max(a.weekXp, 120 + i * 5),
             })),
         ];
-  // Si tu es Champion, tu restes dans la liste ; sinon tu n’y apparais pas
-  const yourIsChamp = normalizeTier(opts.ranked.tier) === 'champion';
+  // Si tu es Champion (et visible), tu restes dans la liste ; sinon tu n’y apparais pas
+  const yourIsChamp =
+    !hideYou && normalizeTier(opts.ranked.tier) === 'champion';
   const champList = yourIsChamp
     ? champEnsured
     : champEnsured.filter((a) => !a.isYou);

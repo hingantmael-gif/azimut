@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
+import { Text } from '../../src/ui/Text';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
@@ -60,7 +62,7 @@ export default function WatchSettingsScreen() {
       } else {
         Alert.alert(
           entry?.label ?? 'Montre',
-          'App compagnon ouverte. Appaire ta montre en Bluetooth dans cette app si ce n’est pas déjà fait — ensuite Azimut n’a plus qu’à envoyer la séance (1 tap).',
+          'App compagnon ouverte. Appaire ta montre en Bluetooth dans cette app si ce n’est pas déjà fait — ensuite Mova n’a plus qu’à envoyer la séance (1 tap).',
         );
       }
     } finally {
@@ -154,6 +156,26 @@ export default function WatchSettingsScreen() {
             onPress={sendToday}
           />
         </SettingsSection>
+
+        {brandId === 'garmin' ? (
+          <SettingsSection title="Garmin">
+            <SettingsRow
+              label="Mode d’emploi : envoyer sur ma Garmin"
+              value="Pas à pas"
+              onPress={() => router.push('/settings/garmin-guide' as Href)}
+            />
+          </SettingsSection>
+        ) : null}
+
+        {brandId === 'apple' ? (
+          <SettingsSection title="Apple Watch">
+            <SettingsRow
+              label="Mode d’emploi : envoyer sur mon Apple Watch"
+              value="Pas à pas"
+              onPress={() => router.push('/settings/apple-watch-guide' as Href)}
+            />
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection title="Sommeil">
           <SettingsRow label="Importer manuellement" onPress={() => router.push('/sleep')} />

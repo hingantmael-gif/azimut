@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useApp } from '../src/store/AppContext';
 import {
   badgeViewModels,
@@ -15,7 +16,7 @@ import { BadgeGrid } from '../src/ui/badges/BadgeGrid';
 import { SportAtmosphereBanner } from '../src/ui/SportAtmosphereBanner';
 import { ATMOSPHERE_IMAGES } from '../src/constants/sportVisuals';
 
-/** Catalogue badges — triés par proximité du déblocage. */
+/** Catalogue badges — terminés en tête, puis proches du déblocage. */
 export default function BadgesScreen() {
   const { state } = useApp();
   const { colors } = useThemeColors();
@@ -28,6 +29,12 @@ export default function BadgesScreen() {
     const likedPrograms = (state.profile.likedProgramKeys ?? []).length;
     const likedSessions = (state.profile.likedSessionKeys ?? []).length;
     const sleepHistory = state.health.sleepHistory;
+    const programsLaunched = Math.max(
+      state.profile.programsLaunchedCount ?? 0,
+      (state.profile.programHistory?.length ?? 0) +
+        (state.profile.activePrograms?.length ??
+          (state.profile.activeProgram ? 1 : 0)),
+    );
     const all = badgeViewModels({
       achievements,
       lifetime: state.lifetime,
@@ -39,7 +46,10 @@ export default function BadgesScreen() {
       following: (state.profile.followingUsernames ?? []).length,
       followers: (state.profile.followerUsernames ?? []).length,
       hasActiveProgram: Boolean(state.profile.activeProgram),
-      programHistoryCount: (state.profile.programHistory ?? []).length,
+      programHistoryCount: (state.profile.programHistory ?? []).filter(
+        (p) => !p.abandoned && Boolean(p.completedAt),
+      ).length,
+      programsLaunched,
       sleepNights: sleepHistory?.length ?? 0,
       sleepStreak: computeSleepStreak(sleepHistory),
     });
@@ -54,7 +64,9 @@ export default function BadgesScreen() {
     state.profile.followingUsernames,
     state.profile.followerUsernames,
     state.profile.activeProgram,
+    state.profile.activePrograms,
     state.profile.programHistory,
+    state.profile.programsLaunchedCount,
     state.health.sleepHistory,
   ]);
 
@@ -71,9 +83,8 @@ export default function BadgesScreen() {
         />
       </View>
       <Text style={styles.hint}>
-        Facile → Légendaire — débloque un badge pour gagner de l’XP. Likes, nuits de
-        sommeil importées et régularité montent progressivement. Les plus proches du
-        déblocage apparaissent en premier ; les terminés sont en bas.
+        Badges terminés en haut. Les échelles Programmes et Likes montent à l’infini :
+        niv. 1 → 1, niv. 2 → +1, niv. 3 → +2, puis +3, +4… À chaque niveau, plus d’XP.
       </Text>
       <Text style={styles.stats}>
         {unlockedCount} / {badges.length} débloqué{unlockedCount > 1 ? 's' : ''}
@@ -85,7 +96,7 @@ export default function BadgesScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     bannerPad: {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,

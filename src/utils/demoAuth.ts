@@ -5,11 +5,16 @@ export const TRIAL_EMAIL_INPUT = '1';
 export const TRIAL_PASSWORD = '1';
 export const TRIAL_ACCOUNT_EMAIL = '1@demo.local';
 
+/** Le compte d'essai n'existe qu'en développement (ou EXPO_PUBLIC_ENABLE_TRIAL=1) — jamais dans une version publiée. */
+const TRIAL_ENABLED =
+  (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.EXPO_PUBLIC_ENABLE_TRIAL === '1';
+
 export function isTrialCredentials(
   emailOrUsername: string,
   password: string,
 ): boolean {
   return (
+    TRIAL_ENABLED &&
     emailOrUsername.trim() === TRIAL_EMAIL_INPUT &&
     password.trim() === TRIAL_PASSWORD
   );
@@ -69,7 +74,7 @@ export function validateRegistrationEmail(
 ): { ok: true; email: string } | { ok: false; error: string } {
   const value = normalizeEmailInput(raw);
   if (!value) {
-    return { ok: false, error: 'Entrez une adresse e-mail (ex. toi@orange.fr).' };
+    return { ok: false, error: 'Entrez une adresse e-mail (ex. prenom@exemple.com).' };
   }
   if (value === TRIAL_EMAIL_INPUT || value === TRIAL_ACCOUNT_EMAIL) {
     return { ok: false, error: 'Cet e-mail est déjà utilisé.' };
@@ -77,7 +82,7 @@ export function validateRegistrationEmail(
   if (!value.includes('@')) {
     return {
       ok: false,
-      error: 'Il manque le @ — ex. prenom@gmail.com ou toi@orange.fr.',
+      error: 'Il manque le @ — ex. prenom@exemple.com.',
     };
   }
   if (isValidEmailFormat(value)) {
@@ -86,7 +91,7 @@ export function validateRegistrationEmail(
   return {
     ok: false,
     error:
-      'Adresse incomplète. Exemples : toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      'Adresse incomplète. Exemple : prenom@exemple.com',
   };
 }
 

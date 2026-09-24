@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { BRAND } from '../../constants/brand';
 import { spacing } from '../../theme/tokens';
 import { useThemeColors } from '../../theme/ThemeContext';
@@ -6,7 +7,7 @@ import { logoColorsForSurface } from '../../utils/logoColors';
 
 type Size = 'sm' | 'md' | 'lg';
 
-/** Glyphe Azimut seul (vortex) — fond transparent, pas de carré. */
+/** Glyphe Mova seul (vortex) — fond transparent, pas de carré. */
 const LOGO_GLYPH = require('../../../assets/azimut-mark.png');
 
 const SIZES: Record<Size, { mark: number; word: number; gap: number }> = {
@@ -26,7 +27,7 @@ export type AzimutMarkProps = {
 };
 
 /**
- * Logo Azimut = uniquement le vortex (partie blanche de la marque).
+ * Logo Mova = uniquement le vortex (partie blanche de la marque).
  * Pas de fond noir : le glyphe se pose directement sur la surface de l’écran.
  */
 export function AzimutMark({
@@ -42,7 +43,7 @@ export function AzimutMark({
   return (
     <Image
       source={LOGO_GLYPH}
-      accessibilityLabel="Azimut"
+      accessibilityLabel="Mova"
       resizeMode="contain"
       style={{
         width: size,
@@ -53,7 +54,7 @@ export function AzimutMark({
   );
 }
 
-/** Marque + wordmark Azimut */
+/** Marque + wordmark Mova */
 export function BrandMark({
   size = 'lg',
   ink = false,
@@ -79,7 +80,7 @@ export function BrandMark({
       <AzimutMark size={s.mark} color={glyphColor} surfaceColor={surface} ink={ink} />
       {showWordmark ? (
         <View>
-          <Text style={[styles.wordmark, { fontSize: s.word, color: wordColor }]}>Azimut</Text>
+          <Text style={[styles.wordmark, { fontSize: s.word, color: wordColor }]}>Mova</Text>
           {size === 'lg' ? (
             <Text style={[styles.sub, ink ? styles.subInk : { color: colors.accent, opacity: 0.75 }]}>
               entraînement

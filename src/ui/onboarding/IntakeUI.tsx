@@ -1,17 +1,19 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Image,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   View,
   type ImageSourcePropType,
   type TextInputProps,
 } from 'react-native';
+import { Text } from '../Text';
 import { AppTextInput } from '../AppTextInput';
+import { searchCities, type CitySuggestion } from '../../services/geoCities';
 import { formatRaceClockInput } from '../../utils/dateInput';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND } from '../../constants/brand';
 import { COVER_CROP_CENTER, coverCropImageStyle } from '../../constants/sportVisuals';
@@ -19,9 +21,10 @@ import { formatDuration, formatPace } from '../../engines/core';
 import { resolvePaceZones } from '../../engines/paceZones';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
-import { ONBOARDING_IMAGES, PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
+import { PLAN_PREVIEW_COPY, RELAY_COPY } from './campusIntakeConfig';
+import { PressableScale } from '../motion/softMotion';
 
-/** Barre de progression Azimut (segments jade). */
+/** Barre de progression Mova (segments jade). */
 export function IntakeProgress({
   index,
   total,
@@ -55,13 +58,14 @@ export function IntakeProgress({
 export function IntakeBackButton({ onPress }: { onPress: () => void }) {
   const { colors } = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      style={[styles.backBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
+      variant="pop"
       accessibilityLabel="Retour"
+      style={[styles.backBtn, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}
     >
       <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>‹</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -117,18 +121,17 @@ export function IntakeChoiceCard({
 }) {
   const { colors } = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      style={[
+      variant="pop"
+      accessibilityLabel={title}
+      contentStyle={[
         styles.choiceCard,
         {
           backgroundColor: colors.bgElevated,
           borderColor: selected ? BRAND.accent : colors.border,
           borderWidth: selected ? 2 : 1,
         },
-        Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null,
       ]}
     >
       {image ? (
@@ -170,7 +173,7 @@ export function IntakeChoiceCard({
           {selected ? <View style={styles.radioDot} /> : null}
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -192,6 +195,83 @@ export function IntakeField({
         style={[styles.fieldInput, { color: colors.text }]}
         {...props}
       />
+    </View>
+  );
+}
+
+/**
+ * Champ ville avec suggestions : dès la première lettre, jusqu'à 5 villes du pays (détecté par l'adresse IP)
+ * dont le nom commence par ce qui est tapé — moins s'il y en a moins. Choisir une ligne remplit le champ.
+ */
+export function IntakeCityField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+}) {
+  const { colors } = useThemeColors();
+  const [items, setItems] = useState<CitySuggestion[]>([]);
+  const picked = useRef<string | null>(null);
+
+  useEffect(() => {
+    const q = value.trim();
+    if (!q || picked.current === value) {
+      setItems([]);
+      return;
+    }
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = setTimeout(() => {
+      searchCities(q, ctrl?.signal)
+        .then((r) => setItems(r))
+        .catch(() => setItems([]));
+    }, 220);
+    return () => {
+      clearTimeout(timer);
+      ctrl?.abort();
+    };
+  }, [value]);
+
+  return (
+    <View>
+      <IntakeField
+        label={label}
+        value={value}
+        onChangeText={(t) => {
+          picked.current = null;
+          onChangeText(t);
+        }}
+        placeholder={placeholder}
+        autoCapitalize="words"
+        autoCorrect={false}
+      />
+      {items.length > 0 ? (
+        <View style={[styles.cityList, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
+          {items.map((c, i) => (
+            <Pressable
+              key={c.key}
+              onPress={() => {
+                picked.current = c.label;
+                onChangeText(c.label);
+                setItems([]);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={c.label}
+              style={[styles.cityRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+            >
+              <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+              <Text style={{ color: colors.text, fontSize: 15, flex: 1 }} numberOfLines={1}>
+                {c.name}
+                {c.region ? <Text style={{ color: colors.textMuted }}>{` · ${c.region}`}</Text> : null}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -224,7 +304,7 @@ export function IntakeGenderRow({
   );
 }
 
-/** Écran photo plein cadre — look Azimut. */
+/** Écran photo plein cadre — look Mova. */
 export function RelayHero({
   onStart,
   onBack,
@@ -235,14 +315,13 @@ export function RelayHero({
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.relayRoot}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Image
-          source={ONBOARDING_IMAGES.heroRelay}
-          style={[StyleSheet.absoluteFill, coverCropImageStyle(COVER_CROP_CENTER)]}
-          resizeMode="cover"
-          accessibilityIgnoresInvertColors
-        />
-      </View>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[BRAND.ink, '#0B2A2A', '#0E3B33']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.relayScrim} pointerEvents="none" />
       {onBack ? (
         <Pressable
@@ -275,7 +354,7 @@ export function RelayHero({
   );
 }
 
-/** Aperçu des allures — design Azimut (pas de clone Campus). */
+/** Aperçu des allures — design Mova (pas de clone Campus). */
 export function PlanPreviewCard({
   onContinue,
   recentTimeSec,
@@ -478,15 +557,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
   },
   choiceThumbWrap: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     borderRadius: radii.md,
     overflow: 'hidden',
     flexShrink: 0,
   },
   choiceThumb: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: 72,
     borderRadius: radii.md,
   },
   choiceTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
@@ -522,6 +601,8 @@ const styles = StyleSheet.create({
   },
   fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
   fieldInput: { fontSize: 16, paddingVertical: 6 },
+  cityList: { marginTop: 4, borderWidth: 1, borderRadius: radii.lg, overflow: 'hidden' },
+  cityRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 12 },
   genderRow: { flexDirection: 'row', marginTop: spacing.sm },
   relayRoot: { flex: 1, minHeight: 560, justifyContent: 'flex-end', backgroundColor: BRAND.ink },
   relayScrim: {

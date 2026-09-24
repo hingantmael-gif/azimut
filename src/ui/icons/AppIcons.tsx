@@ -68,12 +68,22 @@ export function IconPerson({ size = 24, color }: IconProps) {
   );
 }
 
-/** Enregistrer + */
+/** Nouveau + */
 export function IconAdd({ size = 24, color }: IconProps) {
   return (
     <IconBox size={size}>
       <Line x1={12} y1={6} x2={12} y2={18} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
       <Line x1={6} y1={12} x2={18} y2={12} stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+    </IconBox>
+  );
+}
+
+/** Enregistrer — bouton record (cercle) */
+export function IconRecord({ size = 24, color }: IconProps) {
+  return (
+    <IconBox size={size}>
+      <Circle cx={12} cy={12} r={8} stroke={color} strokeWidth={2} />
+      <Circle cx={12} cy={12} r={4.2} fill={color} />
     </IconBox>
   );
 }

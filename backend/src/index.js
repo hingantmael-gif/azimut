@@ -4,6 +4,14 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mountCommunityRoutes } from './community.js';
+import { mountBillingRoutes } from './billing.js';
+import { mountContactRoutes } from './contact.js';
+import { mountReviewRoutes } from './reviews.js';
+import { mountConfigRoutes } from './appConfig.js';
+import { purgeUserCommunity } from './community.js';
+import { deleteDoc, flushStorage, initStorage, readDoc, storageMode, userDocName, writeDoc } from './storage.js';
+import { corsOptions, createLimiter, securityHeaders } from './security.js';
 
 /** Charge backend/.env si présent (sans dépendance dotenv) */
 function loadEnvFile() {
@@ -32,7 +40,7 @@ function loadEnvFile() {
 loadEnvFile();
 
 /**
- * API Azimut — auth Google + OTP e-mail (6 chiffres)
+ * API Mova — auth Google + OTP e-mail (6 chiffres)
  * Env :
  *   RESEND_API_KEY (+ EMAIL_FROM)  → envoi réel du code
  *   BREVO_API_KEY (+ EMAIL_FROM)   → alternative
@@ -41,35 +49,41 @@ loadEnvFile();
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(__dirname, '..', 'data');
-const usersFile = path.join(dataDir, 'users.json');
 
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(securityHeaders);
+app.use(cors(corsOptions()));
+// La synchronisation envoie l'état complet de l'app : limite plus large, uniquement sur /sync.
+// Webhook Stripe : la signature se vérifie sur le corps BRUT, il doit passer avant express.json().
+app.use('/billing/stripe/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
+app.use('/sync', express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '1mb' }));
+
+// Limitation de débit : force brute sur les codes et mots de passe, inscriptions en masse.
+const emailKey = (req) => `${req.ip}|${String(req.body?.email ?? req.body?.emailOrUsername ?? '').toLowerCase()}`;
+app.use('/auth', createLimiter({ windowMs: 10 * 60_000, max: 60 }));
+app.use(
+  ['/auth/login', '/auth/verify-2fa', '/auth/complete-profile'],
+  createLimiter({ windowMs: 10 * 60_000, max: 12, key: emailKey }),
+);
+app.use(
+  ['/auth/request-otp', '/auth/register', '/auth/resend-2fa', '/auth/signup'],
+  createLimiter({ windowMs: 60 * 60_000, max: 8, key: emailKey, message: 'Trop de demandes. Réessayez dans une heure.' }),
+);
 
 const otps = new Map(); // email -> { hash, expiresAt, attempts }
 const workouts = [];
 const activities = [];
 const healthEvents = [];
 
-function ensureDataDir() {
-  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, '[]', 'utf8');
-}
-
 function loadUsers() {
-  ensureDataDir();
-  try {
-    return JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-  } catch {
-    return [];
-  }
+  return readDoc('users', () => []);
 }
 
 function saveUsers(users) {
-  ensureDataDir();
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), 'utf8');
+  writeDoc('users', users);
 }
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -97,22 +111,43 @@ function genCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/** Durée de vie d'un jeton de session. */
+const TOKEN_TTL_MS = 30 * 24 * 3600_000;
+/** Anciens jetons (sans expiration) : acceptés encore 90 jours après émission puis refusés. */
+const LEGACY_TOKEN_MAX_AGE_MS = 90 * 24 * 3600_000;
+
+function authSecret() {
+  const s = process.env.JWT_SECRET;
+  if (s && s.length >= 16) return s;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET (16 caractères minimum) est obligatoire en production');
+  }
+  return 'azimut-dev-secret';
+}
+
+function signPayload(payloadB64) {
+  return crypto.createHmac('sha256', authSecret()).update(payloadB64).digest('base64url');
+}
+
 function issueToken(email) {
+  const user = loadUsers().find((u) => String(u.email ?? '').toLowerCase() === String(email).toLowerCase());
+  const iat = Date.now();
   const payload = Buffer.from(
-    JSON.stringify({ email, iat: Date.now() }),
+    JSON.stringify({ email, iat, exp: iat + TOKEN_TTL_MS, tv: user?.tokenVersion ?? 0 }),
     'utf8',
   ).toString('base64url');
-  const sig = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'azimut-dev-secret')
-    .update(payload)
-    .digest('base64url');
-  return `az_${payload}.${sig}`;
+  return `az_${payload}.${signPayload(payload)}`;
+}
+
+/** Le code de démonstration n'est JAMAIS renvoyé en production. */
+function demoCodesAllowed() {
+  return process.env.NODE_ENV !== 'production' && process.env.AUTH_ALLOW_DEMO_CODE !== 'false';
 }
 
 async function sendOtpEmail(to, code) {
-  const from = process.env.EMAIL_FROM || 'Azimut <onboarding@resend.dev>';
-  const subject = 'Votre code Azimut';
-  const html = `<p>Votre code de vérification Azimut :</p>
+  const from = process.env.EMAIL_FROM || 'Mova <onboarding@resend.dev>';
+  const subject = 'Votre code Mova';
+  const html = `<p>Votre code de vérification Mova :</p>
     <p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p>
     <p>Valable 10 minutes. Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.</p>`;
 
@@ -140,7 +175,7 @@ async function sendOtpEmail(to, code) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { email: from.includes('<') ? from.replace(/.*<([^>]+)>.*/, '$1') : from, name: 'Azimut' },
+        sender: { email: from.includes('<') ? from.replace(/.*<([^>]+)>.*/, '$1') : from, name: 'Mova' },
         to: [{ email: to }],
         subject,
         htmlContent: html,
@@ -153,7 +188,7 @@ async function sendOtpEmail(to, code) {
     return { sent: true, provider: 'brevo' };
   }
 
-  console.log(`[azimut-auth] OTP ${to} → ${code} (aucun fournisseur e-mail configuré)`);
+  console.log(`[mova-auth] OTP ${to} → ${code} (aucun fournisseur e-mail configuré)`);
   return { sent: false, provider: 'console' };
 }
 
@@ -167,6 +202,13 @@ function storeOtp(email, code) {
 
 const TRIAL_LOGIN_ID = '1';
 const TRIAL_EMAIL = '1@demo.local';
+/** Compte d'essai local : jamais actif en production (ALLOW_TRIAL_ACCOUNT=true pour le développement). */
+const TRIAL_ENABLED = process.env.ALLOW_TRIAL_ACCOUNT === 'true';
+
+/** Compte propriétaire : Premium gratuit, Google uniquement. */
+const OWNER_PREMIUM_EMAIL = String(process.env.OWNER_PREMIUM_EMAIL ?? '').trim().toLowerCase();
+const OWNER_GOOGLE_ONLY_MESSAGE =
+  'Ce compte ultra-sécurisé doit se connecter uniquement avec Google.';
 
 function normalizeEmail(email) {
   return String(email ?? '')
@@ -174,6 +216,10 @@ function normalizeEmail(email) {
     .toLowerCase()
     .replace(/\uFF20/g, '@')
     .replace(/\s+/g, '');
+}
+
+function isOwnerPremiumEmail(email) {
+  return OWNER_PREMIUM_EMAIL !== '' && normalizeEmail(email) === OWNER_PREMIUM_EMAIL;
 }
 
 function isValidEmail(email) {
@@ -190,6 +236,7 @@ function isValidEmail(email) {
 function isTrialLogin(id, password) {
   const normalized = String(id ?? '').trim().toLowerCase();
   return (
+    TRIAL_ENABLED &&
     String(password ?? '') === '1' &&
     (normalized === TRIAL_LOGIN_ID || normalized === TRIAL_EMAIL)
   );
@@ -237,8 +284,9 @@ function validatePasswordPolicy(password) {
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    app: 'azimut-api',
+    app: 'mova-api',
     mailConfigured: Boolean(process.env.RESEND_API_KEY || process.env.BREVO_API_KEY),
+    storage: storageMode(),
   });
 });
 
@@ -246,8 +294,11 @@ async function handleRequestOtp(req, res) {
   const email = normalizeEmail(req.body?.email);
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({
-      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      error: 'E-mail invalide — ex. prenom@exemple.com',
     });
+  }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
   }
   // Compte essai réservé + comptes déjà finalisés → pas de nouvelle inscription
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
@@ -261,8 +312,7 @@ async function handleRequestOtp(req, res) {
   storeOtp(email, code);
   try {
     const mail = await sendOtpEmail(email, code);
-    const allowDemo =
-      process.env.AUTH_ALLOW_DEMO_CODE === 'true' || process.env.NODE_ENV !== 'production';
+    const allowDemo = demoCodesAllowed();
     res.json({
       ok: true,
       email,
@@ -291,8 +341,7 @@ app.post('/auth/resend-2fa', async (req, res) => {
   storeOtp(email, code);
   try {
     const mail = await sendOtpEmail(email, code);
-    const allowDemo =
-      process.env.AUTH_ALLOW_DEMO_CODE === 'true' || process.env.NODE_ENV !== 'production';
+    const allowDemo = demoCodesAllowed();
     res.json({
       ok: true,
       mailSent: mail.sent,
@@ -358,8 +407,11 @@ app.post('/auth/signup', (req, res) => {
   const { firstName, lastName, username, password } = req.body ?? {};
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({
-      error: 'E-mail invalide — ex. toi@gmail.com, toi@outlook.com, toi@orange.fr',
+      error: 'E-mail invalide — ex. prenom@exemple.com',
     });
+  }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
   }
   if (email === TRIAL_LOGIN_ID || email === TRIAL_EMAIL) {
     return res.status(409).json({ error: 'Cet e-mail est déjà utilisé.' });
@@ -440,6 +492,9 @@ app.post('/auth/complete-profile', (req, res) => {
   if (handle === TRIAL_LOGIN_ID || email === TRIAL_EMAIL || email === TRIAL_LOGIN_ID) {
     return res.status(409).json({ error: 'Cet identifiant est déjà utilisé.' });
   }
+  if (isOwnerPremiumEmail(email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   const users = loadUsers();
   let user = users.find((u) => u.email === email);
   if (!user || !user.emailVerified) {
@@ -498,8 +553,14 @@ app.post('/auth/login', (req, res) => {
       },
     });
   }
+  if (isOwnerPremiumEmail(id)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   const users = loadUsers();
   const user = users.find((u) => u.email === id || u.username === id);
+  if (user && isOwnerPremiumEmail(user.email)) {
+    return res.status(403).json({ error: OWNER_GOOGLE_ONLY_MESSAGE });
+  }
   if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ error: 'E-mail ou mot de passe incorrect' });
   }
@@ -586,12 +647,16 @@ app.post('/auth/google', async (req, res) => {
       };
       users.push(user);
     } else {
-      user.provider = user.provider || 'google';
+      user.provider = 'google';
       user.googleId = g.id || user.googleId;
       user.emailVerified = true;
       if (!user.firstName && g.given_name) user.firstName = g.given_name;
       if (!user.lastName && g.family_name) user.lastName = g.family_name;
       user.updatedAt = new Date().toISOString();
+    }
+    if (isOwnerPremiumEmail(email)) {
+      user.plan = 'premium_yearly';
+      user.provider = 'google';
     }
     saveUsers(users);
     res.json({
@@ -605,6 +670,8 @@ app.post('/auth/google', async (req, res) => {
         lastName: user.lastName ?? '',
         username: user.username ?? '',
         emailVerified: true,
+        plan: user.plan || 'free',
+        provider: 'google',
       },
     });
   } catch (e) {
@@ -613,7 +680,7 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
-// ─── Auth token (Azimut) ───────────────────────────────────────────────────
+// ─── Auth token (Mova) ───────────────────────────────────────────────────
 
 function verifyAuthToken(token) {
   if (!token?.startsWith('az_')) return null;
@@ -621,15 +688,14 @@ function verifyAuthToken(token) {
   const dot = raw.lastIndexOf('.');
   if (dot < 1) return null;
   const payloadB64 = raw.slice(0, dot);
-  const sig = raw.slice(dot + 1);
-  const expected = crypto
-    .createHmac('sha256', process.env.JWT_SECRET || 'azimut-dev-secret')
-    .update(payloadB64)
-    .digest('base64url');
-  if (sig !== expected) return null;
+  const sig = Buffer.from(raw.slice(dot + 1));
+  const expected = Buffer.from(signPayload(payloadB64));
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(sig, expected)) return null;
   try {
     const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
     if (!payload.email) return null;
+    const exp = payload.exp ?? (payload.iat ?? 0) + LEGACY_TOKEN_MAX_AGE_MS;
+    if (Date.now() > exp) return null;
     return payload;
   } catch {
     return null;
@@ -641,6 +707,12 @@ function authMiddleware(req, res, next) {
   const token = header.replace(/^Bearer\s+/i, '').trim();
   const payload = verifyAuthToken(token);
   if (!payload) return res.status(401).json({ error: 'Non authentifié' });
+  // Le compte doit exister (supprimé = jeton mort) et la version du jeton doit être à jour (déconnexion partout).
+  const user = loadUsers().find((u) => String(u.email ?? '').toLowerCase() === String(payload.email).toLowerCase());
+  if (!user) return res.status(401).json({ error: 'Compte introuvable' });
+  if ((payload.tv ?? 0) !== (user.tokenVersion ?? 0)) {
+    return res.status(401).json({ error: 'Session expirée — reconnecte-toi' });
+  }
   req.authEmail = payload.email;
   next();
 }
@@ -713,6 +785,38 @@ async function refreshGarminTokens(refreshToken) {
   return body;
 }
 
+const GARMIN_WELLNESS = 'https://apis.garmin.com/wellness-api/rest';
+/** Adresses de la Training API : à confirmer dans la spec fournie par Garmin après l'approbation (surchargeables sans toucher au code). */
+const GARMIN_TRAINING_WORKOUT_URL = process.env.GARMIN_TRAINING_WORKOUT_URL || 'https://apis.garmin.com/training-api/workout';
+const GARMIN_TRAINING_SCHEDULE_URL = process.env.GARMIN_TRAINING_SCHEDULE_URL || 'https://apis.garmin.com/training-api/schedule';
+
+/** Permissions réellement accordées par l'utilisateur (il peut décocher « Import de séances » chez Garmin). */
+async function garminPermissions(accessToken) {
+  try {
+    const res = await fetch(`${GARMIN_WELLNESS}/user/permissions`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return Array.isArray(body) ? body : Array.isArray(body?.permissions) ? body.permissions : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Obligatoire côté Garmin : quand l'utilisateur se déconnecte de Mova, on supprime aussi son enregistrement chez eux. */
+async function garminDeleteRegistration(accessToken) {
+  try {
+    const res = await fetch(`${GARMIN_WELLNESS}/user/registration`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    return res.ok || res.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 async function garminUserId(accessToken) {
   const res = await fetch('https://apis.garmin.com/wellness-api/rest/user/id', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -751,12 +855,14 @@ async function garminAccessTokenForUser(user) {
   const g = user.oauthIntegrations?.garmin;
   if (!g?.accessToken) return null;
   const expiresAt = g.expiresAt ? Date.parse(g.expiresAt) : 0;
-  if (expiresAt && expiresAt > Date.now() + 60_000) {
+  // Garmin recommande de rafraîchir 10 minutes avant l'expiration.
+  if (expiresAt && expiresAt > Date.now() + 600_000) {
     return g.accessToken;
   }
   if (!g.refreshToken) return g.accessToken;
   const refreshed = await refreshGarminTokens(g.refreshToken);
   g.accessToken = refreshed.access_token;
+  // Garmin renvoie un NOUVEAU refresh token à chaque rafraîchissement : le précédent devient inutilisable.
   g.refreshToken = refreshed.refresh_token || g.refreshToken;
   if (refreshed.expires_in) {
     g.expiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
@@ -784,6 +890,14 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
   try {
     const tokens = await exchangeGarminTokens({ code, codeVerifier, redirectUri });
     const accessToken = tokens.access_token;
+    const permissions = await garminPermissions(accessToken);
+    if (permissions && !permissions.includes('WORKOUT_IMPORT')) {
+      await garminDeleteRegistration(accessToken);
+      return res.status(400).json({
+        error:
+          'Tu n’as pas autorisé « Import de séances » chez Garmin. Relance la liaison et laisse cette case cochée : sans elle, Mova ne peut pas envoyer tes séances.',
+      });
+    }
     const uid = await garminUserId(accessToken);
     user.oauthIntegrations = user.oauthIntegrations || {};
     user.oauthIntegrations.garmin = {
@@ -793,6 +907,7 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : undefined,
       garminUserId: uid,
+      permissions: permissions ?? undefined,
       displayName: uid ? `Garmin #${uid}` : 'Garmin Connect',
       connectedAt: new Date().toISOString(),
     };
@@ -805,10 +920,16 @@ app.post('/integrations/garmin/exchange', authMiddleware, async (req, res) => {
   }
 });
 
-app.delete('/integrations/garmin', authMiddleware, (req, res) => {
+app.delete('/integrations/garmin', authMiddleware, async (req, res) => {
   const { users, user } = findAuthedUser(req.authEmail);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
   if (user.oauthIntegrations?.garmin) {
+    try {
+      const token = await garminAccessTokenForUser(user);
+      if (token) await garminDeleteRegistration(token);
+    } catch (e) {
+      console.warn('[garmin] suppression de l’enregistrement impossible', e?.message);
+    }
     delete user.oauthIntegrations.garmin;
     user.updatedAt = new Date().toISOString();
     saveUsers(users);
@@ -875,7 +996,7 @@ app.post('/integrations/garmin/workout', authMiddleware, async (req, res) => {
     }
     saveUsers(users);
 
-    const gRes = await fetch('https://apis.garmin.com/training-api/workout', {
+    const gRes = await fetch(GARMIN_TRAINING_WORKOUT_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -895,7 +1016,7 @@ app.post('/integrations/garmin/workout', authMiddleware, async (req, res) => {
     const dateToSchedule = scheduleDate || new Date().toISOString().slice(0, 10);
 
     if (workoutId) {
-      const schedRes = await fetch('https://apis.garmin.com/training-api/schedule', {
+      const schedRes = await fetch(GARMIN_TRAINING_SCHEDULE_URL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -987,7 +1108,84 @@ app.post('/webhooks/strava', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-const port = Number(process.env.PORT || 8787);
-app.listen(port, () => {
-  console.log(`azimut-api on http://localhost:${port}`);
+/** Suppression réelle du compte et de toutes ses données (exigence Apple 5.1.1 / Google / RGPD). */
+app.delete('/account', authMiddleware, (req, res) => {
+  const users = loadUsers();
+  const me = users.find((u) => String(u.email ?? '').toLowerCase() === String(req.authEmail).toLowerCase());
+  const username = String(me?.username ?? '').toLowerCase();
+  saveUsers(users.filter((u) => u !== me && u.email !== req.authEmail));
+  deleteDoc(userDocName('sync', req.authEmail));
+  purgeUserCommunity(username);
+  res.json({ ok: true });
 });
+
+/** Renouvelle le jeton (session glissante : l'app l'appelle à chaque ouverture). */
+app.post('/auth/refresh', authMiddleware, (req, res) => {
+  res.json({ ok: true, token: issueToken(req.authEmail) });
+});
+
+/** Déconnecte tous les appareils : les jetons émis avant cet appel deviennent invalides. */
+app.post('/auth/logout-all', authMiddleware, (req, res) => {
+  const users = loadUsers();
+  const me = users.find((u) => String(u.email ?? '').toLowerCase() === String(req.authEmail).toLowerCase());
+  if (me) {
+    me.tokenVersion = (me.tokenVersion ?? 0) + 1;
+    saveUsers(users);
+  }
+  res.json({ ok: true });
+});
+
+/**
+ * Synchronisation des données d'entraînement entre appareils.
+ * GET  /sync/state → dernier instantané { savedAt, deviceId, state } (ou state:null)
+ * PUT  /sync/state { state, deviceId, baseSavedAt } → enregistre ; 409 + instantané serveur si un AUTRE appareil
+ *      a écrit depuis la version connue du client (le client fusionne puis renvoie).
+ */
+app.get('/sync/state', authMiddleware, (req, res) => {
+  const snap = readDoc(userDocName('sync', req.authEmail), () => null);
+  res.json({ ok: true, snapshot: snap });
+});
+
+app.put('/sync/state', authMiddleware, (req, res) => {
+  const { state, deviceId, baseSavedAt } = req.body ?? {};
+  if (!state || typeof state !== 'object' || !deviceId) {
+    return res.status(400).json({ error: 'state et deviceId requis' });
+  }
+  const name = userDocName('sync', req.authEmail);
+  const current = readDoc(name, () => null);
+  if (current && current.deviceId !== deviceId && current.savedAt !== (baseSavedAt ?? null)) {
+    return res.status(409).json({ error: 'Version plus récente sur le serveur', snapshot: current });
+  }
+  const snapshot = { savedAt: new Date().toISOString(), deviceId: String(deviceId).slice(0, 64), state };
+  writeDoc(name, snapshot);
+  res.json({ ok: true, savedAt: snapshot.savedAt });
+});
+
+mountConfigRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
+mountReviewRoutes(app, { authMiddleware, isOwner: isOwnerPremiumEmail });
+mountCommunityRoutes(app, { authMiddleware, loadUsers, saveUsers, isOwner: isOwnerPremiumEmail });
+mountBillingRoutes(app, { authMiddleware, loadUsers, saveUsers });
+mountContactRoutes(app, {
+  authMiddleware,
+  verifyAuthToken,
+  authSecret,
+  loadUsers,
+  normalizeEmail,
+  isValidEmail,
+  isOwner: isOwnerPremiumEmail,
+});
+
+const port = Number(process.env.PORT || 8787);
+authSecret(); // échoue tout de suite en production si le secret manque
+await initStorage();
+const server = app.listen(port, () => {
+  console.log(`mova-api on http://localhost:${port} (stockage : ${storageMode()})`);
+});
+
+async function shutdown() {
+  server.close();
+  await flushStorage();
+  process.exit(0);
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

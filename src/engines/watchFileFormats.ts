@@ -1,12 +1,16 @@
 import type { PlannedWorkout, SportDiscipline, WatchBrandId, WorkoutStep } from '../types/domain';
 import { buildGarminWorkoutExport } from './garminWorkout';
+import { encodeFitWorkout } from './fitWorkout';
 import { buildWatchWorkoutBrief } from './watchExport';
 import { summarizeWorkout } from './workoutPresentation';
+import { dropOrdinal, findRepeatCycle } from './stepGrouping';
 
 export type WatchExportFile = {
   filename: string;
   mime: string;
   content: string;
+  /** Contenu binaire (fichier .fit) : prioritaire sur `content`. */
+  bytes?: Uint8Array;
   /** Extension affichée à l’utilisateur */
   formatLabel: string;
   /** Consigne courte après téléchargement */
@@ -119,7 +123,7 @@ export function buildStructuredTcx(workout: PlannedWorkout): string {
       const rep = s.repeat && s.repeat > 1 ? ` ×${s.repeat}` : '';
       return `${s.type}${rep}: ${s.label ?? s.type} (${dur})`;
     }),
-    'Export Azimut → montre',
+    'Export Mova → montre',
   ].join(' | ');
 
   const trackPoints = workout.steps
@@ -162,15 +166,70 @@ ${trackPoints || `        <Trackpoint><Time>${startIso}</Time></Trackpoint>`}
 </TrainingCenterDatabase>`;
 }
 
-/** JSON type WorkoutKit (Apple Watch / Fitness). */
-export function buildAppleWorkoutKitJson(workout: PlannedWorkout): string {
-  const warmup = workout.steps.find((s) => s.type === 'warmup');
-  const cooldown = workout.steps.find((s) => s.type === 'cooldown');
-  const middle = workout.steps.filter((s) => s.type === 'active' || s.type === 'rest');
+export type AppleWorkoutStep = {
+  purpose: 'warmup' | 'work' | 'recovery' | 'cooldown';
+  goal: Record<string, unknown>;
+  target: Record<string, unknown>;
+  displayName: string;
+};
 
-  const blocks: Record<string, unknown>[] = [];
+export type AppleWorkoutPlan = {
+  version: 1;
+  kind: 'custom';
+  source: 'mova';
+  displayName: string;
+  /** running | cycling | swimming | traditionalStrengthTraining */
+  activity: string;
+  /** Date de la séance, AAAA-MM-JJ. */
+  scheduledDate: string;
+  discipline: string;
+  warmup?: AppleWorkoutStep;
+  /** Blocs d'intervalles : « iterations » = nombre de répétitions du bloc (WorkoutKit IntervalBlock). */
+  blocks: Array<{ iterations: number; steps: AppleWorkoutStep[] }>;
+  cooldown?: AppleWorkoutStep;
+  brief: string;
+};
+
+/** Étapes d'échauffement / retour au calme consécutives → UNE étape (WorkoutKit n'en accepte qu'une). */
+function mergeEdgeSteps(steps: WorkoutStep[], purpose: 'warmup' | 'cooldown', name: string): AppleWorkoutStep | undefined {
+  if (steps.length === 0) return undefined;
+  const allTime = steps.every((st) => st.endCondition !== 'distance' && (st.durationSec ?? 0) > 0);
+  const goal = allTime
+    ? { type: 'time', value: steps.reduce((sum, st) => sum + (st.durationSec ?? 0), 0), unit: 'seconds' }
+    : stepGoal(steps[0]!);
+  return { purpose, goal, target: stepTarget(steps[0]!), displayName: name };
+}
+
+/**
+ * Plan structuré au format WorkoutKit (Apple Watch) : échauffement, blocs répétés (« 8 × … »), retour au calme.
+ * Les séries répétées (fartlek, côtes…) deviennent UN bloc avec « iterations », pas 16 blocs.
+ */
+export function buildAppleWorkoutPlan(workout: PlannedWorkout): AppleWorkoutPlan {
+  const steps = workout.steps;
+  let lo = 0;
+  while (lo < steps.length && steps[lo]!.type === 'warmup') lo++;
+  let hi = steps.length;
+  while (hi > lo && steps[hi - 1]!.type === 'cooldown') hi--;
+  const warmup = mergeEdgeSteps(steps.slice(0, lo), 'warmup', 'Échauffement');
+  const cooldown = mergeEdgeSteps(steps.slice(hi), 'cooldown', 'Retour au calme');
+  const middle = steps.slice(lo, hi);
+
+  const toStep = (st: WorkoutStep): AppleWorkoutStep => ({
+    purpose: st.type === 'rest' ? 'recovery' : 'work',
+    goal: stepGoal(st),
+    target: stepTarget(st),
+    displayName: dropOrdinal(st.label ?? (st.type === 'rest' ? 'Récupération' : 'Effort')),
+  });
+
+  const blocks: AppleWorkoutPlan['blocks'] = [];
   let i = 0;
   while (i < middle.length) {
+    const cycle = findRepeatCycle(middle, i);
+    if (cycle) {
+      blocks.push({ iterations: cycle.count, steps: middle.slice(i, i + cycle.len).map(toStep) });
+      i += cycle.len * cycle.count;
+      continue;
+    }
     const a = middle[i]!;
     const b = middle[i + 1];
     if (
@@ -182,70 +241,32 @@ export function buildAppleWorkoutKitJson(workout: PlannedWorkout): string {
     ) {
       const work = a.type === 'active' ? a : b;
       const recovery = a.type === 'rest' ? a : b;
-      blocks.push({
-        iterations: a.repeat,
-        steps: [
-          {
-            purpose: 'work',
-            goal: stepGoal(work),
-            target: stepTarget(work),
-            displayName: work.label ?? 'Travail',
-          },
-          {
-            purpose: 'recovery',
-            goal: stepGoal(recovery),
-            target: stepTarget(recovery),
-            displayName: recovery.label ?? 'Récup',
-          },
-        ],
-      });
+      blocks.push({ iterations: a.repeat, steps: [toStep(work), toStep(recovery)] });
       i += 2;
       continue;
     }
-    blocks.push({
-      iterations: a.repeat && a.repeat > 1 ? a.repeat : 1,
-      steps: [
-        {
-          purpose: a.type === 'rest' ? 'recovery' : 'work',
-          goal: stepGoal(a),
-          target: stepTarget(a),
-          displayName: a.label ?? a.type,
-        },
-      ],
-    });
+    blocks.push({ iterations: a.repeat && a.repeat > 1 ? a.repeat : 1, steps: [toStep(a)] });
     i += 1;
   }
 
-  const payload = {
+  return {
+    version: 1,
     kind: 'custom',
-    source: 'azimut',
+    source: 'mova',
     displayName: workout.title,
     activity: appleActivity(workout.discipline),
     scheduledDate: workout.date,
     discipline: workout.discipline,
-    warmup: warmup
-      ? {
-          purpose: 'warmup',
-          goal: stepGoal(warmup),
-          target: stepTarget(warmup),
-          displayName: warmup.label ?? 'Échauffement',
-        }
-      : undefined,
+    warmup,
     blocks,
-    cooldown: cooldown
-      ? {
-          purpose: 'cooldown',
-          goal: stepGoal(cooldown),
-          target: stepTarget(cooldown),
-          displayName: cooldown.label ?? 'Retour au calme',
-        }
-      : undefined,
+    cooldown,
     brief: buildWatchWorkoutBrief(workout),
-    importHint:
-      'iPhone : Fitness / Santé → importer ou planifier. Sur watchOS 10+, WorkoutKit peut planifier cette séance.',
   };
+}
 
-  return JSON.stringify(payload, null, 2);
+/** JSON type WorkoutKit (Apple Watch / Fitness). */
+export function buildAppleWorkoutKitJson(workout: PlannedWorkout): string {
+  return JSON.stringify(buildAppleWorkoutPlan(workout), null, 2);
 }
 
 /** Plan JSON Samsung Health / Health Connect. */
@@ -253,7 +274,7 @@ export function buildSamsungWorkoutJson(workout: PlannedWorkout): string {
   const summary = summarizeWorkout(workout);
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'samsung_health',
       title: workout.title,
       date: workout.date,
@@ -282,7 +303,7 @@ export function buildSamsungWorkoutJson(workout: PlannedWorkout): string {
 export function buildFitbitWorkoutJson(workout: PlannedWorkout): string {
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'fitbit',
       name: workout.title,
       date: workout.date,
@@ -310,7 +331,7 @@ export function buildFitbitWorkoutJson(workout: PlannedWorkout): string {
 export function buildHuaweiWorkoutJson(workout: PlannedWorkout): string {
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'huawei_health',
       title: workout.title,
       date: workout.date,
@@ -337,13 +358,11 @@ export function buildGarminTrainingJson(workout: PlannedWorkout): string {
   const { workout: payload, scheduleDate, summary } = buildGarminWorkoutExport(workout);
   return JSON.stringify(
     {
-      source: 'azimut',
+      source: 'mova',
       platform: 'garmin_connect',
       scheduleDate,
       summary,
       workout: payload,
-      importHint:
-        'Garmin Connect → Entraînement → Importer (JSON Training API) ou laisse Azimut pousser via le compte lié.',
     },
     null,
     2,
@@ -358,29 +377,22 @@ export function buildWatchExportFiles(
   workout: PlannedWorkout,
   brandId: WatchBrandId,
 ): { primary: WatchExportFile; extras: WatchExportFile[] } {
-  const base = `azimut-${slug(workout.title)}-${workout.date}`;
+  const base = `mova-${slug(workout.title)}-${workout.date}`;
   const tcx = buildStructuredTcx(workout);
 
   switch (brandId) {
     case 'garmin':
+      // Format FIT « Workout » : celui que la montre lit nativement (copié dans GARMIN/NewFiles).
       return {
         primary: {
-          filename: `${base}-garmin.json`,
-          mime: 'application/json',
-          content: buildGarminTrainingJson(workout),
-          formatLabel: 'JSON Garmin Training',
-          nextStep:
-            'Si le compte Garmin est lié, Azimut pousse aussi sur Connect. Sinon : Garmin Connect → Entraînements → Importer.',
+          filename: `${base}.fit`,
+          mime: 'application/octet-stream',
+          content: '',
+          bytes: encodeFitWorkout(workout),
+          formatLabel: 'FIT Garmin',
+          nextStep: 'Copie le fichier .fit dans le dossier GARMIN › NewFiles de ta montre (câble USB).',
         },
-        extras: [
-          {
-            filename: `${base}-garmin.tcx`,
-            mime: 'application/vnd.garmin.tcx+xml',
-            content: tcx,
-            formatLabel: 'TCX',
-            nextStep: 'Import TCX dans Garmin Connect (compatible course / vélo / natation).',
-          },
-        ],
+        extras: [],
       };
     case 'apple':
       return {
@@ -390,7 +402,7 @@ export function buildWatchExportFiles(
           content: buildAppleWorkoutKitJson(workout),
           formatLabel: 'JSON WorkoutKit',
           nextStep:
-            'Sur iPhone : Fitness / Santé. Le JSON décrit la séance structurée (warmup, blocs, cooldown) pour Apple Watch.',
+            'Fichier technique (JSON WorkoutKit) : inutile à importer à la main. Utilise « Ajouter à l’Apple Watch » (app iPhone) ou « Copier la séance ».',
         },
         extras: [
           {

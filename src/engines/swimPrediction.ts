@@ -1,6 +1,8 @@
 /**
  * Prédiction natation — modèle distinct de la course.
  *
+ * Shared core (CP / VMA) : `./performancePredictionCore`
+ *
  * Sources (coaching / littérature) :
  * - Critical Swim Speed (Wakayoshi et al. 1992) : seuil ~30 min,
  *   test classique 200 m + 400 m. Équivalent natation du FTP vélo.

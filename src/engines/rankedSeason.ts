@@ -12,52 +12,79 @@ import {
  * Ladder hebdomadaire (inspiré Soft Ladder / ligues en ligne) :
  * - chaque lundi, le peloton (~100) est tranché
  * - top → promotion, bas → rétrogradation (sauf Bronze 3 = plancher)
- * - plus on monte, moins de places de promotion (50 → 5 vers Champion)
+ * - règles **identiques dans toute une classe** (Bronze 3/2/1 = même barre)
+ * - progression **par classe** : plus on monte de ligue, moins de places de promo
+ *   (Bronze large → Elite resserré : 45 / 38 / 32 / 28 / 22 / 10)
+ *   Seul le passage Élite → Champion reste très exclusif (top 10). Les paliers du
+ *   milieu (Or → Diamant, Platine → Élite) étaient trop serrés (22 et 14 places).
  */
 
-/** Places de promotion (sur 100) — plus facile en bas, plus serré en haut */
+/** Places de promotion (sur ~100) — une valeur par classe, pas par division. */
+export const TIER_PROMOTE_SLOTS: Record<RankTier, number> = {
+  bronze: 45,
+  argent: 38,
+  or: 32,
+  diamant: 28,
+  platine: 22,
+  elite: 10,
+  champion: 0,
+  master: 0,
+};
+
+/** Places de rétrogradation — plus risqué en haut ; Bronze 3 reste plancher (0). */
+export const TIER_RELEGATE_SLOTS: Record<RankTier, number> = {
+  bronze: 15,
+  argent: 17,
+  or: 19,
+  diamant: 22,
+  platine: 25,
+  elite: 28,
+  champion: 30,
+  master: 30,
+};
+
+/** @deprecated — dérivé de TIER_* pour compat ; même valeur dans une classe. */
 export const LADDER_PROMOTE_SLOTS: number[] = [
-  55, // Bronze 3 → 2
-  50, // Bronze 2 → 1
-  45, // Bronze 1 → Argent 3
-  38, // Argent 3 → 2
-  32, // Argent 2 → 1
-  28, // Argent 1 → Or 3
-  24, // Or 3 → 2
-  20, // Or 2 → 1
-  17, // Or 1 → Diamant 3
-  14, // Diamant 3 → 2
-  12, // Diamant 2 → 1
-  10, // Diamant 1 → Platine 3
-  9, // Platine 3 → 2
-  8, // Platine 2 → 1
-  7, // Platine 1 → Élite 3
-  10, // Élite 3 → 2
-  7, // Élite 2 → 1
-  3, // Élite 1 → Champion
+  TIER_PROMOTE_SLOTS.bronze,
+  TIER_PROMOTE_SLOTS.bronze,
+  TIER_PROMOTE_SLOTS.bronze,
+  TIER_PROMOTE_SLOTS.argent,
+  TIER_PROMOTE_SLOTS.argent,
+  TIER_PROMOTE_SLOTS.argent,
+  TIER_PROMOTE_SLOTS.or,
+  TIER_PROMOTE_SLOTS.or,
+  TIER_PROMOTE_SLOTS.or,
+  TIER_PROMOTE_SLOTS.diamant,
+  TIER_PROMOTE_SLOTS.diamant,
+  TIER_PROMOTE_SLOTS.diamant,
+  TIER_PROMOTE_SLOTS.platine,
+  TIER_PROMOTE_SLOTS.platine,
+  TIER_PROMOTE_SLOTS.platine,
+  TIER_PROMOTE_SLOTS.elite,
+  TIER_PROMOTE_SLOTS.elite,
+  TIER_PROMOTE_SLOTS.elite,
 ];
 
-/** Places de rétrogradation (bas du peloton). Bronze 3 = 0 (plancher). */
 export const LADDER_RELEGATE_SLOTS: number[] = [
-  0, // Bronze 3
-  12,
-  16,
-  18,
-  20,
-  22,
-  24,
-  26,
-  28,
-  28,
-  30,
-  30,
-  32,
-  33,
-  34,
-  32, // Élite 3
-  30, // Élite 2
-  28, // Élite 1
-  35, // Champion → Élite 1
+  0, // Bronze 3 = plancher
+  TIER_RELEGATE_SLOTS.bronze,
+  TIER_RELEGATE_SLOTS.bronze,
+  TIER_RELEGATE_SLOTS.argent,
+  TIER_RELEGATE_SLOTS.argent,
+  TIER_RELEGATE_SLOTS.argent,
+  TIER_RELEGATE_SLOTS.or,
+  TIER_RELEGATE_SLOTS.or,
+  TIER_RELEGATE_SLOTS.or,
+  TIER_RELEGATE_SLOTS.diamant,
+  TIER_RELEGATE_SLOTS.diamant,
+  TIER_RELEGATE_SLOTS.diamant,
+  TIER_RELEGATE_SLOTS.platine,
+  TIER_RELEGATE_SLOTS.platine,
+  TIER_RELEGATE_SLOTS.platine,
+  TIER_RELEGATE_SLOTS.elite,
+  TIER_RELEGATE_SLOTS.elite,
+  TIER_RELEGATE_SLOTS.elite,
+  TIER_RELEGATE_SLOTS.champion,
 ];
 
 export type LadderZone = 'promote' | 'safe' | 'relegate';
@@ -109,15 +136,22 @@ export function stepAt(index: number): RankStep {
   return steps[Math.max(0, Math.min(steps.length - 1, index))];
 }
 
-export function promoteSlotsFor(tier: RankTier, division: RankDivision | null | undefined): number {
-  const idx = rankStepIndex(tier, division);
-  if (idx >= LADDER_PROMOTE_SLOTS.length) return 0; // Champion
-  return LADDER_PROMOTE_SLOTS[idx];
+function normalizeLadderTier(tier: RankTier): RankTier {
+  return tier === 'master' ? 'champion' : tier;
 }
 
+/** Places de promo : même barre pour toute la classe (ex. tout le Bronze = top 30). */
+export function promoteSlotsFor(tier: RankTier, _division?: RankDivision | null | undefined): number {
+  const t = normalizeLadderTier(tier);
+  if (t === 'champion') return 0;
+  return TIER_PROMOTE_SLOTS[t] ?? 0;
+}
+
+/** Rétro : même barre par classe ; Bronze 3 = plancher (0). */
 export function relegateSlotsFor(tier: RankTier, division: RankDivision | null | undefined): number {
-  const idx = rankStepIndex(tier, division);
-  return LADDER_RELEGATE_SLOTS[Math.min(idx, LADDER_RELEGATE_SLOTS.length - 1)] ?? 0;
+  const t = normalizeLadderTier(tier);
+  if (t === 'bronze' && (division ?? 3) === 3) return 0;
+  return TIER_RELEGATE_SLOTS[t] ?? 0;
 }
 
 export function ladderZoneForPlace(
@@ -294,7 +328,7 @@ export function ladderOutcomeLabel(
   if (outcome === 'shielded') {
     const left =
       shieldsLeft != null ? ` · ${shieldsLeft} bouclier${shieldsLeft > 1 ? 's' : ''} restant${shieldsLeft > 1 ? 's' : ''}` : '';
-    return `Bouclier Premium — ligue sauvée${left}.`;
+    return `Bouclier — ligue sauvée${left}.`;
   }
   if (outcome === 'held') {
     return 'Ligue maintenue.';
@@ -309,13 +343,14 @@ export function ladderRulesBlurb(
   const promoteN = promoteSlotsFor(tier, division);
   const relegateN = relegateSlotsFor(tier, division);
   const label = formatRankLabel(tier, division ?? null);
+  const sameClass = 'même règle pour toute la classe (ex. tout le Bronze)';
   if (tier === 'champion' || promoteN === 0) {
-    return `${label} : top ${DIVISION_POOL_SIZE - relegateN} pour rester · bas ${relegateN} rétrogradés. Reset chaque lundi.`;
+    return `${label} : top ${DIVISION_POOL_SIZE - relegateN} pour rester · bas ${relegateN} rétrogradés · ${sameClass}. Reset chaque lundi.`;
   }
   if (relegateN === 0) {
-    return `${label} : top ${promoteN} / ${DIVISION_POOL_SIZE} promus · pas de rétrogradation (plancher). Reset chaque lundi.`;
+    return `${label} : top ${promoteN} / ${DIVISION_POOL_SIZE} promus · pas de rétrogradation (plancher) · ${sameClass}. Reset chaque lundi.`;
   }
-  return `${label} : top ${promoteN} promus · bas ${relegateN} rétrogradés · milieu en sécurité. Reset chaque lundi.`;
+  return `${label} : top ${promoteN} promus · bas ${relegateN} rétrogradés · milieu en sécurité · ${sameClass}. Reset chaque lundi.`;
 }
 
 export type LadderZoneSummary = {

@@ -4,8 +4,17 @@ export type AuthSession = {
   onboardingCompleted: boolean;
 };
 
+/** Retour OAuth Google sur la racine — ne pas rediriger tant que le code est dans l’URL. */
+function isOAuthReturnUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const blob = `${window.location.search || ''}${window.location.hash || ''}`;
+  return /[?&#](code|state|access_token|id_token|error)=/.test(blob);
+}
+
 /** Route cible si la session ne correspond pas au segment courant, sinon null. */
 export function getAuthRedirect(segments: string[], session: AuthSession): string | null {
+  if (isOAuthReturnUrl()) return null;
+
   const root = segments[0];
   const page = segments[1];
   const inAuth = root === '(auth)';
@@ -16,6 +25,8 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   const isPublicLegal =
     pathKey === 'settings/privacy-policy' ||
     pathKey === 'settings/terms' ||
+    pathKey === 'settings/contact' ||
+    pathKey.startsWith('settings/legal/') ||
     pathKey === 'apropos';
 
   // Sans compte → écran d’accueil / login (comme BTP Pro), PAS /install (évite spinner infini)
@@ -38,7 +49,8 @@ export function getAuthRedirect(segments: string[], session: AuthSession): strin
   ) {
     return '/(auth)/onboarding';
   }
-  if (session.authToken && session.onboardingCompleted && (inAuth || inInstall)) {
+  // /install reste ouverte aux comptes connectés (écran « Installer Mova » dans l'app, avec flèche retour).
+  if (session.authToken && session.onboardingCompleted && inAuth) {
     return '/(tabs)';
   }
   return null;

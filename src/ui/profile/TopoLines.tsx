@@ -1,0 +1,58 @@
+import { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
+import { buildTopoPaths } from '../../engines/topoLines';
+import { LoopView } from '../atmosphere/LoopView';
+
+/**
+ * Courbes de niveau vivantes : la signature « mouvement » des fonds de profil Mova.
+ * Les lignes dérivent lentement (aller-retour, animation CSS sur le web) ; ne capte aucun toucher.
+ */
+export function TopoLines({
+  color,
+  height,
+  seed,
+  lines = 12,
+  opacity = 0.32,
+  drift: driftScale = 1,
+  paused = false,
+}: {
+  color: string;
+  height: number;
+  seed: number;
+  lines?: number;
+  opacity?: number;
+  /** Amplitude de la dérive : 1 = discret (fonds de profil), 2+ = nettement visible. */
+  drift?: number;
+  /** Fige le mouvement (écran en arrière-plan). */
+  paused?: boolean;
+}) {
+  const OVERSCAN = Math.round(30 * Math.max(1, driftScale));
+  const paths = useMemo(() => buildTopoPaths({ seed, lines, h: height, overscan: OVERSCAN }), [seed, lines, height, OVERSCAN]);
+
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <LoopView
+        from={{ x: -OVERSCAN * 0.7, y: 2 * driftScale }}
+        to={{ x: OVERSCAN * 0.7, y: -2 * driftScale }}
+        ms={9000 + (seed % 3000)}
+        paused={paused}
+        style={{ position: 'absolute', top: 0, bottom: 0, left: -OVERSCAN, right: -OVERSCAN }}
+      >
+        <Svg width="100%" height="100%" viewBox={`${-OVERSCAN} 0 ${400 + OVERSCAN * 2} ${height}`} preserveAspectRatio="none">
+          {paths.map((p, i) => (
+            <Path
+              key={i}
+              d={p.d}
+              fill="none"
+              stroke={color}
+              strokeOpacity={p.major ? opacity * 1.5 : opacity * (0.55 + 0.45 * (1 - p.t))}
+              strokeWidth={p.major ? 1.6 : 0.9}
+              strokeLinecap="round"
+            />
+          ))}
+        </Svg>
+      </LoopView>
+    </View>
+  );
+}

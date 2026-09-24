@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text } from 'react-native';
+import { Animated, Easing, StyleSheet } from 'react-native';
+import { Text } from '../Text';
 import { useApp } from '../../store/AppContext';
 import { useThemeColors } from '../../theme/ThemeContext';
 

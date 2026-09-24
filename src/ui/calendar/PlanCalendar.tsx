@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import type { PlannedWorkout, SportDiscipline } from '../../types/domain';
 import {
   DISCIPLINE_META,
@@ -12,6 +13,7 @@ import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
 import { PressableScale, SoftPulse } from '../motion/softMotion';
+import { LoadHeatmap } from './LoadHeatmap';
 
 type Props = {
   year: number;
@@ -21,6 +23,8 @@ type Props = {
   moveMode: boolean;
   selectedWorkoutId: string | null;
   selectedDate?: string | null;
+  /** Intensité SoftPulse des jours cibles en mode déplacement (défaut 0.05). */
+  moveTargetPulse?: number;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onDayPress: (date: string) => void;
@@ -81,6 +85,7 @@ export function PlanCalendar({
   moveMode,
   selectedWorkoutId,
   selectedDate,
+  moveTargetPulse = 0.05,
   onPrevMonth,
   onNextMonth,
   onDayPress,
@@ -105,6 +110,8 @@ export function PlanCalendar({
           <Text style={styles.navBtnText}>›</Text>
         </Pressable>
       </View>
+
+      <LoadHeatmap year={year} month={month} plan={plan} />
 
       {moveMode ? (
         <View style={styles.moveBanner}>
@@ -131,6 +138,11 @@ export function PlanCalendar({
           const isMoveTarget = moveMode && cell.date !== moveSourceDate;
           const isDaySelected = !moveMode && cell.date === selectedDate;
           const isMoveSource = moveMode && cell.date === moveSourceDate;
+          const pulseIntensity = isMoveTarget
+            ? moveTargetPulse
+            : isDaySelected
+              ? 0.04
+              : 0;
 
           return (
             <PressableScale
@@ -142,9 +154,10 @@ export function PlanCalendar({
                 isMoveTarget && styles.cellMoveTarget,
                 isMoveSource && styles.cellSelectedSource,
               ]}
+              contentStyle={styles.cellContent}
               onPress={() => onDayPress(cell.date!)}
             >
-              <SoftPulse intensity={isDaySelected ? 0.04 : 0}>
+              <SoftPulse intensity={pulseIntensity} style={styles.cellContent}>
                 <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{cell.day}</Text>
                 <View style={styles.dots}>
                   {sessions.slice(0, 4).map((s) => (
@@ -227,6 +240,9 @@ function makeStyles(colors: ColorPalette) {
       paddingVertical: 4,
       borderRadius: radii.sm,
     },
+    // Le contenu de PressableScale est pleine largeur : sans centrage, les chiffres se collent à gauche
+    // pendant que les initiales (Lun, Mar…) sont centrées — d'où le décalage.
+    cellContent: { alignItems: 'center', justifyContent: 'center' },
     cellToday: {
       backgroundColor: colors.accentLight,
     },

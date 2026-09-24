@@ -250,10 +250,12 @@ export function buildKmOdysseyBoards(opts: {
   };
   sport?: OdysseySport;
   liveTick?: number;
+  hideYouFromBoard?: boolean;
 }): KmOdysseyBoards {
   const sport = opts.sport ?? 'run';
   const country = normalizeCountry(opts.you.country);
   const liveTick = Math.max(0, Math.floor(opts.liveTick ?? 0));
+  const hideYou = Boolean(opts.hideYouFromBoard);
   const youProgress = kmOdysseyFromTotalKm(opts.you.totalKm, sport);
   const youEntry: Omit<KmOdysseyBoardEntry, 'place'> = {
     id: opts.you.id,
@@ -278,19 +280,22 @@ export function buildKmOdysseyBoards(opts: {
     return { ...base, totalKm: progress.totalKm, level: progress.level };
   });
 
-  const world = rankEntries([...rivals, youEntry]);
+  const withYou = hideYou ? rivals : [...rivals, youEntry];
+  const world = rankEntries(withYou);
   const national = rankEntries(
-    [...rivals, youEntry].filter((e) => normalizeCountry(e.country) === country),
+    withYou.filter((e) => normalizeCountry(e.country) === country),
   );
 
-  const yourWorldRank =
-    world.find((e) => e.isYou)?.place ??
-    world.find((e) => e.username === youEntry.username)?.place ??
-    world.length;
-  const yourNationalRank =
-    national.find((e) => e.isYou)?.place ??
-    national.find((e) => e.username === youEntry.username)?.place ??
-    national.length;
+  const yourWorldRank = hideYou
+    ? 0
+    : world.find((e) => e.isYou)?.place ??
+      world.find((e) => e.username === youEntry.username)?.place ??
+      world.length;
+  const yourNationalRank = hideYou
+    ? 0
+    : national.find((e) => e.isYou)?.place ??
+      national.find((e) => e.username === youEntry.username)?.place ??
+      national.length;
 
   return {
     world,

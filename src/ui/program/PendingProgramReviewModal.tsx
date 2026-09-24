@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useApp } from '../../store/AppContext';
 import { ProgramReviewCard } from '../program/ProgramReviewCard';
 import { useThemeColors } from '../../theme/ThemeContext';

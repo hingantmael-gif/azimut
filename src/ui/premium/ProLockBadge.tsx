@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text } from '../Text';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { isPremiumUiVisible } from '../../premium/featureFlags';
 import { ProCrown } from './ProCrown';

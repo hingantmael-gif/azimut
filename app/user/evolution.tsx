@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   demoAthleteEvolution,
@@ -158,7 +159,7 @@ export default function UserEvolutionScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     hero: {
       marginTop: spacing.lg,
       marginHorizontal: spacing.md,

@@ -1,35 +1,57 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toLocalDateIso } from '../../engines/sleepCalendar';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
-import { useApp } from '../../store/AppContext';
+import { useApp, todayWorkout } from '../../store/AppContext';
+import { DismissibleBanner } from './DismissibleBanner';
 import { NotificationPermissionModal } from './NotificationPermissionModal';
 import {
+  askSystemPermission,
   ensureNotificationHandler,
-  presentSocialPush,
+  getPushPermissionStatus,
+  getSystemPermissionStatus,
   requestPushPermission,
+  supportsSystemPermission,
   syncLocalReminders,
+  usesInAppNotificationsOnly,
 } from '../../services/pushNotifications';
 import {
   loadNotificationPromptHandled,
-  saveNotificationPromptHandled,
+  markNotificationPromptHandled,
 } from '../../storage/notificationPrompt';
+import {
+  generateReminderCopy,
+  shouldShowPreSessionBanner,
+} from '../../engines/preSessionReminder';
+import { useThemeColors } from '../../theme/ThemeContext';
+import { radii, spacing } from '../../theme/tokens';
+import { SoftPulse } from '../motion/softMotion';
+import { BRAND } from '../../constants/brand';
+
+/** Clé « appareil » : la question du premier lancement n'est posée qu'une fois, avant même la connexion. */
+const DEVICE_KEY = '__device__';
 
 /**
- * - Propose l’autorisation une seule fois (refus = plus jamais la modale)
- * - Réactivation uniquement via Réglages → Notifications
+ * - Premier lancement : la toute première chose affichée est la demande de notifications
+ * - Web / PWA : alertes uniquement dans Mova (pas de notif téléphone / domaine GitHub)
+ * - Natif : permission OS pour rappels en arrière-plan ; social = toast in-app
+ * - Bandeau pré-séance in-app
  */
 export function NotificationBootstrap() {
   const { state, dispatch } = useApp();
   const router = useRouter();
+  const { colors } = useThemeColors();
   const [promptVisible, setPromptVisible] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const lastSocialId = useRef<string | null>(null);
+  const seenSocialIds = useRef<Set<string>>(new Set());
   const bootstrapped = useRef(false);
-  const promptHandledRef = useRef(false);
-  const askedRef = useRef(Boolean(state.profile.pushPermissionAsked));
-
-  askedRef.current = Boolean(
-    state.profile.pushPermissionAsked || promptHandledRef.current,
-  );
+  const promptHandledRef = useRef(Boolean(state.profile.pushPermissionAsked));
+  const checkGen = useRef(0);
+  const inAppOnly = usesInAppNotificationsOnly();
+  const [firstLaunchVisible, setFirstLaunchVisible] = useState(false);
 
   const ready =
     Boolean(state.authToken) &&
@@ -37,53 +59,170 @@ export function NotificationBootstrap() {
     state.profile.onboardingCompleted;
 
   const profileId = state.profile.id;
+  const email = state.profile.email;
+  const username = state.profile.username;
+
+  const today = todayWorkout(state.plan);
+  const todayIso = toLocalDateIso(new Date());
+  const sessionDoneToday = state.activities.some(
+    (a) => a.startDate.slice(0, 10) === todayIso,
+  );
+
+  const preCopy = useMemo(() => {
+    // Pas de rappel « dans 2 h » pour une séance rapide lancée à l'instant.
+    if (!today || today.discipline === 'rest' || today.adHoc) return null;
+    return generateReminderCopy({
+      sessionTitle: today.title,
+      formTsb: state.banister.formTsb,
+      sleepScore: state.health.sleep?.score,
+      hoursUntilApprox: 2,
+      sessionDate: today.date,
+    });
+  }, [today, state.banister.formTsb, state.health.sleep?.score]);
+
+  const showBanner =
+    ready &&
+    !bannerDismissed &&
+    Boolean(state.profile.notifications.preSession) &&
+    shouldShowPreSessionBanner({
+      todayWorkout: today,
+      sessionDoneToday,
+    }) &&
+    Boolean(preCopy);
 
   useEffect(() => {
     ensureNotificationHandler();
   }, []);
 
+  // Tout premier lancement (avant connexion) : on propose les notifications tout de suite.
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    void (async () => {
+      if (!supportsSystemPermission()) return;
+      const [handled, status] = await Promise.all([
+        loadNotificationPromptHandled(DEVICE_KEY),
+        getSystemPermissionStatus(),
+      ]);
+      if (cancelled) return;
+      if (status !== 'undetermined') {
+        if (!handled) void markNotificationPromptHandled(DEVICE_KEY);
+        return;
+      }
+      if (handled) return;
+      timer = setTimeout(() => {
+        if (!cancelled) setFirstLaunchVisible(true);
+      }, 600);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const answerFirstLaunch = async (allow: boolean) => {
+    setFirstLaunchVisible(false);
+    void markNotificationPromptHandled(DEVICE_KEY);
+    if (!allow) return;
+    const granted = await askSystemPermission();
+    if (granted && state.authToken) {
+      dispatch({ type: 'UPDATE_PROFILE', patch: { pushPermissionAsked: true, pushEnabled: true } });
+    }
+  };
+
   useEffect(() => {
     if (!state.authToken) {
       bootstrapped.current = false;
       lastSocialId.current = null;
+      seenSocialIds.current = new Set();
       promptHandledRef.current = false;
       setPromptVisible(false);
+      setBannerDismissed(false);
     }
   }, [state.authToken]);
 
   useEffect(() => {
+    promptHandledRef.current = Boolean(state.profile.pushPermissionAsked);
+    setPromptVisible(false);
+  }, [profileId]);
+
+  useEffect(() => {
     let cancelled = false;
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    const gen = ++checkGen.current;
+
+    setPromptVisible(false);
 
     if (!ready) {
-      setPromptVisible(false);
-      return;
+      return () => {
+        cancelled = true;
+        if (timeout) clearTimeout(timeout);
+      };
     }
 
-    if (askedRef.current || state.profile.pushPermissionAsked) {
-      setPromptVisible(false);
-      return;
+    // Web : activer les alertes in-app sans demander la permission téléphone
+    if (inAppOnly) {
+      if (!state.profile.pushPermissionAsked || !state.profile.pushEnabled) {
+        promptHandledRef.current = true;
+        void markNotificationPromptHandled(profileId, email, username);
+        dispatch({
+          type: 'UPDATE_PROFILE',
+          patch: {
+            pushPermissionAsked: true,
+            pushEnabled: true,
+          },
+        });
+      } else {
+        promptHandledRef.current = true;
+      }
+      return () => {
+        cancelled = true;
+        if (timeout) clearTimeout(timeout);
+      };
+    }
+
+    if (state.profile.pushPermissionAsked || promptHandledRef.current) {
+      promptHandledRef.current = true;
+      return () => {
+        cancelled = true;
+        if (timeout) clearTimeout(timeout);
+      };
     }
 
     void (async () => {
-      const stored = await loadNotificationPromptHandled(profileId);
-      if (cancelled) return;
+      const [stored, osStatus, deviceHandled] = await Promise.all([
+        loadNotificationPromptHandled(profileId, email, username),
+        getPushPermissionStatus(),
+        loadNotificationPromptHandled(DEVICE_KEY),
+      ]);
+      if (cancelled || gen !== checkGen.current) return;
 
-      if (stored) {
+      const osSettled = osStatus === 'denied' || osStatus === 'granted';
+      // Déjà répondu au lancement (autoriser / refuser) : on ne redemande pas après la connexion.
+      if (stored || osSettled || deviceHandled) {
         promptHandledRef.current = true;
-        askedRef.current = true;
-        setPromptVisible(false);
+        await markNotificationPromptHandled(profileId, email, username);
         if (!state.profile.pushPermissionAsked) {
           dispatch({
             type: 'UPDATE_PROFILE',
-            patch: { pushPermissionAsked: true, pushEnabled: false },
+            patch: {
+              pushPermissionAsked: true,
+              pushEnabled: osStatus === 'granted',
+            },
+          });
+        } else if (osStatus === 'granted' && !state.profile.pushEnabled) {
+          dispatch({
+            type: 'UPDATE_PROFILE',
+            patch: { pushEnabled: true },
           });
         }
         return;
       }
 
       timeout = setTimeout(() => {
-        if (cancelled || askedRef.current) return;
+        if (cancelled || gen !== checkGen.current || promptHandledRef.current) {
+          return;
+        }
         setPromptVisible(true);
       }, 800);
     })();
@@ -92,49 +231,62 @@ export function NotificationBootstrap() {
       cancelled = true;
       if (timeout) clearTimeout(timeout);
     };
-  }, [ready, state.profile.pushPermissionAsked, profileId, dispatch]);
-
-  useEffect(() => {
-    if (!ready) return;
-    void syncLocalReminders(state.reminders, Boolean(state.profile.pushEnabled));
-  }, [ready, state.reminders, state.profile.pushEnabled]);
-
-  useEffect(() => {
-    if (!ready || !state.profile.pushEnabled || !state.profile.notifications.social) {
-      return;
-    }
-    const newest = state.profile.socialNotifications?.[0];
-
-    if (!bootstrapped.current) {
-      bootstrapped.current = true;
-      lastSocialId.current = newest?.id ?? null;
-      return;
-    }
-
-    if (!newest || newest.id === lastSocialId.current) return;
-    lastSocialId.current = newest.id;
-    if (!newest.read) {
-      void presentSocialPush(newest);
-    }
   }, [
     ready,
+    inAppOnly,
+    state.profile.pushPermissionAsked,
     state.profile.pushEnabled,
-    state.profile.notifications.social,
-    state.profile.socialNotifications,
+    profileId,
+    email,
+    username,
+    dispatch,
   ]);
 
   useEffect(() => {
+    if (!ready || inAppOnly) return;
+    void syncLocalReminders(state.reminders, Boolean(state.profile.pushEnabled));
+  }, [ready, inAppOnly, state.reminders, state.profile.pushEnabled]);
+
+  useEffect(() => {
+    if (!ready || inAppOnly || !state.profile.pushEnabled) return;
+    if (!state.profile.notifications.preSession) return;
+    void syncLocalReminders(state.reminders, true);
+  }, [
+    ready,
+    inAppOnly,
+    state.profile.pushEnabled,
+    state.profile.notifications.preSession,
+    today?.id,
+    sessionDoneToday,
+    state.reminders,
+  ]);
+
+  // Suivi social pour la cloche — pas de push OS (toast = SocialInboxBootstrap)
+  useEffect(() => {
+    if (!ready || !state.profile.notifications.social) return;
+    const list = state.profile.socialNotifications ?? [];
+    if (!bootstrapped.current) {
+      bootstrapped.current = true;
+      lastSocialId.current = list[0]?.id ?? null;
+      seenSocialIds.current = new Set(list.map((n) => n.id));
+      return;
+    }
+    for (const n of list) seenSocialIds.current.add(n.id);
+    if (list[0]) lastSocialId.current = list[0].id;
+  }, [ready, state.profile.notifications.social, state.profile.socialNotifications]);
+
+  useEffect(() => {
+    if (inAppOnly) return;
     const sub = Notifications.addNotificationResponseReceivedListener(() => {
       router.push('/notifications');
     });
     return () => sub.remove();
-  }, [router]);
+  }, [router, inAppOnly]);
 
   const markPromptHandled = (pushEnabled: boolean) => {
     promptHandledRef.current = true;
-    askedRef.current = true;
     setPromptVisible(false);
-    void saveNotificationPromptHandled(profileId);
+    void markNotificationPromptHandled(profileId, email, username);
     dispatch({
       type: 'UPDATE_PROFILE',
       patch: {
@@ -160,24 +312,106 @@ export function NotificationBootstrap() {
           },
         },
       });
-      void syncLocalReminders(state.reminders, true);
-    } else {
+      if (!inAppOnly) void syncLocalReminders(state.reminders, true);
+    } else if (!inAppOnly) {
       void syncLocalReminders([], false);
     }
   };
 
   const onDeny = () => {
     markPromptHandled(false);
-    void syncLocalReminders([], false);
+    if (!inAppOnly) void syncLocalReminders([], false);
   };
 
   return (
-    <NotificationPermissionModal
-      visible={promptVisible && !promptHandledRef.current}
-      onAllow={() => {
-        void onAllow();
-      }}
-      onDeny={onDeny}
-    />
+    <>
+      {showBanner && preCopy ? (
+        <View pointerEvents="box-none" style={styles.bannerHost}>
+          <SoftPulse intensity={0.03}>
+            <DismissibleBanner
+              style={[
+                styles.banner,
+                {
+                  backgroundColor: colors.bgElevated,
+                  borderColor: colors.accent,
+                },
+              ]}
+              onPress={() => {
+                if (today) router.push(`/session/${today.id}`);
+              }}
+              onDismiss={() => setBannerDismissed(true)}
+              closeColor={colors.textMuted}
+              accessibilityLabel={preCopy.title}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.eyebrow, { color: colors.accent }]}>
+                  {BRAND.name.toUpperCase()}
+                </Text>
+                <Text style={[styles.bannerTitle, { color: colors.text }]}>
+                  {preCopy.title}
+                </Text>
+                <Text
+                  style={[styles.bannerBody, { color: colors.textMuted }]}
+                  numberOfLines={2}
+                >
+                  {preCopy.body}
+                </Text>
+              </View>
+            </DismissibleBanner>
+          </SoftPulse>
+        </View>
+      ) : null}
+      <NotificationPermissionModal
+        visible={firstLaunchVisible}
+        inAppOnly={false}
+        onAllow={() => {
+          void answerFirstLaunch(true);
+        }}
+        onDeny={() => {
+          void answerFirstLaunch(false);
+        }}
+      />
+      <NotificationPermissionModal
+        visible={promptVisible && !promptHandledRef.current && !inAppOnly}
+        inAppOnly={false}
+        onAllow={() => {
+          void onAllow();
+        }}
+        onDeny={onDeny}
+      />
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  bannerHost: {
+    position: 'absolute',
+    top: 52,
+    left: spacing.md,
+    right: spacing.md,
+    zIndex: 40,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  eyebrow: {
+    fontWeight: '800',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  bannerTitle: { fontWeight: '800', fontSize: 14 },
+  bannerBody: { marginTop: 2, fontSize: 12, lineHeight: 16 },
+  bannerClose: { fontSize: 16, fontWeight: '700', paddingLeft: 4 },
+});

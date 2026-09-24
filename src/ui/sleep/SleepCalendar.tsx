@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert } from '../../utils/appAlert';
+import { Text } from '../Text';
 import {
   buildMonthGrid,
   earliestSleepDateIso,

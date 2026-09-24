@@ -1,7 +1,7 @@
 import type { PlannedWorkout, WorkoutStep } from '../types/domain';
 import { addDaysIso, toLocalDateIso } from './sleepCalendar';
 
-export type ProgramScheduleMode = 'stack' | 'spread';
+export type ProgramScheduleMode = 'stack' | 'spread' | 'replace';
 
 export type SameDayOverlap = {
   date: string;

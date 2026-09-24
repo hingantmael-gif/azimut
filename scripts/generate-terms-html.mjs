@@ -29,7 +29,7 @@ const html = `<!doctype html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Conditions d’utilisation — Azimut</title>
+  <title>Conditions d’utilisation — Mova</title>
   <meta name="google-site-verification" content="6yGL_C7i88c19mN5yId8YEK4FvQgf6K29fTXr1Cm_Pw" />
   <style>
     body {
@@ -52,11 +52,11 @@ const html = `<!doctype html>
 </head>
 <body>
   <main>
-    <h1>Conditions d’utilisation — Azimut</h1>
+    <h1>Conditions d’utilisation — Mova</h1>
     <p class="meta">Version ${esc(TERMS_VERSION)} · Dernière mise à jour : ${esc(TERMS_LAST_UPDATED)} · Inclut la confidentialité</p>
     <p class="intro">${esc(TERMS_INTRO)}</p>
 ${sections}
-    <p style="margin-top:36px"><a href="/apropos.html">← Présentation Azimut</a></p>
+    <p style="margin-top:36px"><a href="/apropos.html">← Présentation Mova</a></p>
   </main>
 </body>
 </html>

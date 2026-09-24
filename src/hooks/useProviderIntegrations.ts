@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import { useApp } from '../store/AppContext';
 import {
   apiDisconnectIntegration,
@@ -43,7 +43,7 @@ export function useProviderIntegrations() {
           return;
         }
         await syncFromServer();
-        Alert.alert('Connecté', 'Ton compte Garmin Connect est lié à ce profil Azimut.');
+        Alert.alert('Connecté', 'Ton compte Garmin Connect est lié à ce profil Mova.');
       } finally {
         setBusy(null);
       }
@@ -93,7 +93,7 @@ export function useProviderIntegrations() {
 
       if (item.connected) {
         if (item.provider === 'garmin') {
-          Alert.alert(label, 'Veux-tu déconnecter ce compte de ton profil Azimut ?', [
+          Alert.alert(label, 'Veux-tu déconnecter ce compte de ton profil Mova ?', [
             { text: 'Annuler', style: 'cancel' },
             {
               text: 'Déconnecter',

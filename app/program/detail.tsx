@@ -1,5 +1,7 @@
+import { useAmbientSport } from '../../src/theme/AmbientSport';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
 import { ProgramEvolutionCard } from '../../src/ui/ProgramEvolutionCard';
@@ -46,7 +48,12 @@ export default function ProgramDetailScreen() {
     const id = params.id;
     const at = params.at;
     return (state.profile.programHistory ?? []).find(
-      (p) => p.id === id && (!at || p.completedAt === at || p.startedAt === at),
+      (p) =>
+        p.id === id &&
+        (!at ||
+          p.completedAt === at ||
+          p.abandonedAt === at ||
+          p.startedAt === at),
     );
   }, [
     params,
@@ -55,6 +62,7 @@ export default function ProgramDetailScreen() {
     state.profile.programHistory,
   ]);
 
+  useAmbientSport(program?.sportCategory);
   const isActive = params.scope === 'active';
   const [cancelOpen, setCancelOpen] = useState(false);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
@@ -135,9 +143,20 @@ export default function ProgramDetailScreen() {
 
       {isActive ? (
         <FadeInUp delay={40}>
-          <Pressable style={styles.cancelBtn} onPress={() => setCancelOpen(true)}>
-            <Text style={styles.cancelBtnText}>Supprimer ce programme</Text>
-          </Pressable>
+          <PressableScale
+            style={styles.adjustBtn}
+            onPress={() =>
+              router.push({
+                pathname: '/program/adjust',
+                params: { id: program.id },
+              })
+            }
+          >
+            <Text style={styles.adjustBtnText}>Ajuster allures & jours</Text>
+            <Text style={styles.adjustBtnHint}>
+              Chrono faux ou jours changés — sans tout refaire
+            </Text>
+          </PressableScale>
         </FadeInUp>
       ) : null}
 
@@ -388,6 +407,16 @@ export default function ProgramDetailScreen() {
           </FadeInUp>
         ))
       )}
+
+      {isActive ? (
+        <Pressable
+          style={styles.cancelLink}
+          onPress={() => setCancelOpen(true)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.cancelLinkText}>Supprimer ce programme</Text>
+        </Pressable>
+      ) : null}
     </AppScrollView>
   );
 }
@@ -464,7 +493,7 @@ function groupByMonth(planned: PlannedWorkout[]): MonthBucket[] {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary, padding: spacing.md },
+    root: { flex: 1, backgroundColor: 'transparent', padding: spacing.md },
     hero: {
       borderRadius: radii.xl,
       overflow: 'hidden',
@@ -522,6 +551,38 @@ function makeStyles(colors: ColorPalette) {
     },
     ctaText: { color: colors.accentDark, fontWeight: '800', fontSize: 15 },
     ctaArrow: { color: colors.accent, fontWeight: '800', fontSize: 18 },
+    adjustBtn: {
+      marginTop: spacing.sm,
+      paddingVertical: 14,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.lg,
+      backgroundColor: colors.accentLight,
+      borderWidth: 1.5,
+      borderColor: colors.accent,
+    },
+    adjustBtnText: {
+      color: colors.accentDark,
+      fontWeight: '800',
+      fontSize: 15,
+    },
+    adjustBtnHint: {
+      marginTop: 4,
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '600',
+    },
+    cancelLink: {
+      marginTop: spacing.xl,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    cancelLinkText: {
+      color: colors.danger,
+      fontWeight: '600',
+      fontSize: 13,
+      textDecorationLine: 'underline',
+    },
     cancelBtn: {
       marginTop: spacing.sm,
       paddingVertical: 12,

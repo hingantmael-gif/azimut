@@ -6,7 +6,7 @@ import {
 } from './sportsScience';
 
 /**
- * Programmation musculation — Schoenfeld + référentiel haltères Azimut.
+ * Programmation musculation — Schoenfeld + référentiel haltères Mova.
  */
 
 export type StrengthEquipment =
@@ -96,6 +96,23 @@ export const STRENGTH_BODY_FOCUS_OPTIONS: Array<{
     desc: 'On alterne haut et bas — programme complet',
   },
 ];
+
+/** Cible musculaire précise (plusieurs possibles) : quand elle est choisie, elle prime sur la zone. */
+export type StrengthTarget = 'abs' | 'back' | 'arms' | 'legs' | 'chest';
+
+export const STRENGTH_TARGET_OPTIONS: Array<{ id: StrengthTarget; label: string }> = [
+  { id: 'abs', label: 'Abdos' },
+  { id: 'back', label: 'Dos' },
+  { id: 'arms', label: 'Bras' },
+  { id: 'legs', label: 'Jambes' },
+  { id: 'chest', label: 'Pectoraux & épaules' },
+];
+
+export function parseStrengthTargets(raw?: string[] | string | null): StrengthTarget[] {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(',') : [];
+  const ok = new Set<string>(STRENGTH_TARGET_OPTIONS.map((t) => t.id));
+  return list.map((x) => x.trim()).filter((x): x is StrengthTarget => ok.has(x));
+}
 
 /** Normalise l'ancien format (string) ou le nouveau (tableau). */
 export function normalizeStrengthEquipment(
@@ -369,6 +386,32 @@ const EXERCISE_LIBRARY: ExerciseDef[] = [
   { name: 'Tirage horizontal machine', muscles: ['pull'], equipment: ['home_machines', 'gym'], oneRmPct: 55 },
   { name: 'Élévations latérales machine', muscles: ['shoulders'], equipment: ['home_machines', 'gym'], oneRmPct: 40 },
   { name: 'Curl pupitre / machine biceps', muscles: ['arms'], equipment: ['home_machines', 'gym'], oneRmPct: 45 },
+
+  // ——— Compléments par cible (abdos, dos, bras, épaules) ———
+  { name: 'Relevés de jambes allongé', muscles: ['core'], equipment: ['bodyweight', 'bands', 'home_dumbbells', 'gym', 'home_machines'], cue: 'Bas du dos plaqué, monte les jambes tendues sans cambrer.' },
+  { name: 'Crunchs bicyclette', muscles: ['core'], equipment: ['bodyweight', 'bands', 'home_dumbbells', 'gym', 'home_machines'] },
+  { name: 'Russian twist', muscles: ['core'], equipment: ['bodyweight', 'home_dumbbells', 'gym'], cue: 'Buste incliné, pivote de gauche à droite, un haltère si tu veux charger.', oneRmPct: 30 },
+  { name: 'Relevés de genoux suspendu', muscles: ['core'], equipment: ['gym', 'bodyweight'], cue: 'Pendu à une barre, monte les genoux sans balancer.' },
+  { name: 'Roue abdominale', muscles: ['core'], equipment: ['gym', 'home_machines', 'bodyweight'], cue: 'Genoux au sol, roule vers l’avant en gardant le dos plat.' },
+  { name: 'Crunch à la poulie', muscles: ['core'], equipment: ['gym', 'home_machines'], oneRmPct: 45 },
+  { name: 'Extension lombaire (banc à lombaires)', muscles: ['pull', 'hams'], equipment: ['gym'], cue: 'Monte le buste jusqu’à l’alignement, sans hyper-extension.', oneRmPct: 30 },
+  { name: 'Tractions supination', muscles: ['pull', 'arms'], equipment: ['gym', 'bodyweight'], cue: 'Paumes vers toi, menton au-dessus de la barre.' },
+  { name: 'Tirage poitrine prise serrée (poulie)', muscles: ['pull', 'arms'], equipment: ['gym', 'home_machines'], oneRmPct: 55 },
+  { name: 'Rowing haltère prise neutre (banc incliné)', muscles: ['pull'], equipment: ['home_dumbbells', 'gym'], oneRmPct: 50 },
+  { name: 'Dips aux barres parallèles', muscles: ['push', 'arms'], equipment: ['gym', 'bodyweight'], cue: 'Épaules basses, descends à 90° aux coudes.' },
+  { name: 'Curl barre EZ', muscles: ['arms'], equipment: ['gym'], oneRmPct: 45 },
+  { name: 'Extension triceps à la poulie', muscles: ['arms'], equipment: ['gym', 'home_machines'], oneRmPct: 45 },
+  { name: 'Curl incliné avec haltères', muscles: ['arms'], equipment: ['home_dumbbells', 'gym'], oneRmPct: 35 },
+  { name: 'Développé militaire (barre)', muscles: ['shoulders', 'push'], equipment: ['gym'], oneRmPct: 60 },
+  { name: 'Arnold press avec haltères', muscles: ['shoulders'], equipment: ['home_dumbbells', 'gym'], oneRmPct: 45 },
+  { name: 'Curl marteau élastique', muscles: ['arms'], equipment: ['bands'] },
+  { name: 'Kickback triceps élastique', muscles: ['arms'], equipment: ['bands'] },
+  { name: 'Curl concentré élastique', muscles: ['arms'], equipment: ['bands'] },
+  { name: 'Curl poulie basse', muscles: ['arms'], equipment: ['home_machines', 'gym'], oneRmPct: 40 },
+  { name: 'Extension triceps machine', muscles: ['arms'], equipment: ['home_machines', 'gym'], oneRmPct: 45 },
+  { name: 'Tirage vertical élastique', muscles: ['pull'], equipment: ['bands'] },
+  { name: 'Oiseau élastique', muscles: ['pull', 'shoulders'], equipment: ['bands'] },
+  { name: 'Oiseau à la poulie / machine', muscles: ['shoulders', 'pull'], equipment: ['gym', 'home_machines'], oneRmPct: 30 },
 ];
 
 type Scheme = {
@@ -483,6 +526,19 @@ function equipmentMatchScore(
   return score;
 }
 
+/** Bras : alterne biceps et triceps pour ne jamais faire une séance « bras » sans triceps (ni sans biceps). */
+function alternateBicepsTriceps(list: ExerciseDef[]): ExerciseDef[] {
+  const isTriceps = (e: ExerciseDef) => /triceps|dips|prise serrée|diamant/i.test(e.name);
+  const triceps = list.filter(isTriceps);
+  const others = list.filter((e) => !isTriceps(e));
+  const out: ExerciseDef[] = [];
+  for (let i = 0; i < Math.max(triceps.length, others.length); i++) {
+    if (others[i]) out.push(others[i]!);
+    if (triceps[i]) out.push(triceps[i]!);
+  }
+  return out;
+}
+
 function rotatePool<T>(items: T[], seed: number): T[] {
   if (items.length <= 1) return items;
   const offset = ((seed % items.length) + items.length) % items.length;
@@ -494,6 +550,8 @@ function exercisesFor(
   muscles: MuscleGroup[],
   limit: number,
   rotationSeed = 0,
+  /** true : rien en dehors des muscles demandés (séances « abdos », « dos »…). */
+  strict = false,
 ): ExerciseDef[] {
   const pool = EXERCISE_LIBRARY.filter((e) =>
     equipment.some((eq) => e.equipment.includes(eq)),
@@ -509,19 +567,21 @@ function exercisesFor(
       pool.filter((e) => e.muscles.includes(m)),
       rotationSeed + m.length * 3,
     );
-    byMuscle.set(m, list);
+    byMuscle.set(m, m === 'arms' ? alternateBicepsTriceps(list) : list);
   }
 
   const picked: ExerciseDef[] = [];
-  // 1er passage : un exercice par groupe musculaire (varié selon la séance)
-  for (const m of muscles) {
-    if (picked.length >= limit) break;
-    const list = byMuscle.get(m) ?? [];
-    const hit = list.find((e) => !picked.some((p) => p.name === e.name));
-    if (hit) picked.push(hit);
+  // 1er passage : un exercice par groupe musculaire (varié selon la séance) ; en mode ciblé on fait plusieurs tours.
+  for (let round = 0; round < (strict ? 4 : 1); round++) {
+    for (const m of muscles) {
+      if (picked.length >= limit) break;
+      const list = byMuscle.get(m) ?? [];
+      const hit = list.find((e) => !picked.some((p) => p.name === e.name));
+      if (hit) picked.push(hit);
+    }
   }
   // 2e passage : compléter avec d’autres mouvements du pool (rotation)
-  const filler = rotatePool(pool, rotationSeed * 7 + 11);
+  const filler = rotatePool(strict ? pool.filter((e) => e.muscles.some((m) => muscles.includes(m))) : pool, rotationSeed * 7 + 11);
   for (const e of filler) {
     if (picked.length >= limit) break;
     if (!picked.some((p) => p.name === e.name)) picked.push(e);
@@ -568,6 +628,21 @@ function slotMuscles(
   return { title: 'Jambes', muscles: ['quads', 'glutes', 'hams', 'calves', 'core'] };
 }
 
+const MUSCLES_OF_TARGET: Record<StrengthTarget, MuscleGroup[]> = {
+  abs: ['core'],
+  back: ['pull'],
+  arms: ['arms'],
+  legs: ['quads', 'hams', 'glutes', 'calves'],
+  chest: ['push', 'shoulders'],
+};
+
+function targetedSlot(targets: StrengthTarget[]): { title: string; muscles: MuscleGroup[] } {
+  const muscles: MuscleGroup[] = [];
+  for (const t of targets) for (const m of MUSCLES_OF_TARGET[t]) if (!muscles.includes(m)) muscles.push(m);
+  const title = targets.map((t) => STRENGTH_TARGET_OPTIONS.find((o) => o.id === t)!.label).join(' + ');
+  return { title, muscles };
+}
+
 function estimateDurationSec(steps: WorkoutStep[]): number {
   return steps.reduce((sum, st) => {
     if (st.durationSec) return sum + st.durationSec * (st.repeat ?? 1);
@@ -584,6 +659,8 @@ export function buildStrengthSession(opts: {
   equipment: StrengthEquipment[];
   strengthGoal: StrengthGoalFocus;
   bodyFocus?: StrengthBodyFocus;
+  /** Cibles précises (abdos, dos, bras, jambes, pectoraux & épaules) : priment sur la zone. */
+  targets?: StrengthTarget[];
   ppgLite?: boolean;
   /** Semaine du programme — fait tourner les exercices */
   weekIndex?: number;
@@ -592,12 +669,13 @@ export function buildStrengthSession(opts: {
     opts.equipment.length > 0 ? opts.equipment : (['home_dumbbells'] as StrengthEquipment[]);
   const bodyFocus = opts.bodyFocus ?? 'full';
   const split = resolveStrengthSplit(opts.trainingDaysCount, bodyFocus);
-  const slot = slotMuscles(split, opts.slotIndex);
+  const targets = opts.targets ?? [];
+  const slot = targets.length > 0 ? targetedSlot(targets) : slotMuscles(split, opts.slotIndex);
   const scheme = schemeFor(opts.strengthGoal, opts.level, equipment);
   const exCount = opts.ppgLite ? 4 : opts.level === 'debutant' ? 5 : 6;
   const rotationSeed =
     (opts.weekIndex ?? 0) * 17 + opts.slotIndex * 5 + equipment.join(',').length;
-  const exercises = exercisesFor(equipment, slot.muscles, exCount, rotationSeed);
+  const exercises = exercisesFor(equipment, slot.muscles, exCount, rotationSeed, targets.length > 0);
 
   const gearLabel = equipmentLabelShort(equipment);
 
@@ -605,22 +683,26 @@ export function buildStrengthSession(opts: {
     {
       id: 'wu',
       type: 'warmup',
-      label: 'Échauffement (articulations + 2 séries très légères)',
+      label: 'Échauffement 3 min — articulations + 2 séries très légères',
       endCondition: 'duration',
-      durationSec: 6 * 60,
+      durationSec: 3 * 60,
     },
     ...exercises.map((ex, i) => {
-      const workSec = scheme.sets * (45 + scheme.restSec);
+      const workSec = scheme.sets * 40 + (scheme.sets - 1) * scheme.restSec;
       const pct = ex.oneRmPct
         ? equipment.includes('home_dumbbells') && !equipment.includes('gym')
           ? Math.round(ex.oneRmPct * dumbbellOneRmFactor(opts.level))
           : ex.oneRmPct
         : scheme.oneRmPct;
-      const cue = ex.cue ? ` · ${ex.cue}` : '';
+      const cue = ex.cue ? ` — ${ex.cue}` : '';
+      const isHold = /chaise|wall.?sit|planche|gainage|hollow|tenue/i.test(ex.name);
+      const workCore = isHold
+        ? `${ex.name} · ${scheme.sets} × 30s · repos ${scheme.restSec}s`
+        : `${ex.name} · ${scheme.sets} × ${scheme.repsLabel} · repos ${scheme.restSec}s`;
       return {
         id: `ex-${i}`,
         type: 'active' as const,
-        label: `${ex.name} · ${scheme.sets} séries de ${scheme.repsLabel} · ${scheme.restSec}s de repos · charge ≈ ${pct}% de ton max · ${scheme.loadHint}${cue}`,
+        label: `${workCore} · charge ≈ ${pct}% de ton max · ${scheme.loadHint}${cue}`,
         endCondition: 'duration' as const,
         durationSec: Math.min(12 * 60, Math.max(3 * 60, workSec)),
       };
@@ -628,9 +710,9 @@ export function buildStrengthSession(opts: {
     {
       id: 'cd',
       type: 'cooldown',
-      label: 'Étirements 5 min',
+      label: 'Retour au calme 3 min — étirements',
       endCondition: 'duration',
-      durationSec: 5 * 60,
+      durationSec: 3 * 60,
     },
   ];
 

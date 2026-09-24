@@ -1,5 +1,5 @@
 /**
- * Conditions d’utilisation Azimut — texte unifié (app + site).
+ * Conditions d’utilisation Mova — texte unifié (app + site).
  * Contenu original ; structure détaillée type apps sportives (compte, santé, données, responsabilité).
  */
 
@@ -17,8 +17,8 @@ export type TermsSection = {
 };
 
 export const TERMS_INTRO =
-  `Conditions d’utilisation Azimut — version ${TERMS_VERSION} (${TERMS_LAST_UPDATED}). ` +
-  `Ces Conditions constituent un contrat entre toi et Azimut concernant l’accès et l’utilisation ` +
+  `Conditions d’utilisation Mova — version ${TERMS_VERSION} (${TERMS_LAST_UPDATED}). ` +
+  `Ces Conditions constituent un contrat entre toi et Mova concernant l’accès et l’utilisation ` +
   `de l’application, du site et des services associés (ci-après les « Services »). ` +
   `En cochant « J’accepte », en créant un compte, en te connectant ou en utilisant les Services, ` +
   `tu confirmes avoir lu, compris et accepté l’intégralité des présentes Conditions, y compris ` +
@@ -33,10 +33,10 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Azimut peut mettre à jour ces Conditions pour refléter l’évolution des Services, ' +
+          'Mova peut mettre à jour ces Conditions pour refléter l’évolution des Services, ' +
           'des exigences légales ou de la sécurité. La date de « dernière mise à jour » et le ' +
           'numéro de version figurent en tête du document. En cas de changement substantiel, ' +
-          'Azimut s’efforce d’en informer les utilisateurs via l’application ou le site. ' +
+          'Mova s’efforce d’en informer les utilisateurs via l’application ou le site. ' +
           'La poursuite de l’utilisation après la date d’effet vaut acceptation des Conditions ' +
           'modifiées. Si tu refuses une modification, tu dois cesser d’utiliser les Services ' +
           'et peux demander la suppression de ton compte.',
@@ -50,7 +50,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Azimut est une application de coaching et de suivi multi-sport destinée à un usage ' +
+          'Mova est une application de coaching et de suivi multi-sport destinée à un usage ' +
           'personnel. Selon les fonctionnalités disponibles à un moment donné, les Services ' +
           'peuvent inclure notamment :',
       },
@@ -63,13 +63,13 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'outils de récupération, sommeil saisi, nutrition indicative, prédiction de performances ;',
           'profil utilisateur, paramètres de confidentialité, éventuelle dimension sociale (groupes, abonnements) ;',
           'installation en PWA, synchronisation compte (appareil / serveur), connexions optionnelles (ex. Google) ;',
-          'pages d’information et d’installation du site hingantmael-gif.github.io.',
+          'pages d’information et d’installation du site Mova.',
         ],
       },
       {
         type: 'p',
         text:
-          'Azimut se réserve le droit d’ajouter, modifier, suspendre ou retirer tout ou partie ' +
+          'Mova se réserve le droit d’ajouter, modifier, suspendre ou retirer tout ou partie ' +
           'des fonctionnalités, sans obligation de maintenir une fonctionnalité particulière ' +
           'indéfiniment. Certaines fonctions peuvent être limitées, expérimentales ou réservées ' +
           'à des comptes spécifiques.',
@@ -114,7 +114,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Tu es responsable de toutes les actions réalisées via ton compte. Azimut peut ' +
+          'Tu es responsable de toutes les actions réalisées via ton compte. Mova peut ' +
           'refuser, suspendre ou résilier un compte en cas d’informations inexactes, de ' +
           'comptes multiples abusifs, de violation des présentes Conditions ou de risque ' +
           'pour la sécurité des Services ou des autres utilisateurs.',
@@ -129,12 +129,12 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'Si tu choisis de te connecter avec Google (ou un autre fournisseur d’identité ' +
-          'proposé), tu autorises Azimut à recevoir certaines données d’identité (par ex. ' +
+          'proposé), tu autorises Mova à recevoir certaines données d’identité (par ex. ' +
           'e-mail, nom) selon les permissions que tu accordes. Ton usage de Google reste ' +
-          'soumis aux conditions et à la politique de confidentialité de Google. Azimut ' +
+          'soumis aux conditions et à la politique de confidentialité de Google. Mova ' +
           'n’est pas responsable des indisponibilités ou décisions du fournisseur tiers. ' +
           'Tu peux révoquer l’accès depuis les réglages de ton compte Google, ce qui peut ' +
-          'limiter certaines fonctionnalités Azimut.',
+          'limiter certaines fonctionnalités Mova.',
       },
     ],
   },
@@ -154,20 +154,20 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'diffuser des contenus illicites, haineux, harcelants, diffamatoires, pornographiques illégaux, ou portant atteinte aux droits de tiers ;',
           'usurper l’identité d’autrui, falsifier des performances de façon trompeuse dans un contexte compétitif ou social ;',
           'utiliser les Services à des fins commerciales non autorisées (revente de plans, spam, publicité non sollicitée) ;',
-          'extraire massivement les contenus Azimut pour entraîner des modèles ou créer un service concurrent sans autorisation écrite.',
+          'extraire massivement les contenus Mova pour entraîner des modèles ou créer un service concurrent sans autorisation écrite.',
         ],
       },
       {
         type: 'p',
         text:
-          'Azimut peut retirer des contenus, limiter des fonctionnalités ou suspendre un ' +
+          'Mova peut retirer des contenus, limiter des fonctionnalités ou suspendre un ' +
           'compte en cas de manquement, avec ou sans préavis selon la gravité.',
       },
     ],
   },
   {
     id: 'user-content',
-    title: '7. Tes contenus et licence accordée à Azimut',
+    title: '7. Tes contenus et licence accordée à Mova',
     blocks: [
       {
         type: 'p',
@@ -175,7 +175,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
           'Tu conserves les droits sur les contenus que tu fournis (profil, bio, photos, ' +
           'activités, commentaires, notes, données de séance, etc. — les « Contenus ' +
           'Utilisateur »). En les publiant ou en les synchronisant via les Services, tu ' +
-          'accordes à Azimut une licence mondiale, non exclusive, gratuite, transférable ' +
+          'accordes à Mova une licence mondiale, non exclusive, gratuite, transférable ' +
           'et sous-licenciable, pour héberger, stocker, reproduire, adapter (format, ' +
           'affichage, compression), afficher et traiter ces Contenus uniquement afin de ' +
           'fournir, améliorer, sécuriser et promouvoir les Services (y compris sauvegarde, ' +
@@ -195,14 +195,14 @@ export const TERMS_SECTIONS: TermsSection[] = [
   },
   {
     id: 'ip',
-    title: '8. Propriété intellectuelle Azimut',
+    title: '8. Propriété intellectuelle Mova',
     blocks: [
       {
         type: 'p',
         text:
           'Les Services, le logiciel, le design, les textes, graphismes, logos, marques, ' +
           'bases de programmes d’entraînement, algorithmes de coaching, documentation et ' +
-          'autres éléments fournis par Azimut sont protégés par le droit de la propriété ' +
+          'autres éléments fournis par Mova sont protégés par le droit de la propriété ' +
           'intellectuelle. Aucune disposition des présentes ne te transfère de droits de ' +
           'propriété. Tu disposes d’un droit d’usage personnel, non exclusif, non ' +
           'cessible et révocable, strictement limité à l’utilisation conforme des Services. ' +
@@ -219,7 +219,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'IMPORTANT — Les informations, plans, allures, volumes, scores, messages coach, ' +
-          'outils de récupération, sommeil, nutrition ou prédiction fournis par Azimut ou ' +
+          'outils de récupération, sommeil, nutrition ou prédiction fournis par Mova ou ' +
           'par des tiers via les Services sont destinés à des fins informatives et de ' +
           'coaching sportif général. Ils ne constituent PAS un avis médical, un diagnostic, ' +
           'un traitement, ni un dispositif médical au sens de la réglementation applicable.',
@@ -236,7 +236,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Dans toute la mesure permise par la loi, Azimut décline toute responsabilité ' +
+          'Dans toute la mesure permise par la loi, Mova décline toute responsabilité ' +
           'pour les blessures, problèmes de santé ou dommages résultant de l’utilisation ' +
           'ou de la confiance accordée aux contenus d’entraînement des Services.',
       },
@@ -251,7 +251,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         text:
           'Lorsque tu t’entraînes à l’extérieur (route, trail, vélo, eau libre, etc.), tu ' +
           'es seul(e) responsable de ta sécurité et du respect du code de la route, des ' +
-          'règles locales, de la météo, du matériel et de l’environnement. Azimut ne ' +
+          'règles locales, de la météo, du matériel et de l’environnement. Mova ne ' +
           'fournit pas de service de secours. Ne te fie pas exclusivement à l’app pour la ' +
           'navigation critique. Emporte de l’eau, un moyen d’appeler les secours, et ' +
           'informe quelqu’un de ta sortie si tu t’éloignes. La baignade en eau libre ' +
@@ -267,7 +267,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Azimut traite des données personnelles pour fournir et sécuriser les Services. ' +
+          'Mova traite des données personnelles pour fournir et sécuriser les Services. ' +
           'Selon ton usage, les catégories peuvent inclure :',
       },
       {
@@ -294,10 +294,10 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'Stockage : données sur ton appareil (stockage local / PWA) et/ou sur des ' +
-          'serveurs d’authentification et d’hébergement utilisés par Azimut (par ex. ' +
+          'serveurs d’authentification et d’hébergement utilisés par Mova (par ex. ' +
           'infrastructure cloud). Durées : aussi longtemps que ton compte est actif, puis ' +
           'suppression ou anonymisation dans un délai raisonnable après clôture, sauf ' +
-          'obligations légales ou besoins de preuve. Azimut ne vend pas tes données ' +
+          'obligations légales ou besoins de preuve. Mova ne vend pas tes données ' +
           'personnelles.',
       },
       {
@@ -337,11 +337,11 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'Les Services peuvent renvoyer vers ou interagir avec des sites, API, montres, ' +
-          'plateformes sportives ou outils tiers. Azimut ne contrôle pas ces services et ' +
+          'plateformes sportives ou outils tiers. Mova ne contrôle pas ces services et ' +
           'n’est pas responsable de leur contenu, disponibilité, sécurité ou politiques. ' +
           'Ton utilisation de ces tiers est régie par leurs propres conditions. Toute ' +
           'perte liée à un tiers (données perdues, synchro défaillante, etc.) relève, ' +
-          'sauf faute d’Azimut prouvée, de la relation avec ce tiers.',
+          'sauf faute de Mova prouvée, de la relation avec ce tiers.',
       },
     ],
   },
@@ -352,7 +352,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Les Services sont fournis « en l’état » et « selon disponibilité ». Azimut ne ' +
+          'Les Services sont fournis « en l’état » et « selon disponibilité ». Mova ne ' +
           'garantit pas que les Services seront ininterrompus, exempts d’erreurs, de ' +
           'virus ou adaptés à un usage particulier, ni que les plans ou métriques seront ' +
           'exacts ou complets. Des maintenances, pannes réseau, mises à jour PWA ou ' +
@@ -368,7 +368,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Dans toute la mesure permise par le droit applicable, Azimut et ses ' +
+          'Dans toute la mesure permise par le droit applicable, Mova et ses ' +
           'contributeurs ne sauraient être responsables des dommages indirects, ' +
           'accessoires, spéciaux, consécutifs ou punitifs, ni des pertes de données, de ' +
           'profits, d’opportunité ou de réputation, résultant de l’usage ou de ' +
@@ -379,9 +379,9 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'La responsabilité totale d’Azimut pour tout litige lié aux Services est, sauf ' +
+          'La responsabilité totale de Mova pour tout litige lié aux Services est, sauf ' +
           'faute lourde ou dol, ou atteinte à l’intégrité physique résultant d’une faute ' +
-          'd’Azimut, limitée au montant que tu as éventuellement payé à Azimut au titre ' +
+          'de Mova, limitée au montant que tu as éventuellement payé à Mova au titre ' +
           'des Services au cours des douze (12) mois précédant le fait générateur, ou à ' +
           'cinquante (50) euros si tu n’as rien payé. Rien dans les présentes n’exclut ' +
           'les responsabilités qui ne peuvent être limitées en droit de la consommation ' +
@@ -396,7 +396,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
       {
         type: 'p',
         text:
-          'Tu t’engages à indemniser et dégager Azimut de toute réclamation, perte ou ' +
+          'Tu t’engages à indemniser et dégager Mova de toute réclamation, perte ou ' +
           'frais (y compris honoraires raisonnables) résultant de ton usage illicite des ' +
           'Services, de tes Contenus Utilisateur, ou de ta violation des présentes ' +
           'Conditions ou des droits de tiers.',
@@ -412,7 +412,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         text:
           'Tu peux cesser d’utiliser les Services à tout moment et demander la ' +
           'suppression de ton compte via les paramètres prévus à cet effet (Compte / ' +
-          'sécurité) ou via le support. Azimut peut suspendre ou résilier l’accès, avec ' +
+          'sécurité) ou via le support. Mova peut suspendre ou résilier l’accès, avec ' +
           'ou sans préavis, en cas de violation des Conditions, de risque sécurité, ' +
           'd’inactivité prolongée, d’obligation légale, ou de cessation des Services. En ' +
           'cas de résiliation, le droit d’accès cesse ; les licences nécessaires à ' +
@@ -448,7 +448,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
         items: [
           'Si une clause est jugée invalide, les autres restent en vigueur.',
           'Le fait de ne pas exercer un droit ne vaut pas renonciation.',
-          'Tu ne peux céder ce contrat sans accord écrit d’Azimut ; Azimut peut céder le contrat en cas de réorganisation ou de transfert d’activité.',
+          'Tu ne peux céder ce contrat sans accord écrit de Mova ; Mova peut céder le contrat en cas de réorganisation ou de transfert d’activité.',
           'Les présentes Conditions (et tout document expressément incorporé) constituent l’intégralité de l’accord relatif aux Services et remplacent les versions antérieures.',
         ],
       },
@@ -462,8 +462,8 @@ export const TERMS_SECTIONS: TermsSection[] = [
         type: 'p',
         text:
           'Pour toute question sur ces Conditions, l’exercice de tes droits ou le ' +
-          'support : utilise Aide / Compte dans l’application, ou écris à ' +
-          'support@endurance-coach.app. Mentions complémentaires éventuelles : page ' +
+          'support : utilise le formulaire « Écrire à Mova » (Paramètres → Aide). ' +
+          'Mentions complémentaires éventuelles : page ' +
           '« À propos » du site.',
       },
     ],

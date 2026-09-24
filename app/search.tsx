@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { AppTextInput } from '../src/ui/AppTextInput';
 import { useRouter } from 'expo-router';
 import { useApp } from '../src/store/AppContext';
@@ -7,11 +8,15 @@ import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
 import { suggestProfiles, type RegistryUser } from '../src/storage/userRegistry';
 import { formatUsernameDisplay, limitUsernameInput } from '../src/utils/username';
-import { ProfileAvatar } from '../src/ui/profile/ProfileAvatar';
 import { AppFlatList } from '../src/ui/scrolling';
+import { communitySearchUsers } from '../src/api/community';
+import { RankBadge } from '../src/ui/ranked/RankBadge';
+import type { RankTier } from '../src/types/domain';
 
 const SUGGEST_LIMIT = 10;
 const DEBOUNCE_MS = 120;
+
+type SearchHit = RegistryUser & { fromCloud?: boolean; rankTier?: RankTier };
 
 function sportLabelFromProfile(goal?: string): string | undefined {
   if (!goal) return undefined;
@@ -22,14 +27,29 @@ function sportLabelFromProfile(goal?: string): string | undefined {
   return 'Course';
 }
 
-/** Recherche d’amis — suggestions live → profil */
+function hashTier(username: string): RankTier {
+  const tiers: RankTier[] = [
+    'bronze',
+    'argent',
+    'or',
+    'diamant',
+    'platine',
+    'elite',
+  ];
+  let h = 0;
+  for (let i = 0; i < username.length; i++) h = (h * 31 + username.charCodeAt(i)) >>> 0;
+  return tiers[h % tiers.length]!;
+}
+
+/** Recherche d’amis — cloud prioritaire + registry local. */
 export default function SearchScreen() {
   const { state } = useApp();
   const { colors } = useThemeColors();
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<RegistryUser[]>([]);
+  const [results, setResults] = useState<SearchHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fromCloud, setFromCloud] = useState(false);
   const reqId = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,9 +70,33 @@ export default function SearchScreen() {
       if (!trimmed) {
         setResults([]);
         setLoading(false);
+        setFromCloud(false);
         return;
       }
       setLoading(true);
+
+      const cloud = await communitySearchUsers(state.authToken, trimmed);
+      if (id !== reqId.current) return;
+
+      if (cloud?.users?.length) {
+        const hits: SearchHit[] = cloud.users.map((u) => {
+          const parts = (u.name || '').trim().split(/\s+/);
+          return {
+            id: `cloud-${u.username}`,
+            username: u.username,
+            firstName: parts[0] || u.username,
+            lastName: parts.slice(1).join(' ') || '',
+            email: '',
+            fromCloud: true,
+            rankTier: hashTier(u.username),
+          };
+        });
+        setResults(hits.slice(0, SUGGEST_LIMIT));
+        setFromCloud(true);
+        setLoading(false);
+        return;
+      }
+
       const found = await suggestProfiles(trimmed, {
         city,
         sport,
@@ -60,10 +104,17 @@ export default function SearchScreen() {
         excludeId: state.profile.id,
       });
       if (id !== reqId.current) return;
-      setResults(found);
+      setResults(
+        found.map((f) => ({
+          ...f,
+          fromCloud: false,
+          rankTier: hashTier(f.username),
+        })),
+      );
+      setFromCloud(false);
       setLoading(false);
     },
-    [city, sport, state.profile.id],
+    [city, sport, state.profile.id, state.authToken],
   );
 
   useEffect(() => {
@@ -80,7 +131,7 @@ export default function SearchScreen() {
   const following = new Set(state.profile.followingUsernames ?? []);
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bgSecondary }]}>
+    <View style={styles.root}>
       <View style={[styles.searchBox, { backgroundColor: colors.bg }]}>
         <Text style={[styles.loupe, { color: colors.textMuted }]}>⌕</Text>
         <AppTextInput
@@ -101,13 +152,15 @@ export default function SearchScreen() {
         <Text style={[styles.hint, { color: colors.textMuted }]}>
           {loading
             ? 'Recherche…'
-            : `${results.length} suggestion${results.length > 1 ? 's' : ''}`}
+            : `${results.length} suggestion${results.length > 1 ? 's' : ''}${
+                fromCloud ? ' · cloud' : ' · local'
+              }`}
         </Text>
       ) : (
         <View style={styles.idle}>
           <Text style={[styles.hint, { color: colors.textMuted }]}>
-            Tape le début d’un identifiant pour trouver des athlètes. Les profils
-            publics s’ouvrent tout de suite ; les privés suivent leurs réglages.
+            Tape le début d’un identifiant pour trouver des athlètes. Connecté au
+            cloud : recherche multi-appareils. Sinon : annuaire local de cet appareil.
           </Text>
           <Pressable
             style={[styles.idleCta, { backgroundColor: colors.bg }]}
@@ -150,12 +203,7 @@ export default function SearchScreen() {
                 })
               }
             >
-              <ProfileAvatar
-                uri={item.avatarUri}
-                initials={`${item.firstName?.[0] || '?'}${item.lastName?.[0] || ''}`}
-                size={44}
-                borderColor={colors.accent}
-              />
+              <RankBadge tier={item.rankTier || 'bronze'} division={2} size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.name, { color: colors.text }]}>
                   {item.firstName} {item.lastName}
@@ -165,7 +213,8 @@ export default function SearchScreen() {
                   {isFollowing ? ' · Abonné' : ''}
                 </Text>
                 <Text style={[styles.meta, { color: colors.textSecondary }]}>
-                  {[item.city, item.sport].filter(Boolean).join(' · ')}
+                  {[item.city, item.sport].filter(Boolean).join(' · ') ||
+                    (item.fromCloud ? 'Compte Mova' : '')}
                 </Text>
                 {sameCity || sameSport ? (
                   <Text style={[styles.badge, { color: colors.accentDark }]}>
@@ -203,7 +252,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 14,
     borderWidth: 0,
-    // Web : enlève le contour focus noir du navigateur
     outlineWidth: 0,
     outlineStyle: 'none',
   } as object,
@@ -236,14 +284,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 0,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { fontWeight: '800', fontSize: 15 },
   name: { fontWeight: '700', fontSize: 16 },
   handle: { fontSize: 14, marginTop: 1 },
   meta: { fontSize: 13, marginTop: 2 },

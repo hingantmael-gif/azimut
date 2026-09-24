@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { AppTextInput } from '../../src/ui/AppTextInput';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
@@ -93,7 +94,7 @@ export default function ProgramProgressScreen() {
           </Text>
         ) : null}
 
-        <Pressable style={styles.link} onPress={() => router.push('/(tabs)/calendar')}>
+        <Pressable style={styles.link} onPress={() => router.navigate('/calendar')}>
           <Text style={styles.linkText}>Voir le planning →</Text>
         </Pressable>
       </AppScrollView>

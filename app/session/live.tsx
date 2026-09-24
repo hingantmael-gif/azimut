@@ -1,102 +1,351 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
+  BackHandler,
+  Dimensions,
+  Linking,
   Platform,
   Pressable,
-  StyleSheet,
-  Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, appConfirm } from '../../src/utils/appAlert';
+import { Text } from '../../src/ui/Text';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
-import { radii, spacing } from '../../src/theme/tokens';
-import type { ColorPalette } from '../../src/theme/palettes';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import { ActivityRouteMap } from '../../src/ui/ActivityRouteMap';
 import { useLiveGpsTrack } from '../../src/hooks/useLiveGpsTrack';
+import { FlowBadge } from '../../src/ui/live/FlowField';
+import { LiveIdleBackdrop } from '../../src/ui/live/LiveIdleBackdrop';
 import {
   buildLiveActivity,
   canStartLiveWorkout,
+  computeLiveKmSplits,
+  advanceLiveStepCursor,
+  skipLiveStep,
+  flowPercent,
+  INITIAL_LIVE_CURSOR,
+  type LiveStepCursor,
   computeLiveStepProgress,
+  detectPaceAnomaly,
   flattenWorkoutSteps,
   formatLiveClock,
+  formatLiveClockLong,
   formatLiveDistance,
+  formatLiveDistanceKmValue,
   formatLivePace,
   formatPaceBand,
+  paceTargetMean,
+  formatStepRemaining,
+  freeLiveShell,
+  haversineM,
+  liveCueLabel,
   paceStatus,
-  paceStatusLabel,
+  paceZone,
+  stepPhaseTitle,
 } from '../../src/engines/liveWorkout';
+import { findPlannedForFreeActivity } from '../../src/engines/programSessions';
+import { initialPaceCoach, nextPaceCue } from '../../src/engines/paceCoach';
+import { isVoiceCoachOn, speak } from '../../src/services/voiceCoach';
+import type { PlannedWorkout } from '../../src/types/domain';
+import { PressableScale } from '../../src/ui/motion/softMotion';
+import { safeGoBack } from '../../src/ui/navigation/AlwaysBackButton';
+import {
+  clearLiveDraft,
+  liveDraftKey,
+  loadLiveDraft,
+  saveLiveDraft,
+  type LiveSessionDraft,
+} from '../../src/storage/liveSessionDraft';
+import {
+  GpsSignalBars,
+  LiveFinishCelebration,
+  LiveMetricCell,
+  LivePaceGauge,
+  LivePhaseTimeline,
+  LiveRecordControls,
+  LiveStepPhaseBadge,
+  LiveStepProgressBar,
+  liveTrackerStyles,
+} from '../../src/ui/live/LiveTrackerChrome';
+import {
+  LIVE_INK,
+  LIVE_MINT,
+  LiveAzimutControls,
+  LiveConfirmSheet,
+  LiveFocusBoard,
+  LiveMetricsCapsule,
+  LiveResizableSheet,
+  LiveGpsSlot,
+  LiveSportPickButton,
+  type FreeRecordSport,
+} from '../../src/ui/live/AzimutTrackerHud';
 import { BRAND } from '../../src/constants/brand';
+type Phase = 'ready' | 'running' | 'paused' | 'saving';
 
-type Phase = 'ready' | 'countdown' | 'running' | 'paused' | 'saving' | 'done';
+/** Séance vide utilisée tant qu'aucune séance n'est chargée (voir la garde plus bas). */
+const NO_WORKOUT: PlannedWorkout = {
+  id: 'none',
+  date: '',
+  title: '',
+  discipline: 'rest',
+  steps: [],
+} as unknown as PlannedWorkout;
 
-/** Tracker GPS live guidé — allures du plan, style Strava/Campus. */
+/** Tracker GPS live — guidage Garmin (allure / étapes) pour séances planifiées. */
 export default function LiveSessionScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, mode, sport, resume, go } = useLocalSearchParams<{
+    id?: string;
+    mode?: string;
+    sport?: string;
+    resume?: string;
+    go?: string;
+  }>();
   const { state, dispatch } = useApp();
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { colors } = useThemeColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  const workout = state.plan.find((w) => w.id === id);
 
-  const gps = useLiveGpsTrack();
+  // Écran du tracker : portrait uniquement (une rotation ne doit jamais perturber la séance).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const o = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
+      | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+      | undefined;
+    void o?.lock?.('portrait').catch(() => undefined);
+    return () => {
+      try {
+        o?.unlock?.();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+  const { colors, custom: customTheme } = useThemeColors();
+  const styles = useMemo(() => liveTrackerStyles(colors), [colors]);
+  const screenH = Dimensions.get('window').height;
+
+  const freeShell = useMemo(() => {
+    if (mode !== 'free') return null;
+    const s =
+      sport === 'bike' ? 'bike' : sport === 'swim' ? 'swim' : 'run';
+    return freeLiveShell({ sport: s });
+  }, [mode, sport]);
+
+  const planned = id ? state.plan.find((w) => w.id === id) : undefined;
+  const [draftWorkout, setDraftWorkout] = useState<PlannedWorkout | null>(null);
+  const workoutOrNull: PlannedWorkout | null = planned ?? draftWorkout ?? freeShell;
+  // Les hooks doivent s'exécuter à chaque rendu, même sans séance (brouillon chargé de façon
+  // asynchrone) : on travaille sur une séance vide et les gardes sont placées sous les hooks.
+  const workout: PlannedWorkout = workoutOrNull ?? NO_WORKOUT;
+
+  const sessionKey = liveDraftKey({
+    plannedId: id,
+    mode,
+    sport,
+  });
+
   const [phase, setPhase] = useState<Phase>('ready');
-  const [countdown, setCountdown] = useState(3);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [movingSec, setMovingSec] = useState(0);
+  const [pendingDraft, setPendingDraft] = useState<LiveSessionDraft | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  const [autoPauseCue, setAutoPauseCue] = useState(false);
+  /** Focus métriques plein écran (≠ carte compacte). */
+  const [finishConfirmOpen, setFinishConfirmOpen] = useState(false);
   const startIsoRef = useRef<string | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wallStartRef = useRef<number | null>(null);
   const wallPausedAccumRef = useRef(0);
   const wallPauseAtRef = useRef<number | null>(null);
+  const activeRef = useRef(false);
+  /** Une fois true, autorise la navigation (évite la boucle beforeRemove). */
+  const allowLeaveRef = useRef(false);
+  const restoredRef = useRef(false);
+  const phaseRef = useRef<Phase>('ready');
+  const onAutoPauseRef = useRef<() => void>(() => undefined);
 
-  const flatSteps = useMemo(
-    () => (workout ? flattenWorkoutSteps(workout.steps) : []),
-    [workout],
+  phaseRef.current = phase;
+  activeRef.current = phase === 'running' || phase === 'paused';
+
+  const gps = useLiveGpsTrack({
+    autoPauseAfterSec: 50,
+    onAutoPauseSuggested: () => onAutoPauseRef.current(),
+  });
+
+  const leaveScreen = useCallback(() => {
+    allowLeaveRef.current = true;
+    activeRef.current = false;
+    safeGoBack(router, '/(tabs)');
+  }, [router]);
+
+  const buildDraftPayload = useCallback((): LiveSessionDraft | null => {
+    if (!workout || !startIsoRef.current) return null;
+    const snap = gps.getSnapshot();
+    let pausedExtra = wallPausedAccumRef.current;
+    if (wallPauseAtRef.current != null) {
+      pausedExtra += Date.now() - wallPauseAtRef.current;
+    }
+    const wallElapsed =
+      wallStartRef.current != null
+        ? Math.max(
+            0,
+            (Date.now() - wallStartRef.current - pausedExtra) / 1000,
+          )
+        : elapsedSec;
+    return {
+      v: 1,
+      key: sessionKey,
+      plannedId: isFreeKey(sessionKey) ? undefined : workout.id,
+        mode: mode === 'free' || isFreeKey(sessionKey) ? 'free' : undefined,
+      sport:
+        mode === 'free' || isFreeKey(sessionKey)
+          ? sport === 'bike' || workout.discipline === 'bike'
+            ? 'bike'
+            : sport === 'swim' || workout.discipline === 'swim'
+              ? 'swim'
+              : 'run'
+          : undefined,
+      title: workout.title,
+      discipline: workout.discipline,
+      startIso: startIsoRef.current,
+      savedAt: new Date().toISOString(),
+      elapsedSec: Math.max(wallElapsed, elapsedSec),
+      movingSec: Math.max(snap.movingSec, movingSec),
+      distanceM: snap.distanceM,
+      points: snap.points,
+      wallPausedAccumMs: pausedExtra,
+    };
+  }, [workout, gps, sessionKey, mode, sport, elapsedSec, movingSec]);
+
+  const saveForLater = useCallback(async () => {
+    const draft = buildDraftPayload();
+    if (!draft) return false;
+    await saveLiveDraft(draft);
+    gps.stop();
+    return true;
+  }, [buildDraftPayload, gps]);
+
+  const abandon = useCallback(async () => {
+    await clearLiveDraft();
+    gps.stop();
+  }, [gps]);
+
+  const applyDraft = useCallback(
+    async (draft: LiveSessionDraft) => {
+      if (!planned && (draft.mode === 'free' || draft.key.startsWith('free:'))) {
+        setDraftWorkout({
+          id: draft.key,
+          date: draft.startIso.slice(0, 10),
+          title: draft.title,
+          discipline: draft.discipline,
+          steps: [
+            {
+              id: 'free-1',
+              type: 'active',
+              label: 'Libre',
+              endCondition: 'lap_button',
+            },
+          ],
+        });
+      }
+      startIsoRef.current = draft.startIso;
+      wallPausedAccumRef.current = draft.wallPausedAccumMs;
+      wallPauseAtRef.current = Date.now();
+      wallStartRef.current = Date.now() - draft.elapsedSec * 1000 - draft.wallPausedAccumMs;
+      setElapsedSec(draft.elapsedSec);
+      setMovingSec(draft.movingSec);
+      gps.hydrate({
+        points: draft.points,
+        distanceM: draft.distanceM,
+        movingSec: draft.movingSec,
+      });
+      await gps.prepare();
+      setPhase('paused');
+      setRestored(true);
+      setPendingDraft(null);
+    },
+    [gps, planned],
   );
 
-  const progress = useMemo(
-    () => computeLiveStepProgress(flatSteps, movingSec, gps.distanceM),
-    [flatSteps, movingSec, gps.distanceM],
+  // GPS + éventuelle reprise
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      void gps.prepare();
+      const draft = await loadLiveDraft();
+      if (cancelled || !draft) return;
+      if (draft.key !== sessionKey) {
+        // Autre séance en attente — on n’écrase pas ici
+        return;
+      }
+      if (resume === '1' || resume === 'true') {
+        if (!restoredRef.current) {
+          restoredRef.current = true;
+          await applyDraft(draft);
+        }
+      } else {
+        setPendingDraft(draft);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey, resume]);
+
+  const confirmLeave = useCallback(
+    (onLeave: () => void) => {
+      const later = async () => {
+        const ok = await saveForLater();
+        if (ok) onLeave();
+      };
+      const discard = async () => {
+        await abandon();
+        onLeave();
+      };
+      // Dialogue intégré (identique web / mobile) : trois choix clairs, jamais bloqué par le navigateur.
+      Alert.alert('Séance en cours', 'Que souhaites-tu faire ?', [
+        { text: 'Rester', style: 'cancel' },
+        { text: 'Reprendre plus tard', onPress: () => void later() },
+        { text: 'Abandonner', style: 'destructive', onPress: () => void discard() },
+      ]);
+    },
+    [saveForLater, abandon],
   );
 
-  const status = paceStatus(gps.currentPaceSecPerKm, progress.step);
-  const band = formatPaceBand(progress.step);
-  const discColor =
-    (workout && DISCIPLINE_META[workout.discipline]?.color) || colors.accent;
+  // Bloquer retour matériel / geste pendant la séance (sans re-bloquer après confirmation)
+  useEffect(() => {
+    const sub = navigation.addListener('beforeRemove', (e) => {
+      if (allowLeaveRef.current || !activeRef.current) return;
+      e.preventDefault();
+      confirmLeave(() => {
+        allowLeaveRef.current = true;
+        activeRef.current = false;
+        navigation.dispatch(e.data.action);
+      });
+    });
+    return sub;
+  }, [navigation, confirmLeave]);
 
   useEffect(() => {
-    if (phase !== 'countdown') return;
-    let n = 3;
-    setCountdown(3);
-    let cancelled = false;
-    const timer = setInterval(() => {
-      n -= 1;
-      setCountdown(Math.max(0, n));
-      if (n > 0) return;
-      clearInterval(timer);
-      void (async () => {
-        const ok = await gps.start();
-        if (cancelled) return;
-        if (!ok) {
-          setPhase('ready');
-          return;
-        }
-        startIsoRef.current = new Date().toISOString();
-        wallStartRef.current = Date.now();
-        wallPausedAccumRef.current = 0;
-        setPhase('running');
-      })();
-    }, 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+    if (Platform.OS === 'web') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (allowLeaveRef.current || !activeRef.current) return false;
+      confirmLeave(leaveScreen);
+      return true;
+    });
+    return () => sub.remove();
+  }, [confirmLeave, leaveScreen]);
+
+  // Autosave périodique
+  useEffect(() => {
+    if (phase !== 'running' && phase !== 'paused') return;
+    const t = setInterval(() => {
+      const draft = buildDraftPayload();
+      if (draft) void saveLiveDraft(draft);
+    }, 15000);
+    return () => clearInterval(t);
+  }, [phase, buildDraftPayload]);
 
   useEffect(() => {
     if (phase !== 'running' && phase !== 'paused') {
@@ -125,11 +374,565 @@ export default function LiveSessionScreen() {
     };
   }, [phase, gps]);
 
-  if (!workout) {
+  const splits = useMemo(
+    () => computeLiveKmSplits(gps.points),
+    [gps.points],
+  );
+
+  const latlng: [number, number][] =
+    gps.points.length > 0
+      ? gps.points.map((p) => [p.lat, p.lng] as [number, number])
+      : gps.lastPoint
+        ? [[gps.lastPoint.lat, gps.lastPoint.lng]]
+        : [];
+
+  const discColor =
+    (customTheme ? undefined : DISCIPLINE_META[workout.discipline]?.color) || BRAND.accent;
+  const isFree =
+    mode === 'free' ||
+    workout.id.startsWith('free-') ||
+    workout.id.startsWith('free:');
+
+  const onStart = async () => {
+    if (pendingDraft && pendingDraft.key === sessionKey) {
+      await applyDraft(pendingDraft);
+      return;
+    }
+    const ok = await gps.start();
+    if (!ok) return;
+    void clearLiveDraft();
+    startIsoRef.current = new Date().toISOString();
+    wallStartRef.current = Date.now();
+    wallPausedAccumRef.current = 0;
+    wallPauseAtRef.current = null;
+    setElapsedSec(0);
+    setMovingSec(0);
+    setAutoPauseCue(false);
+    setPhase('running');
+    setPendingDraft(null);
+  };
+
+  const onPause = () => {
+    if (phase !== 'running') return;
+    gps.pause();
+    wallPauseAtRef.current = Date.now();
+    setAutoPauseCue(false);
+    setPhase('paused');
+    const draft = buildDraftPayload();
+    if (draft) void saveLiveDraft(draft);
+  };
+
+  onAutoPauseRef.current = () => {
+    if (phaseRef.current !== 'running') return;
+    gps.pause();
+    wallPauseAtRef.current = Date.now();
+    setPhase('paused');
+    setAutoPauseCue(true);
+    const draft = buildDraftPayload();
+    if (draft) void saveLiveDraft(draft);
+  };
+
+  const onResume = () => {
+    if (phase !== 'paused') return;
+    if (wallPauseAtRef.current != null) {
+      wallPausedAccumRef.current += Date.now() - wallPauseAtRef.current;
+      wallPauseAtRef.current = null;
+    }
+    setAutoPauseCue(false);
+    gps.resume();
+    setPhase('running');
+  };
+
+  const autoGoRef = useRef(false);
+  useEffect(() => {
+    if (autoGoRef.current) return;
+    if (go !== '1' && go !== 'true') return;
+    if (mode !== 'free') return;
+    if (phase !== 'ready') return;
+    if (pendingDraft) return;
+    autoGoRef.current = true;
+    void onStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [go, mode, phase, pendingDraft]);
+
+  const onSaveLater = () => {
+    void (async () => {
+      const ok = await saveForLater();
+      if (ok) leaveScreen();
+    })();
+  };
+
+  const onFinish = () => {
+    setFinishConfirmOpen(true);
+  };
+
+  const runFinishSave = () => {
+    setFinishConfirmOpen(false);
+    void (async () => {
+      setCelebrating(true);
+      setPhase('saving');
+      await new Promise<void>((r) => setTimeout(r, 700));
+      const moving = Math.max(gps.getMovingSec(), movingSec);
+      const elapsed = Math.max(elapsedSec, moving);
+      const pts = gps.points;
+      const track: [number, number][] = pts.map((p) => [p.lat, p.lng]);
+      const timeStream: number[] = [];
+      const altStream: number[] = pts.map((p) => p.alt ?? Number.NaN);
+      const velocity: number[] = [];
+      const startTs = pts[0]?.timestamp ?? Date.now();
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i]!;
+        timeStream.push(Math.round((p.timestamp - startTs) / 1000));
+        if (i === 0) velocity.push(0);
+        else {
+          const prev = pts[i - 1]!;
+          const dt = Math.max(0.5, (p.timestamp - prev.timestamp) / 1000);
+          const d = haversineM(
+            { lat: prev.lat, lng: prev.lng },
+            { lat: p.lat, lng: p.lng },
+          );
+          velocity.push(d / dt);
+        }
+      }
+      gps.stop();
+      await clearLiveDraft();
+      allowLeaveRef.current = true;
+      activeRef.current = false;
+      const activity = buildLiveActivity({
+        workout,
+        distanceM: gps.distanceM,
+        elapsedSec: elapsed,
+        movingSec: moving,
+        startIso: startIsoRef.current ?? new Date().toISOString(),
+        latlng: track,
+        timeStream,
+        velocitySmooth: velocity,
+        altitude: altStream.every((v) => Number.isFinite(v)) ? altStream : undefined,
+      });
+      // Sortie libre : si une séance du plan (même jour, même sport) reste à faire, elle compte
+      // pour cette séance — donc pour le programme, la conformité et la progression.
+      const freeMatch = isFree
+        ? findPlannedForFreeActivity(
+            state.plan,
+            new Set(state.analyses.map((a) => a.plannedWorkoutId)),
+            activity,
+          )
+        : undefined;
+      dispatch({
+        type: 'INGEST_STRAVA',
+        activity,
+        plannedId: isFree ? freeMatch?.id : workout.id,
+        linkPlan: isFree ? Boolean(freeMatch) : true,
+      });
+      router.replace(`/activity/${encodeURIComponent(activity.id)}`);
+    })();
+  };
+
+  const mapHeight = Math.max(280, Math.round(screenH * 0.62));
+  const sportLabel = isFree
+    ? 'Séance libre'
+    : DISCIPLINE_META[workout.discipline]?.label ?? 'Séance';
+
+  const isGuided =
+    !isFree &&
+    workout.steps.some(
+      (s) =>
+        s.type === 'warmup' ||
+        s.type === 'cooldown' ||
+        s.type === 'rest' ||
+        (s.target && s.target.type === 'pace') ||
+        (s.repeat != null && s.repeat > 1),
+    );
+
+  const flatSteps = useMemo(
+    () => flattenWorkoutSteps(workout.steps),
+    [workout.steps],
+  );
+  // Curseur d'étape : mémorise temps ET distance au départ de chaque étape (séances mixtes).
+  const stepCursorRef = useRef<LiveStepCursor>(INITIAL_LIVE_CURSOR);
+  const stepCursorStepsRef = useRef(flatSteps);
+  const [skipTick, setSkipTick] = useState(0);
+  const pendingSkipRef = useRef(0);
+  const stepProgress = useMemo(() => {
+    if (stepCursorStepsRef.current !== flatSteps) {
+      stepCursorStepsRef.current = flatSteps;
+      stepCursorRef.current = INITIAL_LIVE_CURSOR;
+    }
+    stepCursorRef.current = advanceLiveStepCursor(
+      stepCursorRef.current,
+      flatSteps,
+      movingSec,
+      gps.distanceM,
+    );
+    if (pendingSkipRef.current > 0) {
+      pendingSkipRef.current = 0;
+      stepCursorRef.current = skipLiveStep(stepCursorRef.current, flatSteps, movingSec, gps.distanceM);
+    }
+    return computeLiveStepProgress(flatSteps, movingSec, gps.distanceM, stepCursorRef.current);
+    // skipTick : demande manuelle « Passer l'étape »
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flatSteps, movingSec, gps.distanceM, skipTick]);
+  const onSkipStep = useCallback(() => {
+    pendingSkipRef.current = 1;
+    setSkipTick((n) => n + 1);
+  }, []);
+  const currentStep = stepProgress.step;
+  const paceSt = paceStatus(gps.currentPaceSecPerKm, currentStep);
+  const paceBand = formatPaceBand(currentStep);
+
+  // Coach vocal : « Accélère » / « Ralentis » / « Très bien, garde l'allure » selon l'aiguille.
+  const paceCoachRef = useRef(initialPaceCoach(Date.now()));
+  useEffect(() => {
+    if (phase !== 'running' || !isVoiceCoachOn()) return;
+    const r = nextPaceCue(paceCoachRef.current, paceSt, Date.now());
+    paceCoachRef.current = r.state;
+    if (r.say) speak(r.say);
+  }, [phase, paceSt, movingSec]);
+
+  // « Flow » : part du temps passé dans la zone d'allure cible (étapes avec cible d'allure).
+  /** Bouton « Activer » : ouvre la demande d'autorisation du navigateur / du téléphone. */
+  const onEnableLocation = useCallback(async () => {
+    const ok = await gps.prepare();
+    if (ok) return;
+    const native = Platform.OS !== 'web';
+    const openSettings = await appConfirm(
+      'Localisation bloquée',
+      native
+        ? 'Autorise la localisation pour Mova dans les réglages de ton téléphone, puis reviens ici.'
+        : 'Ton navigateur bloque la localisation pour ce site. Clique sur le cadenas à gauche de l’adresse, choisis « Autoriser » pour la localisation, puis touche à nouveau « Activer ».',
+      native ? 'Ouvrir les réglages' : 'Compris',
+      'Fermer',
+    );
+    if (openSettings && native) void Linking.openSettings();
+  }, [gps]);
+
+  const flowRef = useRef({ zoneSec: 0, measuredSec: 0, lastMoving: 0 });
+  const [flowPct, setFlowPct] = useState<number | null>(null);
+  useEffect(() => {
+    const f = flowRef.current;
+    const dt = movingSec - f.lastMoving;
+    f.lastMoving = movingSec;
+    // Un saut > 5 s (reprise après pause, hydratation) n'est pas du temps mesuré.
+    if (phase !== 'running' || dt <= 0 || dt > 5 || paceSt === 'none') return;
+    f.measuredSec += dt;
+    if (paceSt === 'in_zone') f.zoneSec += dt;
+    setFlowPct(flowPercent(f.zoneSec, f.measuredSec));
+  }, [movingSec, phase, paceSt]);
+  const anomaly = useMemo(
+    () =>
+      detectPaceAnomaly({
+        currentPaceSecPerKm: gps.currentPaceSecPerKm,
+        avgPaceSecPerKm: gps.avgPaceSecPerKm,
+        recentPaces: gps.recentPaces,
+        step: currentStep,
+        movingSec,
+      }),
+    [
+      gps.currentPaceSecPerKm,
+      gps.avgPaceSecPerKm,
+      gps.recentPaces,
+      currentStep,
+      movingSec,
+    ],
+  );
+  const coachingCue =
+    gps.error ??
+    (autoPauseCue && phase === 'paused'
+      ? 'Pause auto — arrêt détecté'
+      : phase === 'paused'
+        ? 'En pause — tu peux reprendre plus tard'
+        : phase === 'ready' && pendingDraft
+          ? `Sauvegardée · ${formatLiveDistance(pendingDraft.distanceM)} · ${formatLiveClock(pendingDraft.elapsedSec)}`
+          : phase === 'ready'
+            ? isGuided
+              ? 'Suis les étapes — l’aiguille doit rester dans la zone'
+              : null
+            : liveCueLabel(paceSt, anomaly));
+  const statusStyle = gps.error
+    ? styles.statusDanger
+    : autoPauseCue || paceSt === 'too_slow' || phase === 'paused' || pendingDraft
+      ? styles.statusWarn
+      : paceSt === 'too_fast'
+        ? styles.statusWarn
+        : styles.statusOk;
+
+  const leave = () => {
+    if (phase === 'ready' || phase === 'saving') {
+      leaveScreen();
+      return;
+    }
+    confirmLeave(leaveScreen);
+  };
+
+  const topBar = (
+    <View style={[styles.topBar, { top: insets.top + 6 }]}>
+      <PressableScale
+        variant="pop"
+        onPress={leave}
+        accessibilityLabel="Fermer"
+        contentStyle={styles.iconBtn}
+      >
+        <Text style={styles.iconBtnText}>⌄</Text>
+      </PressableScale>
+      <View style={styles.sportPill}>
+        <Text style={styles.sportKicker} numberOfLines={1}>
+          {sportLabel}
+          {restored || phase === 'paused' ? ' · pause' : ''}
+        </Text>
+        <Text style={styles.sportTitle} numberOfLines={1}>
+          {workout.title}
+        </Text>
+      </View>
+      <GpsSignalBars
+        accuracyM={gps.lastAccuracy}
+        denied={gps.permission === 'denied'}
+      />
+    </View>
+  );
+
+  const controlsBlock = (
+    <>
+      <LiveRecordControls
+        phase={phase}
+        color={discColor}
+        startLabel={pendingDraft ? 'Reprendre' : 'Démarrer'}
+        onStart={() => void onStart()}
+        onPause={onPause}
+        onResume={onResume}
+        onFinish={onFinish}
+        saving={phase === 'saving'}
+      />
+      {phase === 'ready' && pendingDraft ? (
+        <PressableScale
+          variant="subtle"
+          onPress={() => {
+            void clearLiveDraft();
+            setPendingDraft(null);
+          }}
+          contentStyle={styles.laterLink}
+        >
+          <Text style={styles.laterLinkText}>Recommencer à zéro</Text>
+        </PressableScale>
+      ) : null}
+      {phase === 'running' || phase === 'paused' || phase === 'saving' ? (
+        <View style={styles.laterRow}>
+        <PressableScale
+          variant="subtle"
+          onPress={onSaveLater}
+          disabled={phase === 'saving'}
+          contentStyle={styles.laterLink}
+        >
+          <Text style={styles.laterLinkText}>Reprendre plus tard</Text>
+        </PressableScale>
+        </View>
+      ) : null}
+    </>
+  );
+
+  // ——— Séance planifiée : coaching Garmin (carte secondaire / absente) ———
+  if (isGuided) {
+    const paceTarget =
+      currentStep.target?.type === 'pace' ? currentStep.target : null;
+
     return (
-      <View style={[styles.root, { paddingTop: insets.top + 24 }]}>
+      <View style={styles.guidedRoot}>
+        {topBar}
+        <View
+          style={[
+            styles.guidedSheet,
+            {
+              marginTop: insets.top + 64,
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
+          ]}
+        >
+          <LivePhaseTimeline
+            total={stepProgress.totalSteps}
+            currentIndex={stepProgress.stepIndex}
+            color={discColor}
+          />
+          <LiveStepPhaseBadge
+            phase={stepPhaseTitle(currentStep)}
+            index={stepProgress.stepIndex}
+            total={stepProgress.totalSteps}
+            color={discColor}
+          />
+          <Text style={styles.stepTitle} numberOfLines={2}>
+            {currentStep.displayLabel}
+          </Text>
+          <Text style={styles.stepRemaining}>
+            {phase === 'ready'
+              ? 'Prêt à démarrer'
+              : stepProgress.done
+                ? 'Séance terminée — tu peux enregistrer'
+                : formatStepRemaining(stepProgress)}
+          </Text>
+          <LiveStepProgressBar ratio={stepProgress.ratio} color={discColor} />
+          {phase === 'running' && !stepProgress.done && stepProgress.stepIndex < stepProgress.totalSteps - 1 ? (
+            <Pressable onPress={onSkipStep} style={styles.skipStep} accessibilityRole="button" accessibilityLabel="Passer l’étape">
+              <Text style={styles.skipStepText}>Passer l’étape ›</Text>
+            </Pressable>
+          ) : null}
+
+          {paceTarget ? (
+            <LivePaceGauge
+              currentSecPerKm={
+                phase === 'ready' ? null : gps.currentPaceSecPerKm
+              }
+              minSecPerKm={paceZone(currentStep)?.min ?? paceTarget.minSecPerKm}
+              maxSecPerKm={paceZone(currentStep)?.max ?? paceTarget.maxSecPerKm}
+              status={phase === 'ready' ? 'none' : paceSt}
+              currentLabel={formatLivePace(
+                phase === 'ready' ? null : gps.currentPaceSecPerKm,
+              )}
+              bandLabel={paceBand ?? '—'}
+              targetSecPerKm={paceTargetMean(currentStep)}
+            />
+          ) : (
+            <>
+              <Text style={styles.clock}>{formatLiveClock(elapsedSec)}</Text>
+              <Text style={styles.clockSub}>Temps</Text>
+            </>
+          )}
+
+          <View style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text numberOfLines={2} style={[styles.statusLine, statusStyle]}>
+              {coachingCue ?? ' '}
+            </Text>
+          </View>
+
+          <View style={styles.metricRow}>
+            <LiveMetricCell
+              label="Temps"
+              value={formatLiveClock(elapsedSec)}
+              emphasize={phase === 'running'}
+            />
+            <LiveMetricCell
+              label="Distance"
+              value={formatLiveDistance(gps.distanceM)}
+              emphasize={phase === 'running'}
+            />
+            <LiveMetricCell
+              label="Moyenne"
+              value={formatLivePace(gps.avgPaceSecPerKm)}
+            />
+          </View>
+
+          {controlsBlock}
+        </View>
+        <LiveFinishCelebration visible={celebrating} />
+        <LiveConfirmSheet
+          visible={finishConfirmOpen}
+          title="Terminer la séance ?"
+          body="Enregistrer l’activité GPS dans Mova."
+          confirmLabel="Enregistrer"
+          cancelLabel="Continuer"
+          onConfirm={runFinishSave}
+          onCancel={() => setFinishConfirmOpen(false)}
+        />
+      </View>
+    );
+  }
+
+  // ——— Séance libre : carte + HUD Mova (≠ Strava orange / timer-héros) ———
+  const gpsOk =
+    gps.permission !== 'denied' &&
+    (gps.lastAccuracy == null || gps.lastAccuracy < 80);
+  const gpsLabel =
+    gps.permission === 'denied'
+      ? 'Localisation désactivée'
+      : gps.error
+        ? gps.error
+        : gps.lastAccuracy != null
+          ? `GPS ±${Math.round(gps.lastAccuracy)} m`
+          : 'Recherche GPS…';
+  const clockLong = formatLiveClockLong(elapsedSec);
+  const distKm = formatLiveDistanceKmValue(gps.distanceM);
+  const paceAvg = formatLivePace(gps.avgPaceSecPerKm);
+  const paceNow = formatLivePace(gps.currentPaceSecPerKm);
+  const progressToNextKm = (gps.distanceM % 1000) / 1000;
+
+  const freeControls = (
+    <>
+      <LiveAzimutControls
+        phase={phase}
+        color={discColor}
+        startLabel={pendingDraft ? 'Reprendre' : 'Go'}
+        onStart={() => void onStart()}
+        onPause={onPause}
+        onResume={onResume}
+        onFinish={onFinish}
+        saving={phase === 'saving'}
+        sideLeft={
+          phase === 'ready' ? (
+            <LiveSportPickButton
+              sport={
+                (workout.discipline === 'bike' ||
+                workout.discipline === 'swim'
+                  ? workout.discipline
+                  : 'run') as FreeRecordSport
+              }
+              onChange={(next) => {
+                router.replace({
+                  pathname: '/session/live',
+                  params: { mode: 'free', sport: next },
+                });
+              }}
+            />
+          ) : undefined
+        }
+        sideRight={
+          phase === 'ready' ? (
+            <LiveGpsSlot
+              state={
+                gps.permission === 'denied'
+                  ? 'denied'
+                  : gps.lastAccuracy == null
+                    ? 'searching'
+                    : gps.lastAccuracy > 25
+                      ? 'weak'
+                      : 'ok'
+              }
+              accuracyM={gps.lastAccuracy}
+              onPress={() => void onEnableLocation()}
+            />
+          ) : undefined
+        }
+      />
+      {phase === 'ready' && pendingDraft ? (
+        <PressableScale
+          variant="subtle"
+          onPress={() => {
+            void clearLiveDraft();
+            setPendingDraft(null);
+          }}
+          contentStyle={styles.laterLink}
+        >
+          <Text style={styles.laterLinkText}>Recommencer à zéro</Text>
+        </PressableScale>
+      ) : null}
+      {phase === 'running' || phase === 'paused' || phase === 'saving' ? (
+        <View style={styles.laterRow}>
+        <PressableScale
+          variant="subtle"
+          onPress={onSaveLater}
+          disabled={phase === 'saving'}
+          contentStyle={styles.laterLink}
+        >
+          <Text style={[styles.laterLinkText, { color: LIVE_MINT }]}>
+            Reprendre plus tard
+          </Text>
+        </PressableScale>
+        </View>
+      ) : null}
+    </>
+  );
+
+  if (!workoutOrNull) {
+    return (
+      <View style={styles.errorRoot}>
         <Text style={styles.errorTitle}>Séance introuvable</Text>
-        <Pressable onPress={() => router.back()} style={styles.secondaryBtn}>
+        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
           <Text style={styles.secondaryBtnText}>Retour</Text>
         </Pressable>
       </View>
@@ -138,407 +941,99 @@ export default function LiveSessionScreen() {
 
   if (!canStartLiveWorkout(workout.discipline)) {
     return (
-      <View style={[styles.root, { paddingTop: insets.top + 24, paddingHorizontal: 20 }]}>
+      <View style={styles.errorRoot}>
         <Text style={styles.errorTitle}>GPS non disponible pour ce sport</Text>
         <Text style={styles.errorBody}>
-          Le tracker live guide course et vélo (allure + GPS). Pour la musculation ou la
-          natation, utilise l’export montre ou valide en RPE.
+          Le tracker live guide course, vélo et natation. Pour la musculation,
+          utilise l’export montre ou valide en RPE.
         </Text>
-        <Pressable onPress={() => router.back()} style={styles.secondaryBtn}>
+        <Pressable onPress={() => safeGoBack(router, '/(tabs)')} style={styles.secondaryBtn}>
           <Text style={styles.secondaryBtnText}>Retour</Text>
         </Pressable>
       </View>
     );
   }
 
-  const latlng = gps.points.map((p) => [p.lat, p.lng] as [number, number]);
-  const statusColor =
-    status === 'in_zone'
-      ? BRAND.accent
-      : status === 'too_fast'
-        ? '#E11D48'
-        : status === 'too_slow'
-          ? '#D97706'
-          : colors.textMuted;
-
-  const onFinish = () => {
-    const finish = async () => {
-      setPhase('saving');
-      gps.stop();
-      const moving = Math.max(gps.getMovingSec(), movingSec);
-      const elapsed = Math.max(elapsedSec, moving);
-      const timeStream: number[] = [];
-      const velocity: number[] = [];
-      const startTs = gps.points[0]?.timestamp ?? Date.now();
-      for (let i = 0; i < gps.points.length; i++) {
-        const p = gps.points[i]!;
-        timeStream.push(Math.round((p.timestamp - startTs) / 1000));
-        if (i === 0) velocity.push(0);
-        else {
-          const prev = gps.points[i - 1]!;
-          const dt = Math.max(0.5, (p.timestamp - prev.timestamp) / 1000);
-          // approx m/s from consecutive points handled in engine; store pace-ish
-          velocity.push(dt > 0 ? 1 / dt : 0);
-        }
-      }
-      const activity = buildLiveActivity({
-        workout,
-        distanceM: gps.distanceM,
-        elapsedSec: elapsed,
-        movingSec: moving,
-        startIso: startIsoRef.current ?? new Date().toISOString(),
-        latlng,
-        timeStream,
-        velocitySmooth: velocity,
-      });
-      dispatch({ type: 'INGEST_STRAVA', activity, plannedId: workout.id });
-      setPhase('done');
-      router.replace(`/activity/${activity.id}`);
-    };
-
-    if (Platform.OS === 'web') {
-      const ok = window.confirm('Terminer et enregistrer cette séance dans Azimut ?');
-      if (ok) void finish();
-      return;
-    }
-    Alert.alert('Terminer la séance', 'Enregistrer l’activité GPS dans Azimut ?', [
-      { text: 'Continuer', style: 'cancel' },
-      { text: 'Enregistrer', style: 'destructive', onPress: () => void finish() },
-    ]);
-  };
-
-  const onStart = () => setPhase('countdown');
-
-  const onPauseToggle = () => {
-    if (phase === 'running') {
-      gps.pause();
-      wallPauseAtRef.current = Date.now();
-      setPhase('paused');
-    } else if (phase === 'paused') {
-      if (wallPauseAtRef.current != null) {
-        wallPausedAccumRef.current += Date.now() - wallPauseAtRef.current;
-        wallPauseAtRef.current = null;
-      }
-      gps.resume();
-      setPhase('running');
-    }
-  };
-
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={() => {
-            if (phase === 'running' || phase === 'paused') {
-              const leave = () => {
-                gps.stop();
-                router.back();
-              };
-              if (Platform.OS === 'web') {
-                if (window.confirm('Quitter sans enregistrer ?')) leave();
-              } else {
-                Alert.alert('Quitter', 'Abandonner la séance en cours ?', [
-                  { text: 'Rester', style: 'cancel' },
-                  { text: 'Quitter', style: 'destructive', onPress: leave },
-                ]);
-              }
-              return;
-            }
-            router.back();
-          }}
-          hitSlop={12}
+    <View style={styles.root}>
+      {phase === 'ready' && !gps.lastPoint ? (
+        <LiveIdleBackdrop
+          denied={gps.permission === 'denied'}
+          message={
+            gps.permission === 'denied'
+              ? 'Localisation désactivée — touche le bouton GPS pour l’activer'
+              : 'Recherche du signal GPS… sors à l’air libre pour aller plus vite'
+          }
+        />
+      ) : null}
+      <View style={[styles.mapFill, phase === 'ready' && !gps.lastPoint && { opacity: 0 }]}>
+        <ActivityRouteMap
+          latlng={latlng}
+          height={mapHeight + Math.round(screenH * 0.28)}
+          follow={phase === 'ready' || phase === 'running' || phase === 'paused'}
+          zoomControl={false}
+          accuracyM={gps.lastAccuracy}
+          emptyLabel="Autorise le GPS pour centrer la carte"
+        />
+      </View>
+      <View style={styles.topScrim} pointerEvents="none" />
+      {phase === 'running' && flowPct != null ? (
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', top: insets.top + 60, left: 0, right: 0, alignItems: 'center', zIndex: 5 }}
         >
-          <Text style={styles.back}>‹</Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.topTag} numberOfLines={1}>
-            {DISCIPLINE_META[workout.discipline]?.label ?? 'Séance'}
-          </Text>
-          <Text style={styles.topTitle} numberOfLines={1}>
-            {workout.title}
-          </Text>
+          <FlowBadge percent={flowPct} status={paceSt} />
         </View>
-        {gps.lastAccuracy != null ? (
-          <Text style={styles.gpsAcc}>
-            GPS {gps.lastAccuracy < 15 ? 'OK' : `±${Math.round(gps.lastAccuracy)}m`}
-          </Text>
-        ) : null}
-      </View>
+      ) : null}
 
-      {phase === 'countdown' ? (
-        <View style={styles.countdownWrap}>
-          <Text style={styles.countdownNum}>{countdown || 'GO'}</Text>
-          <Text style={styles.countdownHint}>Prépare-toi — GPS en écoute</Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.heroMetrics}>
-            <Text style={styles.clock}>{formatLiveClock(elapsedSec)}</Text>
-            <View style={styles.metricRow}>
-              <View style={styles.metric}>
-                <Text style={styles.metricLabel}>Distance</Text>
-                <Text style={styles.metricValue}>{formatLiveDistance(gps.distanceM)}</Text>
-              </View>
-              <View style={styles.metric}>
-                <Text style={styles.metricLabel}>Allure</Text>
-                <Text style={styles.metricValue}>
-                  {formatLivePace(gps.currentPaceSecPerKm)}
-                </Text>
-              </View>
-              <View style={styles.metric}>
-                <Text style={styles.metricLabel}>Moyenne</Text>
-                <Text style={styles.metricValue}>
-                  {formatLivePace(gps.avgPaceSecPerKm)}
-                </Text>
-              </View>
-            </View>
-          </View>
+      {topBar}
 
-          {(phase === 'running' || phase === 'paused' || phase === 'ready') && (
-            <View style={[styles.guideCard, { borderColor: `${discColor}55` }]}>
-              <Text style={[styles.guideStep, { color: discColor }]}>
-                Étape {progress.stepIndex + 1}/{progress.totalSteps}
-                {phase === 'paused' ? ' · EN PAUSE' : ''}
-              </Text>
-              <Text style={styles.guideTitle}>{progress.step.displayLabel}</Text>
-              {band ? (
-                <Text style={styles.guideBand}>Cible {band}</Text>
-              ) : (
-                <Text style={styles.guideBand}>Sans cible d’allure</Text>
-              )}
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.round(progress.ratio * 100)}%`,
-                      backgroundColor: discColor,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.paceCue, { color: statusColor }]}>
-                {phase === 'ready'
-                  ? 'Appuie sur Démarrer pour lancer le guidage GPS'
-                  : paceStatusLabel(status)}
-              </Text>
-              {progress.remainingSec != null ? (
-                <Text style={styles.remaining}>
-                  Reste {formatLiveClock(progress.remainingSec)} sur cette étape
-                </Text>
-              ) : null}
-              {progress.remainingM != null ? (
-                <Text style={styles.remaining}>
-                  Reste {formatLiveDistance(progress.remainingM)} sur cette étape
-                </Text>
-              ) : null}
-            </View>
-          )}
-
-          {latlng.length >= 2 ? (
-            <View style={styles.mapWrap}>
-              <ActivityRouteMap latlng={latlng} height={180} />
-            </View>
-          ) : phase !== 'ready' ? (
-            <View style={styles.mapPlaceholder}>
-              <Text style={styles.mapPlaceholderText}>
-                En attente du signal GPS… marche quelques mètres.
-              </Text>
-            </View>
-          ) : null}
-
-          {gps.error ? <Text style={styles.errorInline}>{gps.error}</Text> : null}
-        </>
-      )}
-
-      <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {phase === 'ready' ? (
-          <Pressable
-            style={[styles.primaryBtn, { backgroundColor: discColor }]}
-            onPress={onStart}
-          >
-            <Text style={styles.primaryBtnText}>Démarrer la séance</Text>
-          </Pressable>
-        ) : null}
-        {phase === 'running' || phase === 'paused' || phase === 'saving' ? (
-          <View style={styles.controlRow}>
-            <Pressable
-              style={styles.pauseBtn}
-              onPress={onPauseToggle}
-              disabled={phase === 'saving'}
-            >
-              <Text style={styles.pauseBtnText}>
-                {phase === 'paused' ? 'Reprendre' : 'Pause'}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.primaryBtn, styles.finishBtn, { backgroundColor: colors.text }]}
-              onPress={onFinish}
-              disabled={phase === 'saving'}
-            >
-              <Text style={styles.primaryBtnText}>
-                {phase === 'saving' ? 'Enregistrement…' : 'Terminer'}
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
+      {/* Feuille réglable : on la tire jusqu'où on veut — carte, données, ou un mélange des deux. */}
+      <LiveResizableSheet
+        maxHeight={screenH - insets.top - 72}
+        bottomInset={insets.bottom}
+        collapsed={
+          <LiveMetricsCapsule
+            time={phase === 'ready' ? '00:00' : formatLiveClock(elapsedSec)}
+            pace={phase === 'ready' ? '—' : paceNow}
+            distance={phase === 'ready' ? '0,00' : distKm}
+            gpsLabel={gpsLabel}
+            gpsOk={gpsOk}
+          />
+        }
+        expanded={
+          phase === 'ready' ? (
+            <LiveMetricsCapsule time="00:00" pace="—" distance="0,00" gpsLabel={gpsLabel} gpsOk={gpsOk} />
+          ) : (
+            <LiveFocusBoard
+              phase={phase === 'running' ? 'running' : phase === 'saving' ? 'saving' : 'paused'}
+              clock={clockLong}
+              distanceKm={distKm}
+              paceAvg={paceAvg}
+              paceNow={paceNow}
+              splits={splits}
+              progressToNextKm={progressToNextKm}
+              cue={autoPauseCue ? 'Immobilité détectée — reprends quand tu es prêt' : coachingCue}
+              autoPause={autoPauseCue}
+            />
+          )
+        }
+        footer={freeControls}
+      />
+      <LiveFinishCelebration visible={celebrating} />
+      <LiveConfirmSheet
+        visible={finishConfirmOpen}
+        title="Terminer la séance ?"
+        body="Enregistrer l’activité GPS dans Mova."
+        confirmLabel="Enregistrer"
+        cancelLabel="Continuer"
+        onConfirm={runFinishSave}
+        onCancel={() => setFinishConfirmOpen(false)}
+      />
     </View>
   );
 }
 
-function makeStyles(colors: ColorPalette) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bg },
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-    },
-    back: { fontSize: 28, fontWeight: '600', color: colors.text, width: 28 },
-    topTag: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-      color: colors.accent,
-    },
-    topTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
-    gpsAcc: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
-    countdownWrap: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    countdownNum: {
-      fontSize: 96,
-      fontWeight: '900',
-      color: colors.accent,
-      letterSpacing: -2,
-    },
-    countdownHint: { marginTop: 8, color: colors.textMuted, fontWeight: '600' },
-    heroMetrics: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-    clock: {
-      fontSize: 52,
-      fontWeight: '900',
-      color: colors.text,
-      letterSpacing: -1,
-      fontVariant: ['tabular-nums'],
-    },
-    metricRow: { flexDirection: 'row', marginTop: spacing.md, gap: spacing.sm },
-    metric: { flex: 1 },
-    metricLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
-    metricValue: {
-      marginTop: 2,
-      fontSize: 22,
-      fontWeight: '800',
-      color: colors.text,
-      fontVariant: ['tabular-nums'],
-    },
-    guideCard: {
-      marginHorizontal: spacing.md,
-      marginTop: spacing.md,
-      padding: spacing.md,
-      borderRadius: radii.lg,
-      borderWidth: 1.5,
-      backgroundColor: colors.bgElevated,
-    },
-    guideStep: { fontSize: 12, fontWeight: '800', letterSpacing: 0.4 },
-    guideTitle: {
-      marginTop: 4,
-      fontSize: 20,
-      fontWeight: '900',
-      color: colors.text,
-    },
-    guideBand: { marginTop: 4, fontSize: 14, fontWeight: '700', color: colors.textMuted },
-    progressTrack: {
-      marginTop: spacing.sm,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.border,
-      overflow: 'hidden',
-    },
-    progressFill: { height: '100%', borderRadius: 4 },
-    paceCue: { marginTop: spacing.sm, fontSize: 15, fontWeight: '800' },
-    remaining: { marginTop: 4, fontSize: 13, color: colors.textMuted, fontWeight: '600' },
-    mapWrap: {
-      marginHorizontal: spacing.md,
-      marginTop: spacing.md,
-      borderRadius: radii.lg,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    mapPlaceholder: {
-      marginHorizontal: spacing.md,
-      marginTop: spacing.md,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.bgElevated,
-    },
-    mapPlaceholderText: { color: colors.textMuted, textAlign: 'center', fontWeight: '600' },
-    errorInline: {
-      marginHorizontal: spacing.md,
-      marginTop: spacing.sm,
-      color: colors.danger ?? '#E11D48',
-      fontWeight: '700',
-    },
-    controls: {
-      marginTop: 'auto',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      gap: spacing.sm,
-    },
-    controlRow: { flexDirection: 'row', gap: spacing.sm },
-    primaryBtn: {
-      flex: 1,
-      paddingVertical: 16,
-      borderRadius: radii.lg,
-      alignItems: 'center',
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as object) : null),
-    },
-    finishBtn: { flex: 1.2 },
-    primaryBtnText: { color: '#fff', fontWeight: '900', fontSize: 16 },
-    pauseBtn: {
-      flex: 1,
-      paddingVertical: 16,
-      borderRadius: radii.lg,
-      alignItems: 'center',
-      backgroundColor: colors.bgElevated,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    pauseBtnText: { color: colors.text, fontWeight: '800', fontSize: 16 },
-    secondaryBtn: {
-      marginTop: spacing.md,
-      alignSelf: 'flex-start',
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: radii.md,
-      backgroundColor: colors.bgElevated,
-    },
-    secondaryBtnText: { fontWeight: '800', color: colors.text },
-    errorTitle: {
-      fontSize: 20,
-      fontWeight: '900',
-      color: colors.text,
-      paddingHorizontal: 20,
-    },
-    errorBody: {
-      marginTop: 8,
-      paddingHorizontal: 20,
-      color: colors.textMuted,
-      lineHeight: 20,
-    },
-  });
+function isFreeKey(key: string) {
+  return key.startsWith('free:');
 }

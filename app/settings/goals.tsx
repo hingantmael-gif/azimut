@@ -7,7 +7,7 @@ import { describePaceZoneSource } from '../../src/engines/paceZones';
 import { formatVmaKmh, summarizeSportsData } from '../../src/engines/athleteProfile';
 import { resolveAthletePaceZones } from '../../src/engines/workoutPresentation';
 import { AppScrollView } from '../../src/ui/scrolling';
-import { Text } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { spacing } from '../../src/theme/tokens';
 

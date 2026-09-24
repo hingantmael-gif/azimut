@@ -71,12 +71,13 @@ export function analyzeCombinedPlanOverload(
     byDate.set(w.date, (byDate.get(w.date) ?? 0) + 1);
   }
   let maxSessionsPerDay = 0;
-  for (const [date, count] of byDate) {
+  let doubleDays = 0;
+  for (const [, count] of byDate) {
     maxSessionsPerDay = Math.max(maxSessionsPerDay, count);
-    if (count >= 2) {
-      reasons.push(`${count} séances le même jour (${formatShortDate(date)})`);
-    }
+    if (count >= 2) doubleDays += 1;
   }
+  // Une seule ligne, jamais une liste de dates (des dizaines de lignes identiques étaient illisibles).
+  if (doubleDays > 0) reasons.push('des séances sont déjà prévues aux mêmes dates');
 
   const byWeek = new Map<string, number>();
   for (const w of sessions) {
@@ -120,9 +121,9 @@ export function analyzeCombinedPlanOverload(
   const uniqueReasons = [...new Set(reasons)];
   const message =
     level === 'strong'
-      ? `Fortement déconseillé : ${uniqueReasons.join(' · ')}. Risque de surcharge, fatigue et blessure.`
+      ? 'Attention : des séances sont déjà prévues aux mêmes dates. Risque de surcharge et de blessure.'
       : level === 'caution'
-        ? `Attention : ${uniqueReasons.join(' · ')}.`
+        ? 'Attention : ton planning est déjà chargé. Prévois de la récupération.'
         : '';
 
   return {
@@ -134,10 +135,3 @@ export function analyzeCombinedPlanOverload(
   };
 }
 
-function formatShortDate(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}

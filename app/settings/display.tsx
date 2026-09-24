@@ -3,36 +3,73 @@ import { SettingsRow, SettingsScreen, SettingsSection, SettingsToggleRow } from 
 import { useApp } from '../../src/store/AppContext';
 import type { UnitsSystem } from '../../src/types/domain';
 import { AppScrollView } from '../../src/ui/scrolling';
+import { useI18n } from '../../src/i18n/I18nContext';
+import { APP_LOCALES, type AppLocale } from '../../src/i18n/locales';
+import { Text } from '../../src/ui/Text';
+import { useThemeColors } from '../../src/theme/ThemeContext';
+import { spacing } from '../../src/theme/tokens';
+import { setReducedMotion, useReducedMotion } from '../../src/utils/motionPrefs';
 
 export default function DisplaySettingsScreen() {
   const { state, dispatch } = useApp();
+  const { t, locale, setLocale } = useI18n();
+  const { colors } = useThemeColors();
   const p = state.profile;
+  const reduceMotion = useReducedMotion();
 
   const setUnits = (units: UnitsSystem) => {
     dispatch({ type: 'UPDATE_PROFILE', patch: { units } });
   };
 
+  const pickLanguage = (code: AppLocale) => {
+    setLocale(code);
+  };
+
   return (
     <SettingsScreen>
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
-        <SettingsSection title="Unités">
+        <SettingsSection title={t('settings.chooseLanguage')}>
+          {APP_LOCALES.map((lang) => (
+            <SettingsRow
+              key={lang.code}
+              label={lang.nativeLabel}
+              value={locale === lang.code ? '✓' : undefined}
+              onPress={() => pickLanguage(lang.code)}
+            />
+          ))}
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontSize: 12,
+              lineHeight: 17,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+            }}
+          >
+            {t('settings.languageNote')}
+            {p.country ? ` · ${p.country}` : ''}
+          </Text>
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.unitsMap')}>
           <SettingsRow
-            label="Métrique (km, kg)"
+            label={t('settings.metric')}
             value={p.units === 'metric' ? '✓' : undefined}
             onPress={() => setUnits('metric')}
           />
           <SettingsRow
-            label="Impérial (mi, lb)"
+            label={t('settings.imperial')}
             value={p.units === 'imperial' ? '✓' : undefined}
             onPress={() => setUnits('imperial')}
           />
         </SettingsSection>
 
-        <SettingsSection title="Carte">
+        <SettingsSection title="Confort visuel">
           <SettingsToggleRow
-            label="Afficher ma position sur la carte"
-            value
-            onToggle={() => undefined}
+            label="Réduire les animations"
+            subtitle="Fonds immobiles, sans mouvement ni scintillement — recommandé si les animations te gênent"
+            value={reduceMotion}
+            onToggle={() => setReducedMotion(!reduceMotion)}
           />
         </SettingsSection>
       </AppScrollView>

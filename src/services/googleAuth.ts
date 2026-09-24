@@ -1,7 +1,7 @@
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -21,8 +21,24 @@ const androidClientId = (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? web
 /** Placeholder valide pour éviter un crash AuthSession si rien n’est configuré */
 const SAFE_PLACEHOLDER = '000000000000-azimut.apps.googleusercontent.com';
 
+/** Origine PWA prod — doit matcher exactement les URI autorisées Google Cloud. */
+const PROD_WEB_ORIGIN = String(process.env.EXPO_PUBLIC_SITE_URL ?? 'https://mova.app').replace(/\/$/, '');
+
 export function isGoogleAuthConfigured(): boolean {
   return Boolean(webClientId) && !webClientId.includes('azimut.apps.googleusercontent.com');
+}
+
+/**
+ * URI de retour Google.
+ * Console OAuth (client Web) : origins + redirect = racine du site
+ * (l’adresse du site Mova, avec et sans `/` final), PAS /welcome.
+ * Un path non enregistré → « Accès bloqué / demande non valide ».
+ */
+function webGoogleRedirectUri(): string {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return PROD_WEB_ORIGIN;
 }
 
 /**
@@ -38,14 +54,16 @@ export function useGoogleAuth(
   onSuccessRef.current = onSuccess;
   onErrorRef.current = onError;
 
-  // Web PWA : retour OAuth sur /welcome (pas la page apropos à la racine)
-  const redirectUri =
-    Platform.OS === 'web'
-      ? makeRedirectUri({ path: 'welcome' })
-      : makeRedirectUri({
-          scheme: 'azimut',
-          path: 'oauth',
-        });
+  const redirectUri = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? webGoogleRedirectUri()
+        : makeRedirectUri({
+            scheme: 'mova',
+            path: 'oauth',
+          }),
+    [],
+  );
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: webClientId || SAFE_PLACEHOLDER,

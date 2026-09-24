@@ -1,4 +1,4 @@
-/** Politique mot de passe Azimut — majuscule, minuscule, chiffre, caractère spécial. */
+/** Politique mot de passe Mova — majuscule, minuscule, chiffre, caractère spécial. */
 
 export const PASSWORD_SPECIAL_CHARS = `!@#$%^&*()_+-=[]{}|;:'",.<>/?\\\`~`;
 

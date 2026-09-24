@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { WATCH_CATALOG, type WatchCatalogEntry } from '../../constants/watches';
 import type { WatchBrandId } from '../../types/domain';
 import { useThemeColors } from '../../theme/ThemeContext';

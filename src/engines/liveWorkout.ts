@@ -44,32 +44,165 @@ export function haversineM(
   return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-/** Aplatit les répétitions pour le guidage live. */
-export function flattenWorkoutSteps(steps: WorkoutStep[]): FlatLiveStep[] {
+/** Allure « 4:01 » (deux-points, comme sur une montre) — plus lisible en grand que 4'01". */
+export function formatPaceColon(secPerKm: number): string {
+  const total = Math.round(Math.min(1200, Math.max(120, Number.isFinite(secPerKm) ? secPerKm : 330)));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** Allure moyenne visée d'une étape (milieu de la bande), ou null sans cible d'allure. */
+export function paceTargetMean(step: WorkoutStep | null): number | null {
+  if (!step?.target || step.target.type !== 'pace') return null;
+  return (step.target.minSecPerKm + step.target.maxSecPerKm) / 2;
+}
+
+function goalText(step: WorkoutStep): string | null {
+  const m = stepGoalMeters(step);
+  if (m != null) return m >= 1000 ? `${(m / 1000).toFixed(m % 1000 === 0 ? 0 : 1).replace('.', ',')} km` : `${Math.round(m)} m`;
+  const sec = stepGoalSec(step);
+  if (sec == null) return null;
+  const min = Math.floor(sec / 60);
+  const rest = Math.round(sec - min * 60);
+  if (min >= 60) return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
+  if (rest === 0) return `${min} minute${min > 1 ? 's' : ''}`;
+  return min === 0 ? `${rest} secondes` : `${min} min ${String(rest).padStart(2, '0')}`;
+}
+
+/** Étape de « transition de zone » : déjà comprise dans l'échauffement, on ne la montre plus comme étape à part. */
+const ZONE_TRANSITION = /(zone|z)\s*1\s*(→|->|–|—|-|vers|à|puis)\s*(zone|z)\s*2|passage\s+(en|à|de)\s+(la\s+)?zone/i;
+
+/** Libellé centré sur les chiffres : « 5 minutes à 4:01 », « Récupération 3 minutes à 5:18 ». */
+function paceFirstLabel(step: WorkoutStep, suffix: string, times: number): string | null {
+  const mean = paceTargetMean(step);
+  const goal = goalText(step);
+  if (mean == null || goal == null) return null;
+  const prefix =
+    step.type === 'warmup' ? 'Échauffement ' : step.type === 'rest' ? 'Récupération ' : step.type === 'cooldown' ? 'Retour au calme ' : '';
+  if (times > 1) {
+    const head = step.type === 'rest' ? 'Récupération' : step.type === 'active' ? 'Effort' : prefix.trim();
+    return `${head}${suffix} · ${goal} à ${formatPaceColon(mean)}`;
+  }
+  return `${prefix}${goal} à ${formatPaceColon(mean)}`;
+}
+
+/** Aplatit les répétitions pour le guidage live (effort ↔ récup entrelacés). */
+export function flattenWorkoutSteps(rawSteps: WorkoutStep[]): FlatLiveStep[] {
   const out: FlatLiveStep[] = [];
-  for (const step of steps) {
-    const times = Math.max(1, Math.min(40, step.repeat ?? 1));
-    for (let i = 0; i < times; i++) {
-      const suffix = times > 1 ? ` (${i + 1}/${times})` : '';
-      const base =
-        step.label?.trim() ||
-        (step.type === 'warmup'
-          ? 'Échauffement'
-          : step.type === 'cooldown'
-            ? 'Retour au calme'
-            : step.type === 'rest'
+  const steps = rawSteps.filter((st) => !(st.type === 'warmup' && ZONE_TRANSITION.test(st.label ?? '')));
+
+  const pushFlat = (step: WorkoutStep, repIndex: number, times: number) => {
+    const suffix = times > 1 ? ` (${repIndex + 1}/${times})` : '';
+    const base =
+      step.label?.trim() ||
+      (step.type === 'warmup'
+        ? 'Échauffement'
+        : step.type === 'cooldown'
+          ? 'Retour au calme'
+          : step.type === 'rest'
+            ? 'Récupération'
+            : 'Effort');
+    // Label court pour les reps : phase + compteur, pas tout le libellé catalogue
+    const short =
+      times > 1
+        ? `${
+            step.type === 'rest'
               ? 'Récupération'
-              : 'Effort');
-      out.push({
-        ...step,
-        id: `${step.id}__${i}`,
-        repeat: undefined,
-        flatIndex: out.length,
-        displayLabel: `${base}${suffix}`,
-      });
+              : step.type === 'active'
+                ? 'Effort'
+                : base.split('·')[0]?.trim() || base
+          }${suffix}`
+        : base;
+    const paced = paceFirstLabel(step, suffix, times);
+    out.push({
+      ...step,
+      id: `${step.id}__${repIndex}`,
+      repeat: undefined,
+      flatIndex: out.length,
+      displayLabel: paced ?? short,
+    });
+  };
+
+  let i = 0;
+  while (i < steps.length) {
+    const step = steps[i]!;
+    const next = steps[i + 1];
+    const times = Math.max(1, Math.min(40, step.repeat ?? 1));
+    const nextTimes = next ? Math.max(1, Math.min(40, next.repeat ?? 1)) : 0;
+
+    if (
+      next &&
+      step.type === 'active' &&
+      next.type === 'rest' &&
+      times > 1 &&
+      times === nextTimes
+    ) {
+      for (let r = 0; r < times; r++) {
+        pushFlat(step, r, times);
+        pushFlat(next, r, times);
+      }
+      i += 2;
+      continue;
     }
+
+    for (let r = 0; r < times; r++) {
+      pushFlat(step, r, times);
+    }
+    i += 1;
   }
   return out;
+}
+
+/** Phase lisible façon Garmin : échauffement / effort / récup / retour. */
+export function stepPhaseTitle(step: WorkoutStep): string {
+  switch (step.type) {
+    case 'warmup':
+      return 'Échauffement';
+    case 'rest':
+      return 'Récupération';
+    case 'cooldown':
+      return 'Retour au calme';
+    default:
+      return 'Effort';
+  }
+}
+
+/**
+ * Position 0–1 de l’aiguille sur la jauge d’allure.
+ * 0 = trop rapide (gauche), 1 = trop lent (droite).
+ * La zone cible occupe le centre élargi.
+ */
+export function paceGaugeLayout(
+  currentSecPerKm: number | null,
+  minSecPerKm: number,
+  maxSecPerKm: number,
+): { needle: number; zoneStart: number; zoneEnd: number } {
+  const lo = Math.min(minSecPerKm, maxSecPerKm);
+  const hi = Math.max(minSecPerKm, maxSecPerKm);
+  const pad = Math.max(35, (hi - lo) * 0.9);
+  const rangeLo = lo - pad;
+  const rangeHi = hi + pad;
+  const span = Math.max(1, rangeHi - rangeLo);
+  const zoneStart = (lo - rangeLo) / span;
+  const zoneEnd = (hi - rangeLo) / span;
+  const cur =
+    currentSecPerKm != null && Number.isFinite(currentSecPerKm)
+      ? currentSecPerKm
+      : (lo + hi) / 2;
+  const needle = Math.min(1, Math.max(0, (cur - rangeLo) / span));
+  return { needle, zoneStart, zoneEnd };
+}
+
+export function formatStepRemaining(progress: LiveStepProgress): string {
+  if (progress.remainingM != null) {
+    if (progress.remainingM >= 1000) {
+      return `${(progress.remainingM / 1000).toFixed(2).replace('.', ',')} km restants`;
+    }
+    return `${Math.round(progress.remainingM)} m restants`;
+  }
+  if (progress.remainingSec != null) {
+    return `${formatLiveClock(progress.remainingSec)} restants`;
+  }
+  return 'En cours';
 }
 
 export function stepGoalMeters(step: WorkoutStep): number | null {
@@ -90,23 +223,39 @@ export function stepGoalSec(step: WorkoutStep): number | null {
   return null;
 }
 
+/** Demi-largeur minimale de la zone verte : ±10 s/km autour de l'allure visée (comme une montre). */
+export const PACE_ZONE_MIN_HALF_WIDTH_SEC = 10;
+
+/**
+ * Zone d'allure « verte » d'une étape : la bande prévue, élargie si besoin à ±10 s/km autour de son centre
+ * (une zone de 2-3 s est impossible à tenir). Null si l'étape n'a pas d'allure cible.
+ */
+export function paceZone(step: WorkoutStep | null): { min: number; max: number } | null {
+  if (!step?.target || step.target.type !== 'pace') return null;
+  const lo = Math.min(step.target.minSecPerKm, step.target.maxSecPerKm);
+  const hi = Math.max(step.target.minSecPerKm, step.target.maxSecPerKm);
+  const mid = (lo + hi) / 2;
+  const half = Math.max(PACE_ZONE_MIN_HALF_WIDTH_SEC, (hi - lo) / 2);
+  return { min: mid - half, max: mid + half };
+}
+
 export function paceStatus(
   currentSecPerKm: number | null,
   step: WorkoutStep | null,
 ): LivePaceStatus {
-  if (!step?.target || step.target.type !== 'pace' || currentSecPerKm == null) {
-    return 'none';
-  }
-  const { minSecPerKm, maxSecPerKm } = step.target;
+  const zone = paceZone(step);
+  if (!zone || currentSecPerKm == null) return 'none';
   // Allure : plus petit = plus rapide
-  if (currentSecPerKm < minSecPerKm - 3) return 'too_fast';
-  if (currentSecPerKm > maxSecPerKm + 3) return 'too_slow';
+  if (currentSecPerKm < zone.min) return 'too_fast';
+  if (currentSecPerKm > zone.max) return 'too_slow';
   return 'in_zone';
 }
 
 export function formatPaceBand(step: WorkoutStep | null): string | null {
   if (!step?.target || step.target.type !== 'pace') return null;
-  return `${formatPace(step.target.minSecPerKm)} – ${formatPace(step.target.maxSecPerKm)}/km`;
+  // Affichage « entre X et Y » : plus lent → plus rapide (ex. 6'00" – 5'00"/km), sur la zone ±10 s
+  const zone = paceZone(step)!;
+  return `${formatPace(zone.max)} – ${formatPace(zone.min)}/km`;
 }
 
 export function formatLiveClock(totalSec: number): string {
@@ -120,14 +269,28 @@ export function formatLiveClock(totalSec: number): string {
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
+/** Chrono tracker plein écran — toujours HH:MM:SS. */
+export function formatLiveClockLong(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+/** Valeur km pour héros distance (ex. « 0,00 »). */
+export function formatLiveDistanceKmValue(meters: number): string {
+  return (Math.max(0, meters) / 1000).toFixed(2).replace('.', ',');
+}
+
 export function formatLivePace(secPerKm: number | null): string {
   if (secPerKm == null || !Number.isFinite(secPerKm) || secPerKm < 90 || secPerKm > 1200) {
     return '—';
   }
-  const m = Math.floor(secPerKm / 60);
-  const s = Math.round(secPerKm % 60)
-    .toString()
-    .padStart(2, '0');
+  // Arrondir d'abord le total : arrondir seulement les secondes donnait « 5'60" ».
+  const total = Math.round(secPerKm);
+  const m = Math.floor(total / 60);
+  const s = String(total % 60).padStart(2, '0');
   return `${m}'${s}"`;
 }
 
@@ -137,13 +300,120 @@ export function formatLiveDistance(meters: number): string {
 }
 
 /**
- * Calcule la progression dans les étapes à partir du temps / distance
- * écoulés depuis le début (moving).
+ * Splits km en temps réel (style Record Strava).
+ * L'instant de passage de chaque km est interpolé entre les deux points GPS qui
+ * l'encadrent (et non pris sur le point suivant). Tous les splits sont renvoyés :
+ * l'UI n'affiche que les derniers (avant, plafonné à 8 ⇒ figé après le km 8).
+ */
+export function computeLiveKmSplits(
+  points: Array<{ lat: number; lng: number; timestamp: number }>,
+): Array<{ km: number; paceLabel: string }> {
+  if (points.length < 2) return [];
+  const out: Array<{ km: number; paceLabel: string }> = [];
+  let dist = 0;
+  let nextKm = 1;
+  let markTs = points[0]!.timestamp;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]!;
+    const b = points[i]!;
+    const seg = haversineM({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
+    const before = dist;
+    dist += seg;
+    while (dist >= nextKm * 1000) {
+      // Fraction du segment [a, b] parcourue quand on franchit le km.
+      const frac = seg > 0 ? (nextKm * 1000 - before) / seg : 1;
+      const crossTs = a.timestamp + frac * (b.timestamp - a.timestamp);
+      const dt = Math.max(1, (crossTs - markTs) / 1000);
+      out.push({
+        km: nextKm,
+        paceLabel: formatLivePace(dt),
+      });
+      markTs = crossTs;
+      nextKm += 1;
+    }
+  }
+  return out;
+}
+
+/** Durée par défaut d'une étape « ouverte » (bouton tour) qui n'est pas la dernière. */
+const OPEN_STEP_SEC = 180;
+
+/**
+ * Position courante dans la séance : index de l'étape et, surtout, le temps ET la
+ * distance au moment où elle a démarré. Sans ces deux repères, une étape à durée
+ * (échauffement 10 min ≈ 2 km) fausse toutes les étapes à distance qui suivent
+ * (le 400 m serait « déjà fini »), et inversement.
+ */
+export type LiveStepCursor = { index: number; startSec: number; startM: number };
+
+export const INITIAL_LIVE_CURSOR: LiveStepCursor = { index: 0, startSec: 0, startM: 0 };
+
+/**
+ * Fait avancer le curseur tant que l'étape courante est terminée. Fonction pure et
+ * idempotente : l'appeler à chaque tick avec le curseur précédent donne la position
+ * exacte ; la dernière étape ne se termine jamais seule (fin manuelle).
+ */
+export function advanceLiveStepCursor(
+  cursor: LiveStepCursor,
+  flat: FlatLiveStep[],
+  movingSec: number,
+  distanceM: number,
+): LiveStepCursor {
+  if (flat.length === 0) return INITIAL_LIVE_CURSOR;
+  let c = cursor;
+  // Séance rechargée / compteurs remis à zéro : repartir du début.
+  if (c.index < 0 || c.index >= flat.length || movingSec < c.startSec || distanceM < c.startM) {
+    c = INITIAL_LIVE_CURSOR;
+  }
+  while (c.index < flat.length - 1) {
+    const step = flat[c.index]!;
+    const goalM = stepGoalMeters(step);
+    const goalSec = stepGoalSec(step);
+    let finished: boolean;
+    let nextStartSec: number;
+    let nextStartM: number;
+    if (goalM != null) {
+      finished = distanceM - c.startM >= goalM;
+      nextStartM = c.startM + goalM;
+      nextStartSec = movingSec;
+    } else {
+      const len = goalSec ?? OPEN_STEP_SEC;
+      finished = movingSec - c.startSec >= len;
+      nextStartSec = c.startSec + len;
+      nextStartM = distanceM;
+    }
+    if (!finished) break;
+    c = { index: c.index + 1, startSec: nextStartSec, startM: nextStartM };
+  }
+  return c;
+}
+
+/**
+ * « Passer l'étape » : l'étape suivante démarre MAINTENANT (temps et distance actuels), la suite
+ * du plan est décalée d'autant — le temps restant se recalcule tout seul depuis le nouveau départ.
+ * Sans effet sur la dernière étape (fin de séance manuelle).
+ */
+export function skipLiveStep(
+  cursor: LiveStepCursor,
+  flat: FlatLiveStep[],
+  movingSec: number,
+  distanceM: number,
+): LiveStepCursor {
+  const c = advanceLiveStepCursor(cursor, flat, movingSec, distanceM);
+  if (c.index >= flat.length - 1) return c;
+  return { index: c.index + 1, startSec: movingSec, startM: distanceM };
+}
+
+/**
+ * Calcule la progression dans les étapes à partir du temps / distance écoulés
+ * (moving). Passer le curseur conservé entre deux appels (voir
+ * {@link advanceLiveStepCursor}) pour un suivi exact des séances mixtes durée/distance.
  */
 export function computeLiveStepProgress(
   flat: FlatLiveStep[],
   movingSec: number,
   distanceM: number,
+  cursor: LiveStepCursor = INITIAL_LIVE_CURSOR,
 ): LiveStepProgress {
   if (flat.length === 0) {
     return {
@@ -161,70 +431,27 @@ export function computeLiveStepProgress(
     };
   }
 
-  let elapsedSec = 0;
-  let elapsedM = 0;
+  const c = advanceLiveStepCursor(cursor, flat, movingSec, distanceM);
+  const step = flat[c.index]!;
+  const goalM = stepGoalMeters(step);
+  const goalSec = stepGoalSec(step);
+  const base = { step, stepIndex: c.index, totalSteps: flat.length, done: false };
 
-  for (let i = 0; i < flat.length; i++) {
-    const step = flat[i]!;
-    const goalSec = stepGoalSec(step);
-    const goalM = stepGoalMeters(step);
-
-    if (goalM != null) {
-      const inStepM = Math.max(0, distanceM - elapsedM);
-      if (inStepM < goalM || i === flat.length - 1) {
-        return {
-          step,
-          stepIndex: i,
-          totalSteps: flat.length,
-          ratio: Math.min(1, inStepM / goalM),
-          remainingM: Math.max(0, goalM - inStepM),
-          done: false,
-        };
-      }
-      elapsedM += goalM;
-      // estime le temps consommé proportionnellement si besoin
-      continue;
-    }
-
-    if (goalSec != null) {
-      const inStepSec = Math.max(0, movingSec - elapsedSec);
-      if (inStepSec < goalSec || i === flat.length - 1) {
-        return {
-          step,
-          stepIndex: i,
-          totalSteps: flat.length,
-          ratio: Math.min(1, inStepSec / goalSec),
-          remainingSec: Math.max(0, goalSec - inStepSec),
-          done: false,
-        };
-      }
-      elapsedSec += goalSec;
-      continue;
-    }
-
-    // Étape ouverte : reste jusqu’à la fin manuelle si dernière, sinon 3 min par défaut
-    const openSec = 180;
-    const inStepSec = Math.max(0, movingSec - elapsedSec);
-    if (inStepSec < openSec || i === flat.length - 1) {
-      return {
-        step,
-        stepIndex: i,
-        totalSteps: flat.length,
-        ratio: Math.min(1, inStepSec / openSec),
-        remainingSec: Math.max(0, openSec - inStepSec),
-        done: false,
-      };
-    }
-    elapsedSec += openSec;
+  if (goalM != null) {
+    const inStepM = Math.max(0, distanceM - c.startM);
+    return {
+      ...base,
+      ratio: Math.min(1, inStepM / goalM),
+      remainingM: Math.max(0, goalM - inStepM),
+    };
   }
 
-  const last = flat[flat.length - 1]!;
+  const len = goalSec ?? OPEN_STEP_SEC;
+  const inStepSec = Math.max(0, movingSec - c.startSec);
   return {
-    step: last,
-    stepIndex: flat.length - 1,
-    totalSteps: flat.length,
-    ratio: 1,
-    done: true,
+    ...base,
+    ratio: Math.min(1, inStepSec / len),
+    remainingSec: Math.max(0, len - inStepSec),
   };
 }
 
@@ -247,13 +474,14 @@ export function buildLiveActivity(opts: {
   latlng: [number, number][];
   timeStream: number[];
   velocitySmooth: number[];
+  altitude?: number[];
 }): StravaActivity {
   const moving = Math.max(1, opts.movingSec);
   const dist = Math.max(0, opts.distanceM);
   const avgPace =
     dist > 20 ? Math.round((moving / (dist / 1000))) : undefined;
   return {
-    id: `azimut-live-${Date.now()}`,
+    id: `mova-live-${Date.now()}`,
     name: opts.workout.title,
     distanceM: Math.round(dist),
     elapsedSec: Math.round(opts.elapsedSec),
@@ -262,18 +490,56 @@ export function buildLiveActivity(opts: {
     sport: disciplineToActivitySport(opts.workout.discipline),
     avgPaceSecPerKm: avgPace,
     streams:
-      opts.latlng.length >= 2
+      opts.latlng.length >= 1
         ? {
-            time: opts.timeStream,
+            time: opts.timeStream.length
+              ? opts.timeStream
+              : opts.latlng.map((_, i) => i),
             latlng: opts.latlng,
-            velocitySmooth: opts.velocitySmooth,
+            altitude: opts.altitude?.length === opts.latlng.length ? opts.altitude.map((v) => Math.round(v * 10) / 10) : undefined,
+            velocitySmooth:
+              opts.velocitySmooth.length === opts.latlng.length
+                ? opts.velocitySmooth
+                : opts.latlng.map(() => 0),
           }
         : undefined,
   };
 }
 
+export function freeLiveShell(opts: {
+  sport: 'run' | 'bike' | 'swim';
+  dateIso?: string;
+}): PlannedWorkout {
+  const date = opts.dateIso ?? new Date().toISOString().slice(0, 10);
+  const title =
+    opts.sport === 'bike'
+      ? 'Sortie vélo libre'
+      : opts.sport === 'swim'
+        ? 'Natation libre'
+        : 'Course libre';
+  return {
+    id: `free-${opts.sport}-${Date.now()}`,
+    date,
+    title,
+    discipline: opts.sport,
+    steps: [
+      {
+        id: 'free-1',
+        type: 'active',
+        label: 'Libre',
+        endCondition: 'lap_button',
+      },
+    ],
+  };
+}
+
 export function canStartLiveWorkout(discipline: SportDiscipline): boolean {
-  return discipline === 'run' || discipline === 'bike' || discipline === 'brick';
+  return (
+    discipline === 'run' ||
+    discipline === 'bike' ||
+    discipline === 'swim' ||
+    discipline === 'brick'
+  );
 }
 
 export function paceStatusLabel(status: LivePaceStatus): string {
@@ -287,4 +553,121 @@ export function paceStatusLabel(status: LivePaceStatus): string {
     default:
       return 'Allure libre';
   }
+}
+
+export type PaceAnomalyKind = 'sudden_slowdown' | 'fatigue_drift' | 'zone_collapse';
+
+export type PaceAnomaly = {
+  kind: PaceAnomalyKind;
+  severity: 'mild' | 'strong';
+  label: string;
+};
+
+/**
+ * Détecte un moment de faiblesse : ralentissement anormal vs allure récente / moyenne / cible.
+ * `recentPaces` = échantillons d’allure fenêtre (sec/km), du plus ancien au plus récent.
+ */
+export function detectPaceAnomaly(opts: {
+  currentPaceSecPerKm: number | null;
+  avgPaceSecPerKm: number | null;
+  recentPaces: number[];
+  step: WorkoutStep | null;
+  movingSec: number;
+}): PaceAnomaly | null {
+  const { currentPaceSecPerKm: cur, avgPaceSecPerKm: avg, recentPaces, step, movingSec } =
+    opts;
+  if (cur == null || !Number.isFinite(cur) || movingSec < 75) return null;
+  if (cur < 120 || cur > 900) return null;
+
+  const history = recentPaces.filter((p) => p >= 120 && p <= 900);
+  const prior = history.slice(0, Math.max(0, history.length - 1));
+  const median = (arr: number[]) => {
+    if (arr.length === 0) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)]!;
+  };
+  const med = median(prior.length >= 3 ? prior : history);
+
+  // Effondrement soudain vs médiane récente
+  if (med != null && prior.length >= 3) {
+    const jump = cur - med;
+    const pct = jump / med;
+    if (jump >= 45 || pct >= 0.18) {
+      return {
+        kind: 'sudden_slowdown',
+        severity: jump >= 70 || pct >= 0.28 ? 'strong' : 'mild',
+        label:
+          jump >= 70 || pct >= 0.28
+            ? 'Ralentissement brutal — moment de faiblesse détecté'
+            : 'Tu ralentis nettement — écoute ton corps',
+      };
+    }
+  }
+
+  // Dérive de fatigue vs moyenne séance
+  if (avg != null && avg > 0 && movingSec >= 180) {
+    const drift = cur - avg;
+    if (drift >= 35 || drift / avg >= 0.12) {
+      return {
+        kind: 'fatigue_drift',
+        severity: drift >= 55 ? 'strong' : 'mild',
+        label:
+          drift >= 55
+            ? 'Fatigue marquée — allure bien en dessous de ta moyenne'
+            : 'Allure qui s’effrite — signe de fatigue',
+      };
+    }
+  }
+
+  // Hors zone cible (étape active) de façon nette
+  if (
+    step &&
+    (step.type === 'active' || step.type === 'warmup') &&
+    step.target?.type === 'pace'
+  ) {
+    const max = step.target.maxSecPerKm;
+    if (cur > max + 25) {
+      return {
+        kind: 'zone_collapse',
+        severity: cur > max + 45 ? 'strong' : 'mild',
+        label:
+          cur > max + 45
+            ? 'Bien trop lent vs la cible — baisse d’énergie probable'
+            : 'Sous la zone cible — ralentissement anormal',
+      };
+    }
+  }
+
+  return null;
+}
+
+export function liveCueLabel(
+  status: LivePaceStatus,
+  anomaly: PaceAnomaly | null,
+): string {
+  if (anomaly) return anomaly.label;
+  return paceStatusLabel(status);
+}
+
+/**
+ * « Flow » : pourcentage du temps passé dans la zone d'allure cible.
+ * `null` tant qu'il y a moins de 20 s mesurées (valeur sans signification).
+ */
+export function flowPercent(zoneSec: number, measuredSec: number): number | null {
+  if (!Number.isFinite(zoneSec) || !Number.isFinite(measuredSec) || measuredSec < 20) return null;
+  return Math.max(0, Math.min(100, Math.round((zoneSec / measuredSec) * 100)));
+}
+
+/**
+ * Position 0–1 du point sur l'arc de 180° partagé en trois : tiers gauche (trop rapide), tiers central (zone cible),
+ * tiers droit (trop lent). Dans la zone, le point se déplace d'un bord à l'autre du tiers central ; hors zone, il
+ * continue vers le rouge sur une distance égale à la largeur de la zone, puis reste au bout.
+ */
+export function paceDotPosition(currentSecPerKm: number | null, minSecPerKm: number, maxSecPerKm: number): number {
+  const lo = Math.min(minSecPerKm, maxSecPerKm);
+  const hi = Math.max(minSecPerKm, maxSecPerKm);
+  if (currentSecPerKm == null || !Number.isFinite(currentSecPerKm)) return 0.5;
+  const width = Math.max(1, hi - lo);
+  const t = 1 / 3 + ((currentSecPerKm - lo) / width) / 3;
+  return Math.min(1, Math.max(0, t));
 }

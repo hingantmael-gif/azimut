@@ -1,9 +1,9 @@
 /** Identité produit — indépendante de Strava / « Training » générique */
 
 export const BRAND = {
-  name: 'Azimut',
+  name: 'Mova',
   /** Court pour barre d’état / notifs */
-  nameShort: 'Azimut',
+  nameShort: 'Mova',
   tagline: 'Ta trajectoire d’entraînement',
   taglineLines: 'Choisis ton cap.\nEnchaîne. Progresse.',
   /** Jade profond — boutons & UI (lisible sur fond clair) */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../src/store/AppContext';
 import { badgeViewModels } from '../src/engines/achievements';
@@ -40,12 +41,17 @@ import {
 } from '../src/engines/worldRankings';
 import { podiumRewardCard } from '../src/engines/rankingRewards';
 import { formatUsernameDisplay } from '../src/utils/username';
+import { isOwnerHiddenFromPublicRankings } from '../src/engines/ownerAccess';
 import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
 import type { ColorPalette } from '../src/theme/palettes';
 import { AppScrollView } from '../src/ui/scrolling';
 import { useHorizontalDragScroll } from '../src/ui/scrolling/useHorizontalDragScroll';
 import { RankBadge } from '../src/ui/ranked/RankBadge';
+import { LinearGradient } from 'expo-linear-gradient';
+import { TierAmbience } from '../src/ui/profile/TierAmbience';
+import { seedFromString } from '../src/engines/topoLines';
+import { mixHex, rgba } from '../src/theme/tokens';
 import { ProfileAvatar } from '../src/ui/profile/ProfileAvatar';
 import { ScreenAtmosphere } from '../src/ui/atmosphere/ScreenAtmosphere';
 import { FadeInUp } from '../src/ui/motion/softMotion';
@@ -67,8 +73,9 @@ export default function RankedScreen() {
   const router = useRouter();
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { ranked, achievements, firstName, lastName, username, city, id, country, avatarUri } =
+  const { ranked, achievements, firstName, lastName, username, city, id, country, avatarUri, email } =
     state.profile;
+  const hideFromBoards = isOwnerHiddenFromPublicRankings(email);
 
   const [section, setSection] = useState<RankedSection>('league');
   const [liveTick, setLiveTick] = useState(0);
@@ -123,8 +130,20 @@ export default function RankedScreen() {
         },
         sport: odysseySport,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, country, city, kmOdyssey.totalKm, odysseySport, liveTick],
+    [
+      id,
+      username,
+      firstName,
+      lastName,
+      country,
+      city,
+      kmOdyssey.totalKm,
+      odysseySport,
+      liveTick,
+      hideFromBoards,
+    ],
   );
   const odysseyBoardFull =
     odysseyScope === 'national' ? odysseyBoards.national : odysseyBoards.world;
@@ -188,8 +207,9 @@ export default function RankedScreen() {
         you: { id, username, firstName, lastName, city, avatarUri },
         ranked,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, city, avatarUri, ranked, liveTick],
+    [id, username, firstName, lastName, city, avatarUri, ranked, liveTick, hideFromBoards],
   );
 
   const board = useMemo(
@@ -201,6 +221,7 @@ export default function RankedScreen() {
         viewDivision: selectedStep.division,
         expanded: ladderExpanded,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
     [
       id,
@@ -214,6 +235,7 @@ export default function RankedScreen() {
       selectedStep.division,
       ladderExpanded,
       liveTick,
+      hideFromBoards,
     ],
   );
 
@@ -230,8 +252,20 @@ export default function RankedScreen() {
         ranked,
         totalKm: state.lifetime.totalKm,
         liveTick,
+        hideYouFromBoard: hideFromBoards,
       }),
-    [id, username, firstName, lastName, country, city, ranked, state.lifetime.totalKm, liveTick],
+    [
+      id,
+      username,
+      firstName,
+      lastName,
+      country,
+      city,
+      ranked,
+      state.lifetime.totalKm,
+      liveTick,
+      hideFromBoards,
+    ],
   );
 
   const activeWorld = worldRankings[worldBoardId];
@@ -246,7 +280,7 @@ export default function RankedScreen() {
   const openAthleteProfile = useCallback(
     (athleteUsername: string, isYou?: boolean) => {
       if (isYou) {
-        router.push('/(tabs)/profile');
+        router.navigate('/(tabs)/profile');
         return;
       }
       const u = athleteUsername.trim().toLowerCase();
@@ -286,8 +320,9 @@ export default function RankedScreen() {
   );
 
   useEffect(() => {
+    if (hideFromBoards) return;
     dispatch({ type: 'SETTLE_LADDER_WEEK', place: yourBoard.yourRank });
-  }, [dispatch, yourBoard.yourRank, ranked.ladderWeekKey]);
+  }, [dispatch, yourBoard.yourRank, ranked.ladderWeekKey, hideFromBoards]);
 
   const badgeStats = useMemo(() => {
     const likedPrograms = (state.profile.likedProgramKeys ?? []).length;
@@ -304,7 +339,7 @@ export default function RankedScreen() {
       following: (state.profile.followingUsernames ?? []).length,
       followers: (state.profile.followerUsernames ?? []).length,
       hasActiveProgram: Boolean(state.profile.activeProgram),
-      programHistoryCount: (state.profile.programHistory ?? []).length,
+      programHistoryCount: (state.profile.programHistory ?? []).filter((p) => !p.abandoned).length,
       sleepNights: sleepHistory?.length ?? 0,
       sleepStreak: computeSleepStreak(sleepHistory),
     });
@@ -458,8 +493,32 @@ export default function RankedScreen() {
 
         {section === 'league' ? (
         <>
-        <View style={[styles.hero, { backgroundColor: displayMeta.color }]}>
-          <View style={styles.heroGlow} />
+        <LinearGradient
+          colors={[
+            mixHex(displayMeta.color, '#050B16', 0.78),
+            mixHex(displayMeta.color, '#050B16', 0.42),
+            mixHex(displayMeta.color, '#050B16', 0.12),
+          ]}
+          locations={[0, 0.55, 1]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={styles.hero}
+        >
+          <TierAmbience color={mixHex(displayMeta.color, '#FFFFFF', 0.35)} height={380} seed={seedFromString(String(displayMeta.color))} count={14} />
+          {/* Halo lumineux derrière le logo de rang (le logo n'est pas modifié). */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.heroHalo,
+              { boxShadow: `0px 0px 90px 42px ${rgba(mixHex(displayMeta.color, '#FFFFFF', 0.15), 0.42)}` },
+            ]}
+          />
+          <View style={styles.demoBadge}>
+            <Text style={styles.demoBadgeText}>Classement de démonstration</Text>
+          </View>
+          <Text style={styles.demoHint}>
+            Peloton seed / démo — le ladder cloud live arrive bientôt.
+          </Text>
           <Text style={styles.season}>Saison {ranked.seasonId}</Text>
           {Platform.OS === 'web' ? (
             <View style={{ marginTop: spacing.md }}>
@@ -495,21 +554,25 @@ export default function RankedScreen() {
           </Text>
           {isViewingOwnRank ? (
             <>
-              <Text style={styles.streak}>
-                🔥 Série {ranked.streakWeeks} semaine
-                {ranked.streakWeeks > 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.shieldHero}>
-                Boucliers anti-descente : {ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS}/
-                {PREMIUM_RELEGATION_SHIELDS}
-              </Text>
+              <View style={styles.heroChips}>
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>
+                    🔥 Série {ranked.streakWeeks} sem.
+                  </Text>
+                </View>
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>
+                    🛡 {ranked.relegationShieldsLeft ?? PREMIUM_RELEGATION_SHIELDS}/{PREMIUM_RELEGATION_SHIELDS} boucliers
+                  </Text>
+                </View>
+              </View>
             </>
           ) : (
             <Text style={styles.rankPreviewHint}>
               Consultation libre — liste et XP des athlètes ci-dessous.
             </Text>
           )}
-        </View>
+        </LinearGradient>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
@@ -692,12 +755,19 @@ export default function RankedScreen() {
 
         <View style={styles.boardHead}>
           <Text style={styles.section}>Ladder {board.label}</Text>
-          <Text style={board.isYourDivision ? styles.yourPlace : styles.yourPlaceMuted}>
-            {board.isYourDivision
-              ? `#${board.yourRank} / ${board.divisionSize}`
-              : `${board.divisionSize} athlètes`}
+          <Text style={board.isYourDivision && !hideFromBoards ? styles.yourPlace : styles.yourPlaceMuted}>
+            {hideFromBoards
+              ? 'Invisible · Champion privé'
+              : board.isYourDivision
+                ? `#${board.yourRank} / ${board.divisionSize}`
+                : `${board.divisionSize} athlètes`}
           </Text>
         </View>
+        {hideFromBoards ? (
+          <Text style={styles.ladderOutcomeInline}>
+            Compte ultra-sécurisé : rang Champion conservé, hors listes publiques.
+          </Text>
+        ) : null}
         {ranked.lastLadderOutcome && board.isYourDivision ? (
           <Text style={styles.ladderOutcomeInline}>
             {ladderOutcomeLabel(
@@ -894,9 +964,11 @@ export default function RankedScreen() {
             {worldBoardTitle(worldBoardId, country)}
           </Text>
           <Text style={styles.yourPlaceMuted}>
-            {activeWorld.yourPlace > 0
-              ? `#${activeWorld.yourPlace}`
-              : `${activeWorld.entries.length}`}
+            {hideFromBoards
+              ? 'Invisible'
+              : activeWorld.yourPlace > 0
+                ? `#${activeWorld.yourPlace}`
+                : `${activeWorld.entries.length}`}
           </Text>
         </View>
         <View style={styles.board}>
@@ -1060,7 +1132,9 @@ export default function RankedScreen() {
             />
           </View>
           <Text style={styles.odysseyRanks}>
-            Rang {odysseyScope === 'national' ? 'national' : 'mondial'} #{odysseyYourRank}
+            {hideFromBoards
+              ? 'Invisible aux classements odyssée'
+              : `Rang ${odysseyScope === 'national' ? 'national' : 'mondial'} #${odysseyYourRank}`}
             {' · '}
             {ODYSSEY_SPORT_META[odysseySport].unitHint}
             {' · '}+{odysseyXp} XP / niveau
@@ -1210,7 +1284,7 @@ export default function RankedScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     scroll: { flex: 1, backgroundColor: 'transparent' },
     sectionTabs: {
       flexDirection: 'row',
@@ -1220,11 +1294,11 @@ function makeStyles(colors: ColorPalette) {
     },
     sectionTab: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: radii.md,
+      paddingVertical: 11,
+      borderRadius: radii.pill,
       borderWidth: 1,
       borderColor: colors.border,
-      backgroundColor: colors.bg,
+      backgroundColor: colors.glass,
       alignItems: 'center',
     },
     sectionTabText: {
@@ -1267,11 +1341,30 @@ function makeStyles(colors: ColorPalette) {
     rewardBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
     hero: {
       margin: spacing.md,
-      borderRadius: radii.lg,
+      borderRadius: radii.xxl,
       padding: spacing.lg,
       alignItems: 'center',
       overflow: 'hidden',
+      minHeight: 380,
     },
+    heroHalo: {
+      position: 'absolute',
+      top: 128,
+      alignSelf: 'center',
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+    },
+    heroChips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: spacing.md },
+    heroChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.28)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.22)',
+    },
+    heroChipText: { color: '#FFFFFF', fontWeight: '800', fontSize: 12.5 },
     heroGlow: {
       position: 'absolute',
       width: 220,
@@ -1280,6 +1373,31 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: 'rgba(255,255,255,0.18)',
       top: -60,
       right: -40,
+    },
+    demoBadge: {
+      alignSelf: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radii.md,
+      backgroundColor: 'rgba(0,0,0,0.22)',
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.28)',
+      marginBottom: 6,
+    },
+    demoBadgeText: {
+      color: 'rgba(255,255,255,0.78)',
+      fontWeight: '700',
+      fontSize: 11,
+      letterSpacing: 0.3,
+    },
+    demoHint: {
+      color: 'rgba(255,255,255,0.65)',
+      fontSize: 11,
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+      lineHeight: 15,
+      paddingHorizontal: spacing.sm,
     },
     season: {
       color: 'rgba(255,255,255,0.85)',
@@ -1322,10 +1440,11 @@ function makeStyles(colors: ColorPalette) {
     card: {
       marginHorizontal: spacing.md,
       padding: spacing.md,
-      backgroundColor: colors.bg,
-      borderRadius: radii.lg,
+      backgroundColor: colors.bgCard,
+      borderRadius: radii.xl,
       borderWidth: 1,
       borderColor: colors.border,
+      boxShadow: `0px 6px 20px ${colors.shadow}12`,
     },
     cardTitle: { fontWeight: '800', fontSize: 16, color: colors.text },
     xpRow: {
@@ -1342,7 +1461,7 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: colors.bgSecondary,
       overflow: 'hidden',
     },
-    fill: { height: '100%', borderRadius: 7 },
+    fill: { height: '100%', borderRadius: 7, boxShadow: '0px 0px 12px rgba(255,255,255,0.35)' },
     xpHint: {
       marginTop: spacing.sm,
       fontSize: 12,
@@ -1353,8 +1472,8 @@ function makeStyles(colors: ColorPalette) {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,
       padding: spacing.md,
-      backgroundColor: colors.bg,
-      borderRadius: radii.lg,
+      backgroundColor: colors.bgCard,
+      borderRadius: radii.xl,
       borderWidth: 1,
       borderColor: colors.border,
     },

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { Body, Muted, PrimaryButton, Screen, Title } from '../src/ui/primitives';
 import { formatDuration, formatPace } from '../src/engines/core';

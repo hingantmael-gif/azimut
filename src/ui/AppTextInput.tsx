@@ -7,6 +7,7 @@ import {
   type TextStyle,
 } from 'react-native';
 import { useIsWebPhoneFrame } from './platformExperience';
+import { fonts } from '../theme/tokens';
 
 /**
  * Champs texte : clavier physique sur PC (cadre web), virtuel sur vrai téléphone.
@@ -48,7 +49,7 @@ export const AppTextInput = forwardRef<TextInput, TextInputProps>(function AppTe
       {...props}
       showSoftInputOnFocus={softInput}
       onFocus={handleFocus}
-      style={[webCursorStyle, style] as StyleProp<TextStyle>}
+      style={[{ fontFamily: fonts.medium }, webCursorStyle, style] as StyleProp<TextStyle>}
     />
   );
 });

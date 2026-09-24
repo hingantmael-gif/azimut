@@ -1,6 +1,8 @@
 /**
  * Prédiction vélo — modèle distinct de la course et de la natation.
  *
+ * Shared core (CP / VMA) : `./performancePredictionCore`
+ *
  * Sources :
  * - Critical Power / FTP (Allen & Coggan ; CP literature) : puissance soutenable
  *   ~1 h ≈ FTP ; efforts plus courts > FTP, plus longs < FTP.
@@ -34,17 +36,40 @@ const CDA = 0.32;
 const CRR = 0.0045;
 const BIKE_KG = 9;
 
-/** % FTP soutenable selon durée d’effort (min). */
+/**
+ * Repères % FTP soutenable / durée d’effort (min), aux milieux des anciennes tranches
+ * (≤12 min ⇒ 118 %, ≤20 ⇒ 108 %, ≤35 ⇒ 102 %, ≤55 ⇒ 98 %, ≤75 ⇒ 94 %, ≤120 ⇒ 86 %,
+ * ≤180 ⇒ 80 %, ≤270 ⇒ 75 %, au-delà 70 %).
+ */
+const FTP_INTENSITY_KNOTS: ReadonlyArray<readonly [number, number]> = [
+  [6, 1.18],
+  [16, 1.08],
+  [27.5, 1.02],
+  [45, 0.98],
+  [65, 0.94],
+  [97.5, 0.86],
+  [150, 0.8],
+  [225, 0.75],
+  [300, 0.7],
+];
+
+/**
+ * % FTP soutenable selon durée d’effort (min) — interpolation linéaire entre repères.
+ * (Avant : fonction en escalier, −4 % de puissance d’un coup entre 35 et 36 min.)
+ */
 export function ftpIntensityForDurationMin(tMin: number): number {
-  if (tMin <= 12) return 1.18;
-  if (tMin <= 20) return 1.08;
-  if (tMin <= 35) return 1.02;
-  if (tMin <= 55) return 0.98;
-  if (tMin <= 75) return 0.94;
-  if (tMin <= 120) return 0.86;
-  if (tMin <= 180) return 0.8;
-  if (tMin <= 270) return 0.75;
-  return 0.7;
+  const knots = FTP_INTENSITY_KNOTS;
+  if (!Number.isFinite(tMin) || tMin <= knots[0]![0]) return knots[0]![1];
+  const last = knots[knots.length - 1]!;
+  if (tMin >= last[0]) return last[1];
+  for (let i = 1; i < knots.length; i++) {
+    const [t1, p1] = knots[i]!;
+    if (tMin <= t1) {
+      const [t0, p0] = knots[i - 1]!;
+      return p0 + ((p1 - p0) * (tMin - t0)) / (t1 - t0);
+    }
+  }
+  return last[1];
 }
 
 /**

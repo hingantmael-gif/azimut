@@ -1,6 +1,8 @@
-import { Text } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { Stack } from 'expo-router';
-import { colors } from '../../src/theme/tokens';
+// Écrans d'authentification : toujours sombres (identité Mova).
+const colors = { text: '#FFFFFF', bg: '#050B16' };
 import { AlwaysBackButton } from '../../src/ui/navigation/AlwaysBackButton';
 import { AUTH_LABELS, AUTH_PLAIN } from '../../src/constants/authLabels';
 
@@ -32,6 +34,8 @@ export default function AuthLayout() {
         contentStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
         headerBackTitle: 'Retour',
+        animation: 'slide_from_right',
+        animationDuration: 380,
         headerLeft: () => (
           <AlwaysBackButton
             tintColor={colors.text}
@@ -55,6 +59,14 @@ export default function AuthLayout() {
           title: 'Inscription',
           headerShown: true,
           headerTitle: () => <AuthHeaderTitle title="Inscription" />,
+          headerLeft: () => (
+            <View style={{ paddingLeft: 8 }}>
+              <AlwaysBackButton
+                tintColor={colors.text}
+                fallbackHref="/(auth)/welcome"
+              />
+            </View>
+          ),
         }}
       />
       <Stack.Screen
@@ -71,3 +83,5 @@ export default function AuthLayout() {
     </Stack>
   );
 }
+
+export { RouteLoading as SuspenseFallback } from '../../src/ui/RouteLoading';

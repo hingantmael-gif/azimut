@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert } from '../../src/utils/appAlert';
+import { Text } from '../../src/ui/Text';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   demoFinishedProgramsWithUsage,
@@ -226,7 +228,7 @@ export default function UserProgramsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     hero: {
       marginTop: spacing.lg,
       marginHorizontal: spacing.md,

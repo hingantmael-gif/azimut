@@ -2,12 +2,18 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import type { ScheduledReminder } from '../engines/notifications';
 import type { SocialNotification } from '../types/domain';
+import { BRAND } from '../constants/brand';
 
 let handlerReady = false;
 
-/** Affichage foreground — bannière + liste */
+/** PWA / web : alertes uniquement dans l’app (évite un nom de domaine technique sur le téléphone). */
+export function usesInAppNotificationsOnly(): boolean {
+  return Platform.OS === 'web';
+}
+
+/** Affichage foreground — bannière + liste (natif uniquement). */
 export function ensureNotificationHandler() {
-  if (handlerReady) return;
+  if (handlerReady || usesInAppNotificationsOnly()) return;
   handlerReady = true;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -19,9 +25,75 @@ export function ensureNotificationHandler() {
   });
 }
 
-export async function getPushPermissionStatus(): Promise<
-  'granted' | 'denied' | 'undetermined'
-> {
+type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+
+/** API Notification du navigateur (Chrome/Edge/Android, Safari iOS 16.4+ en PWA installée). */
+function webNotificationApi(): typeof Notification | null {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  return 'Notification' in window ? window.Notification : null;
+}
+
+/** L'appareil sait afficher une demande d'autorisation système (natif, ou navigateur compatible). */
+export function supportsSystemPermission(): boolean {
+  return Platform.OS !== 'web' || webNotificationApi() !== null;
+}
+
+/** Autorisation système actuelle (web : `Notification.permission`). */
+export async function getSystemPermissionStatus(): Promise<PermissionStatus> {
+  const api = webNotificationApi();
+  if (Platform.OS === 'web') {
+    if (!api) return 'denied';
+    return api.permission === 'default' ? 'undetermined' : api.permission;
+  }
+  return getPushPermissionStatus();
+}
+
+/**
+ * Déclenche la vraie demande du téléphone / du navigateur. À appeler depuis un geste
+ * de l'utilisateur (obligatoire sur iOS).
+ */
+export async function askSystemPermission(): Promise<boolean> {
+  const api = webNotificationApi();
+  if (Platform.OS === 'web') {
+    if (!api) return false;
+    try {
+      return (await api.requestPermission()) === 'granted';
+    } catch {
+      return false;
+    }
+  }
+  return requestPushPermission();
+}
+
+/**
+ * Notification système sur le web (via le service worker) quand l'app est en arrière-plan.
+ * Sans effet si l'autorisation n'a pas été accordée ou si l'app est au premier plan
+ * (les bannières in-app prennent alors le relais).
+ */
+export async function showSystemNotification(title: string, body: string, url = '/'): Promise<void> {
+  const api = webNotificationApi();
+  if (!api || api.permission !== 'granted') return;
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible') return;
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    const options: NotificationOptions = {
+      body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url },
+    };
+    if (reg) await reg.showNotification(title, options);
+    else new api(title, options);
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function getPushPermissionStatus(): Promise<PermissionStatus> {
+  if (usesInAppNotificationsOnly()) {
+    // Web : les alertes in-app sont toujours actives ; l'autorisation système est distincte.
+    return 'granted';
+  }
   try {
     ensureNotificationHandler();
     const { status } = await Notifications.getPermissionsAsync();
@@ -35,15 +107,20 @@ export async function getPushPermissionStatus(): Promise<
 
 /**
  * Demande l’autorisation système (iOS / Android).
- * Sur le web Expo Go, peut être partiel — on gère les erreurs.
+ * Sur le web : active les alertes in-app sans permission navigateur.
  */
 export async function requestPushPermission(): Promise<boolean> {
+  if (usesInAppNotificationsOnly()) {
+    // Web : on demande aussi l'autorisation du navigateur, mais les alertes in-app restent actives.
+    await askSystemPermission();
+    return true;
+  }
   try {
     ensureNotificationHandler();
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('training', {
-        name: 'Entraînement & social',
+        name: BRAND.name,
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0E8F6F',
@@ -56,7 +133,6 @@ export async function requestPushPermission(): Promise<boolean> {
     const asked = await Notifications.requestPermissionsAsync();
     return asked.status === 'granted';
   } catch {
-    // Web / environnement sans support natif
     return false;
   }
 }
@@ -67,11 +143,12 @@ function parseReminderDate(at: string): Date | null {
   return d;
 }
 
-/** Planifie les rappels locaux du jour (annule les anciens d’abord). */
+/** Planifie les rappels locaux du jour (natif). Sur web : no-op (bandeaux in-app). */
 export async function syncLocalReminders(
   reminders: ScheduledReminder[],
   enabled: boolean,
 ): Promise<void> {
+  if (usesInAppNotificationsOnly()) return;
   try {
     ensureNotificationHandler();
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -84,8 +161,8 @@ export async function syncLocalReminders(
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: r.title,
-          body: r.body,
+          title: BRAND.name,
+          body: `${r.title} — ${r.body}`,
           sound: true,
           data: { type: r.type, reminderId: r.id },
         },
@@ -97,7 +174,7 @@ export async function syncLocalReminders(
       });
     }
   } catch {
-    // ignore — démo / web
+    // ignore
   }
 }
 
@@ -125,26 +202,28 @@ export function socialPushCopy(n: SocialNotification): { title: string; body: st
           ? `${n.fromDisplayName} a aimé « ${n.programTitle} ».`
           : `${n.fromDisplayName} a aimé votre programme.`,
       };
+    case 'session_like':
+      return {
+        title: 'Like sur votre séance',
+        body: n.programTitle
+          ? `${n.fromDisplayName} a aimé « ${n.programTitle} ».`
+          : `${n.fromDisplayName} a aimé votre séance.`,
+      };
+    case 'product':
+      return {
+        title: 'Mise à jour Mova',
+        body: n.programTitle ?? 'Nouvelle fonctionnalité disponible.',
+      };
     default:
       return { title: 'Notification', body: 'Nouveau message social.' };
   }
 }
 
-/** Notification immédiate (like, abonné, etc.) */
+/**
+ * Push OS (natif, app en arrière-plan seulement).
+ * Sur web / PWA : jamais — évite un badge affichant le domaine technique.
+ */
 export async function presentSocialPush(n: SocialNotification): Promise<void> {
-  try {
-    ensureNotificationHandler();
-    const { title, body } = socialPushCopy(n);
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        sound: true,
-        data: { kind: n.kind, notificationId: n.id },
-      },
-      trigger: null,
-    });
-  } catch {
-    // ignore
-  }
+  const copy = socialPushCopy(n);
+  await showSystemNotification(copy.title, copy.body, '/notifications');
 }

@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 
 /**
- * Catalogue unique des fonctionnalités Azimut — pas de distinction premium / basique.
+ * Catalogue unique des fonctionnalités Mova — pas de distinction premium / basique.
  * Chaque entrée mène à l’écran (et éventuellement au bouton) concerné.
  */
 export type AppFeatureSectionId =
@@ -45,12 +45,6 @@ export const APP_FEATURES: AppFeature[] = [
     href: '/(tabs)' as Href,
   },
   {
-    id: 'training-plan',
-    label: 'Plan du jour (entraînement)',
-    section: 'coaching',
-    href: '/(tabs)/training' as Href,
-  },
-  {
     id: 'calendar',
     label: 'Calendrier d’entraînement',
     section: 'coaching',
@@ -79,15 +73,9 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: 'rpe',
     label: 'Feedback RPE (effort ressenti)',
+    hint: 'Ouvre une séance passée dans le calendrier',
     section: 'coaching',
-    href: '/(tabs)/training' as Href,
-    focus: 'rpe',
-  },
-  {
-    id: 'coach-vokal',
-    label: 'Coach vocal',
-    section: 'coaching',
-    href: '/coach-vokal' as Href,
+    href: '/(tabs)/calendar' as Href,
   },
   {
     id: 'adaptive-plan',
@@ -109,29 +97,28 @@ export const APP_FEATURES: AppFeature[] = [
   {
     id: 'send-garmin',
     label: 'Envoyer la séance à ma montre',
-    hint: 'Garmin, Apple Watch, Galaxy…',
+    hint: 'Garmin, Apple Watch, Galaxy… (depuis une séance)',
     section: 'activities',
-    href: '/(tabs)/training' as Href,
-    focus: 'garmin',
+    href: '/(tabs)/calendar' as Href,
   },
   {
     id: 'send-strava',
-    label: 'Envoyer / partager la séance vers Strava',
+    label: 'Envoyer la séance vers Strava (fichier GPX/TCX)',
+    hint: 'Depuis une séance du calendrier',
     section: 'activities',
-    href: '/(tabs)/training' as Href,
-    focus: 'strava',
+    href: '/(tabs)/calendar' as Href,
   },
   {
     id: 'record',
     label: 'Enregistrer une activité',
-    hint: 'Course, vélo, nage, brick, musculation',
+    hint: 'Course, vélo, natation — le tracker GPS',
     section: 'activities',
-    href: '/(tabs)/record' as Href,
-    focus: 'garmin',
+    href: '/session/live?mode=free&sport=run' as Href,
   },
   {
     id: 'activities-list',
-    label: 'Historique des activités',
+    label: 'Mes activités',
+    hint: 'Tout ce que tu as enregistré ou importé',
     section: 'activities',
     href: '/activities' as Href,
   },
@@ -233,7 +220,7 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: 'safety',
-    label: 'Sécurité & alertes',
+    label: 'Sécurité & alertes (bientôt)',
     section: 'body',
     href: '/safety' as Href,
   },
@@ -253,7 +240,7 @@ export const APP_FEATURES: AppFeature[] = [
   },
   {
     id: 'social-feed',
-    label: 'Fil social & kudos',
+    label: 'Fil social & likes',
     section: 'social',
     href: '/(tabs)/social' as Href,
   },

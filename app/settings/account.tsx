@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { apiDeleteAccount } from '../../src/services/cloudApi';
+import { isRemoteAuthToken } from '../../src/services/integrationsApi';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import {
   SettingsRow,
@@ -129,7 +132,16 @@ export default function AccountScreen() {
     const isTrial =
       state.profile.email === TRIAL_ACCOUNT_EMAIL || state.profile.username === '1';
     try {
-      await clearNotificationPromptHandled(userId);
+      // Suppression réelle sur le serveur d'abord : on ne prétend jamais avoir supprimé si ce n'est pas le cas.
+      if (!isTrial && isRemoteAuthToken(state.authToken)) {
+        const r = await apiDeleteAccount(state.authToken!);
+        if (!r.ok && r.status !== 401) throw new Error('Suppression serveur impossible');
+      }
+      await clearNotificationPromptHandled(
+        userId,
+        state.profile.email,
+        state.profile.username,
+      );
       if (isTrial) {
         await resetRegistryToSeedOnly();
         await clearOnboardingCompleted(TRIAL_ACCOUNT_EMAIL, '1', state.profile.username);

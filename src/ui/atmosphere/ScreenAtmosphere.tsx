@@ -1,84 +1,149 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useIsFocused } from 'expo-router';
 import { useThemeColors } from '../../theme/ThemeContext';
+import { useAmbientSportKey, useAmbientTint, useBackgroundMotion, useCustomPattern } from '../../theme/AmbientSport';
+import type { PatternId } from '../../theme/customTheme';
+import { atmosphereBase, mixHex, type SportTint } from '../../theme/sportTints';
+import { seedFromString } from '../../engines/topoLines';
+import { DriftBlob } from '../program/WizardBackdrop';
+import { AuroraPattern, patternForSport } from './AuroraPatterns';
+import { MotionScaleContext } from './LoopView';
 
-/** Fond atmosphérique discret — moins de plat blanc / noir. */
-export function ScreenAtmosphere({ intensity = 1 }: { intensity?: number }) {
-  const { colors, isDark } = useThemeColors();
-  const breath = useRef(new Animated.Value(0.55)).current;
+/**
+ * Fond « aurore » Mova, commun à tout l'app : dégradé + halos qui dérivent + courbes de niveau.
+ * Couleur fixe (jade de la marque) ; seul le motif suit le sport (courbes, traînées, vagues, hexagones…).
+ * Clair : pastel coloré · Sombre : nuit profonde. Ne capte aucun toucher.
+ */
 
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(breath, {
-          toValue: 0.9,
-          duration: 3200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(breath, {
-          toValue: 0.45,
-          duration: 3200,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
+/** Vrai quand l'écran est déjà enveloppé par `AtmosphereLayer` (évite un second fond). */
+const InsideLayer = createContext(false);
+
+function AuroraLayer({ tint, sport, pattern, isDark, paused, frozen = false }: { tint: SportTint; sport: string; pattern: PatternId; isDark: boolean; paused: boolean; frozen?: boolean }) {
+  // Les hooks passent AVANT tout retour anticipé (ordre constant à chaque rendu).
+  const { width, height } = useWindowDimensions();
+  const base0 = atmosphereBase(tint, isDark);
+  // Écran caché (pile de pages, onglet en arrière-plan) : simple dégradé, AUCUNE couche animée.
+  // Empiler des dizaines de couches animées saturait la mémoire graphique des téléphones (scintillement).
+  if (paused) {
+    return (
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        <LinearGradient colors={[...base0]} locations={[0, 0.55, 1]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
+      </View>
     );
-    loop.start();
-    return () => loop.stop();
-  }, [breath]);
-
-  const accent = colors.accent;
-  const soft = isDark ? 'rgba(61,255,154,0.12)' : 'rgba(14,143,111,0.10)';
-  const wash = isDark ? 'rgba(18,40,70,0.55)' : 'rgba(225,240,234,0.85)';
-
+  }
+  const w = Math.max(320, width);
+  const h = Math.max(560, height);
+  const [c1, c2] = tint;
+  const base = atmosphereBase(tint, isDark);
+  // En clair les halos sont plus présents (ils sont la couleur de l'écran), en sombre plus lumineux.
+  const o = isDark ? { a: 0.46, b: 0.42, c: 0.28 } : { a: 0.55, b: 0.5, c: 0.38 };
+  const ink = (c: string) => (isDark ? c : mixHex(c, '#0B1220', 0.4));
   return (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: intensity }]}>
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-        <Defs>
-          <LinearGradient id="atmWash" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor={isDark ? '#0A1628' : '#E8F3EF'} stopOpacity="1" />
-            <Stop offset="55%" stopColor={isDark ? '#0C1A2E' : '#F4FAF7'} stopOpacity="1" />
-            <Stop offset="100%" stopColor={isDark ? '#07111F' : '#EEF6F2'} stopOpacity="1" />
-          </LinearGradient>
-        </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" fill="url(#atmWash)" />
-        <Circle cx="18%" cy="12%" r="120" fill={soft} />
-        <Circle cx="92%" cy="28%" r="90" fill={wash} />
-        <Circle cx="70%" cy="88%" r="140" fill={soft} />
-      </Svg>
-      <Animated.View
-        style={[
-          styles.orb,
-          {
-            backgroundColor: accent,
-            opacity: breath.interpolate({
-              inputRange: [0.45, 0.9],
-              outputRange: [0.04, 0.11],
-            }),
-            transform: [
-              {
-                scale: breath.interpolate({
-                  inputRange: [0.45, 0.9],
-                  outputRange: [1, 1.15],
-                }),
-              },
-            ],
-          },
-        ]}
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <LinearGradient
+        colors={[...base]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <DriftBlob paused={frozen} size={w * 1.5} color={c1} opacity={o.a} dx={64} dy={48} ms={6000} style={{ top: -h * 0.12, left: -w * 0.55 }} />
+      <DriftBlob paused={frozen} size={w * 1.4} color={c2} opacity={o.b} dx={56} dy={62} ms={7400} delay={900} style={{ top: h * 0.32, right: -w * 0.6 }} />
+      <DriftBlob paused={frozen} size={w * 1.1} color={c1} opacity={o.c} dx={48} dy={42} ms={9000} delay={1800} style={{ bottom: -h * 0.08, left: -w * 0.2 }} />
+      {/* Motif propre à la discipline : courbes (course), traînées (vélo), vagues (natation)… */}
+      {pattern === 'none' ? null : (
+        <AuroraPattern
+          kind={pattern}
+          color={ink(c1)}
+          color2={ink(c2)}
+          seed={seedFromString(`mova-ambient-${sport}`)}
+          opacity={isDark ? 1 : 0.95}
+          paused={frozen}
+        />
+      )}
+      {/* Voile en haut : titres et barres de progression restent parfaitement lisibles. */}
+      <LinearGradient
+        colors={isDark ? ['rgba(5,11,22,0.62)', 'rgba(5,11,22,0)'] : ['rgba(255,255,255,0.7)', 'rgba(255,255,255,0)']}
+        style={[styles.topVeil, { height: h * 0.26 }]}
       />
     </View>
   );
 }
 
+type Layer = { id: number; tint: SportTint; sport: string; pattern: PatternId; key: string };
+
+/** Fond animé + fondu enchaîné quand le sport (donc la couleur) change. */
+function Aurora() {
+  const { isDark } = useThemeColors();
+  const tint = useAmbientTint();
+  const sportKey = useAmbientSportKey();
+  const customPattern = useCustomPattern();
+  const motion = useBackgroundMotion();
+  const focused = useIsFocused();
+  // Personnalisation Premium : motif et couleurs choisis ; sinon motif et teinte de la discipline.
+  const pattern: PatternId = customPattern ?? patternForSport(sportKey);
+  const sport = customPattern ? `custom-${customPattern}` : sportKey;
+  const key = `${sport}|${tint[0]}|${tint[1]}`;
+  const [layers, setLayers] = useState<Layer[]>([{ id: 0, tint, sport, pattern, key }]);
+  const fade = useRef(new Animated.Value(1)).current;
+  const nextId = useRef(1);
+
+  useEffect(() => {
+    const top = layers[layers.length - 1]!;
+    if (top.key === key) return;
+    fade.setValue(0);
+    setLayers((l) => [...l.slice(-1), { id: nextId.current++, tint, sport, pattern, key }]);
+    Animated.timing(fade, { toValue: 1, duration: 650, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setLayers((l) => l.slice(-1));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return (
+    <MotionScaleContext.Provider value={motion === 'lively' ? 0.6 : 1}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {layers.map((l, i) => {
+          const isTop = i === layers.length - 1 && layers.length > 1;
+          return (
+            <Animated.View key={l.id} style={[StyleSheet.absoluteFill, isTop ? { opacity: fade } : null]}>
+              <AuroraLayer tint={l.tint} sport={l.sport} pattern={l.pattern} isDark={isDark} paused={!focused} frozen={motion === 'off'} />
+            </Animated.View>
+          );
+        })}
+      </View>
+    </MotionScaleContext.Provider>
+  );
+}
+
+/** À poser en premier enfant d'un écran ; sans effet si l'écran est déjà dans un `AtmosphereLayer`. */
+export function ScreenAtmosphere(_props: { intensity?: number }) {
+  const inside = useContext(InsideLayer);
+  if (inside) return null;
+  return <Aurora />;
+}
+
+/** Enveloppe d'écran (navigateurs `screenLayout`) : fond aurore opaque + contenu par-dessus. */
+export function AtmosphereLayer({ children }: { children: ReactNode }) {
+  const { isDark } = useThemeColors();
+  const tint = useAmbientTint();
+  return (
+    <View style={[styles.layer, { backgroundColor: atmosphereBase(tint, isDark)[0] }]}>
+      <Aurora />
+      <InsideLayer.Provider value>{children}</InsideLayer.Provider>
+    </View>
+  );
+}
+
+/** Couleur de la barre d'en-tête : prolonge le haut du dégradé sans coupure visible. */
+export function useHeaderColor(): string {
+  const { isDark } = useThemeColors();
+  const tint = useAmbientTint();
+  return atmosphereBase(tint, isDark)[0];
+}
+
 const styles = StyleSheet.create({
-  orb: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    top: -40,
-    right: -50,
-  },
+  layer: { flex: 1 },
+  topVeil: { position: 'absolute', top: 0, left: 0, right: 0 },
 });

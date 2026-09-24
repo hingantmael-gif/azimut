@@ -1,5 +1,7 @@
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 
 export type PermissionSnapshot = {
   granted: boolean;
@@ -72,6 +74,48 @@ export async function toggleCameraPermission(wantEnabled: boolean): Promise<bool
     );
   }
   return req.granted;
+}
+
+export async function getLocationPermission(): Promise<PermissionSnapshot> {
+  const r = await Location.getForegroundPermissionsAsync();
+  return { granted: r.status === Location.PermissionStatus.GRANTED, canAskAgain: r.canAskAgain };
+}
+
+/**
+ * Active la localisation (demande système) ou guide vers les réglages pour désactiver.
+ * Les OS ne permettent pas de révoquer une permission depuis l’app.
+ */
+export async function toggleLocationPermission(wantEnabled: boolean): Promise<boolean> {
+  const current = await getLocationPermission();
+
+  if (!wantEnabled) {
+    if (!current.granted) return false;
+    deniedAlert(
+      'Localisation',
+      'Pour retirer l’accès à la position, désactive-le dans les réglages de l’appareil (ou du navigateur).',
+    );
+    return current.granted;
+  }
+
+  if (current.granted) return true;
+
+  if (!current.canAskAgain) {
+    deniedAlert(
+      'Localisation',
+      'L’accès à la position a été refusé. Active-le dans les réglages pour suivre tes séances au GPS.',
+    );
+    return false;
+  }
+
+  const req = await Location.requestForegroundPermissionsAsync();
+  const granted = req.status === Location.PermissionStatus.GRANTED;
+  if (!granted) {
+    Alert.alert(
+      'Localisation',
+      'Accès refusé. Tu pourras réessayer plus tard ou l’activer dans les réglages — le tracker GPS ne fonctionnera pas sans.',
+    );
+  }
+  return granted;
 }
 
 export async function toggleMediaLibraryPermission(

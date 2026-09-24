@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { Body, PrimaryButton, Screen, SecondaryButton, Title } from '../src/ui/primitives';
@@ -17,12 +18,18 @@ import { useThemeColors } from '../src/theme/ThemeContext';
 import { radii, spacing } from '../src/theme/tokens';
 import type { ColorPalette } from '../src/theme/palettes';
 import { detectSportFromActivity } from '../src/engines/sportSessionAnalysis';
+import { matchActivityToPlanned } from '../src/engines/activityPlanMatch';
 import { useActionFocus } from '../src/hooks/useActionFocus';
 import { FocusTarget } from '../src/ui/FocusTarget';
 import { AppScrollView } from '../src/ui/scrolling';
 import { openStravaWebForGpxExport } from '../src/engines/stravaExport';
 import { SportAtmosphereBanner } from '../src/ui/SportAtmosphereBanner';
 import { ATMOSPHERE_IMAGES } from '../src/constants/sportVisuals';
+import {
+  peekUsageQuotaAllowed,
+  takeUsageQuotaIfNeeded,
+} from '../src/premium/guardQuota';
+import { PaywallSheet } from '../src/ui/premium';
 
 export default function ImportActivityScreen() {
   const { dispatch, state } = useApp();
@@ -35,15 +42,28 @@ export default function ImportActivityScreen() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [openingStrava, setOpeningStrava] = useState(false);
+  const [paywall, setPaywall] = useState(false);
   const planned = todayWorkout(state.plan);
   const focusPick = useActionFocus('pick');
+  // « C'est ma séance prévue » : proposé d'office si la sortie ressemble à celle du jour, modifiable.
+  const [linkOverride, setLinkOverride] = useState<boolean | null>(null);
+  const planMatch = useMemo(
+    () => (preview ? matchActivityToPlanned({ ...preview, sport: sportOfPreview(preview, planned) }, planned) : null),
+    [preview, planned],
+  );
+  const linkToPlanned = linkOverride ?? planMatch?.matches ?? false;
 
   const ingest = useCallback(
-    (activity: ImportedActivityMetrics) => {
+    async (activity: ImportedActivityMetrics) => {
       if (importing) return;
       const dup = findDuplicateActivity(activity, state.activities);
       if (dup) {
         setError(DUPLICATE_ACTIVITY_MESSAGE);
+        return;
+      }
+      const quota = await takeUsageQuotaIfNeeded('import', state.profile);
+      if (quota === 'paywall') {
+        setPaywall(true);
         return;
       }
       setImporting(true);
@@ -71,7 +91,7 @@ export default function ImportActivityScreen() {
             sport: sportStore,
           },
           plannedId:
-            planned && planned.discipline !== 'rest' ? planned.id : undefined,
+            planned && planned.discipline !== 'rest' && linkToPlanned ? planned.id : undefined,
         });
         router.replace(`/activity/${encodeURIComponent(activity.id)}` as '/activity/[id]');
       } catch {
@@ -79,11 +99,12 @@ export default function ImportActivityScreen() {
         setImporting(false);
       }
     },
-    [dispatch, importing, planned, router, state.activities],
+    [dispatch, importing, planned, router, state.activities, state.profile, linkToPlanned],
   );
 
   const handleContent = useCallback((name: string, text: string) => {
     try {
+      setLinkOverride(null);
       const parsed = parseActivityFile(name, text);
       if (parsed.distanceM < 50 && parsed.pointCount < 5) {
         setError(
@@ -107,6 +128,11 @@ export default function ImportActivityScreen() {
   }, [state.activities]);
 
   const pickFile = async () => {
+    const allowed = await peekUsageQuotaAllowed('import', state.profile);
+    if (!allowed) {
+      setPaywall(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -190,13 +216,16 @@ export default function ImportActivityScreen() {
             <View style={{ marginTop: spacing.sm }}>
               <Text style={styles.step}>
                 1. Appuyez sur <Text style={styles.em}>Ouvrir Strava Web</Text> (ci-dessous) —
-                connexion avec e-mail et mot de passe.
+                connectez-vous avec e-mail et mot de passe.
               </Text>
               <Text style={styles.step}>
-                2. Ouvrez <Text style={styles.em}>Mes activités</Text>, puis l’activité concernée.
+                2. Sur téléphone : dans le navigateur, activez{' '}
+                <Text style={styles.em}>Version ordinateur</Text> (menu ⋮ ou Aa) — sinon
+                l’export GPX n’apparaît souvent pas.
               </Text>
               <Text style={styles.step}>
-                3. Menu ··· → <Text style={styles.em}>Exporter GPX</Text> (ou TCX pour la FC).
+                3. Ouvrez l’activité → menu ··· →{' '}
+                <Text style={styles.em}>Exporter GPX</Text> (ou TCX pour la FC).
               </Text>
               <Text style={styles.step}>
                 4. Revenez ici → <Text style={styles.em}>Choisir un fichier GPX / TCX</Text> et
@@ -208,9 +237,9 @@ export default function ImportActivityScreen() {
 
         <View style={styles.warn}>
           <Text style={styles.warnText}>
-            « Partager mon activité » dans l’app Strava envoie surtout un lien web — pas la
-            distance, la FC ni l’allure détaillées. Il faut un fichier GPX ou TCX exporté depuis
-            Strava Web.
+            « Partager mon activité » dans l’app Strava envoie seulement un lien web — pas la
+            distance, la FC ni l’allure. Il faut un fichier GPX/TCX depuis le site Strava
+            (version ordinateur sur téléphone).
           </Text>
         </View>
 
@@ -229,7 +258,9 @@ export default function ImportActivityScreen() {
           />
         </View>
         <Text style={styles.hintUnder}>
-          Connectez-vous, exportez le GPX/TCX, puis revenez choisir le fichier ci-dessus.
+          Ouvre « Mes activités » (strava.com/athlete/training). Sur téléphone :
+          activez « Version ordinateur », exportez le GPX/TCX, puis choisissez le
+          fichier ci-dessus.
         </Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -238,20 +269,52 @@ export default function ImportActivityScreen() {
           <View style={styles.preview}>
             <Text style={styles.previewTitle}>{preview.name}</Text>
             <Body style={{ marginTop: 6 }}>{formatImportedSummary(preview)}</Body>
+            {planned && planned.discipline !== 'rest' ? (
+              <Pressable
+                style={[styles.matchBox, linkToPlanned && styles.matchBoxOn]}
+                onPress={() => setLinkOverride(!linkToPlanned)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: linkToPlanned }}
+              >
+                <Text style={styles.matchTitle}>
+                  {linkToPlanned ? '✓ Comptée pour ta séance prévue' : 'Non liée à ta séance prévue'}
+                </Text>
+                <Text style={styles.matchText}>
+                  {planMatch?.matches ? 'Cette sortie ressemble à « ' + planned.title + ' ». ' : '« ' + planned.title + ' » est prévue aujourd’hui. '}
+                  {(planMatch?.reasons ?? []).join(' · ')}
+                  {linkToPlanned ? ' Touche pour ne pas la lier.' : ' Touche pour la lier à cette séance.'}
+                </Text>
+              </Pressable>
+            ) : null}
             <PrimaryButton
               label={importing ? 'Import…' : 'Confirmer l’import'}
               disabled={importing}
-              onPress={() => ingest(preview)}
+              onPress={() => void ingest(preview)}
             />
           </View>
         ) : null}
       </AppScrollView>
+      <PaywallSheet
+        visible={paywall}
+        reason="import_quota"
+        onClose={() => setPaywall(false)}
+      />
     </Screen>
   );
 }
 
+/** Sport de l'import (même règle que l'enregistrement de l'activité). */
+function sportOfPreview(a: ImportedActivityMetrics, planned: ReturnType<typeof todayWorkout>): 'run' | 'bike' | 'swim' | 'strength' | 'other' {
+  const d = detectSportFromActivity(a, planned ?? undefined);
+  return d === 'bike' || d === 'swim' || d === 'strength' ? d : d === 'trail' || d === 'run' || d === 'brick' ? 'run' : 'other';
+}
+
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
+    matchBox: { marginTop: spacing.sm, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg },
+    matchBoxOn: { borderColor: colors.accent, backgroundColor: colors.accentLight },
+    matchTitle: { fontWeight: '800', color: colors.text, fontSize: 14 },
+    matchText: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
     box: {
       marginTop: spacing.sm,
       padding: spacing.md,

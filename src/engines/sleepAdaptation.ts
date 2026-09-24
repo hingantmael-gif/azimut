@@ -32,7 +32,7 @@ function mapRange(
 }
 
 /**
- * Convertit le score affiché sur la montre → score canonique Azimut (0–100).
+ * Convertit le score affiché sur la montre → score canonique Mova (0–100).
  *
  * Références publiques des bandes :
  * - Garmin / Fitbit / Samsung : Excellent 90–100, Good 80–89, Fair 60–79, Poor <60

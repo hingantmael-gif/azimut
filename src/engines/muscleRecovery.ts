@@ -103,6 +103,10 @@ const MUSCLE_TAU_H: Record<MuscleGroupId, number> = {
   calves: 40,
 };
 
+/** Alias public (spec callisthénie) — half-life de récupération par groupe. */
+export const muscleRecoveryHalfLifeHours: Record<MuscleGroupId, number> =
+  MUSCLE_TAU_H;
+
 /** Libellés anatomiques (noms de muscles) */
 const MUSCLE_LABELS: Record<MuscleGroupId, string> = {
   neck: 'Cou',
@@ -170,19 +174,33 @@ interface MuscleAccum {
   lastImpulseAtSession: number;
 }
 
+type MuscleStatesInput = {
+  activities: StravaActivity[];
+  feedbacks: RpeFeedback[];
+  plan: PlannedWorkout[];
+  onboarding?: OnboardingAnswers;
+};
+
+/** τ effectif : base × taux personnel (défaut 1 = modèle standard). */
+function tauForMuscle(
+  id: MuscleGroupId,
+  recoveryRateMuscle: Partial<Record<MuscleGroupId, number>>,
+): number {
+  const rate = recoveryRateMuscle[id];
+  const mult =
+    rate != null && Number.isFinite(rate) && rate > 0 ? Math.min(2.5, Math.max(0.4, rate)) : 1;
+  return MUSCLE_TAU_H[id] * mult;
+}
+
 /**
  * Agrège 7 jours d’activités avec analyse multi-sport + décroissance
- * exponentielle par muscle (impulse-response).
+ * exponentielle par muscle (impulse-response), τ personnalisable.
  * `nowMs` permet de recalculer la progression minute par minute.
  */
-export function computeMuscleStates(
-  input: {
-    activities: StravaActivity[];
-    feedbacks: RpeFeedback[];
-    plan: PlannedWorkout[];
-    onboarding?: OnboardingAnswers;
-  },
+export function computeMuscleStatesPersonalized(
+  input: MuscleStatesInput,
   nowMs: number = Date.now(),
+  recoveryRateMuscle: Partial<Record<MuscleGroupId, number>> = {},
 ): MuscleGroupState[] {
   const now = nowMs;
   const acc = new Map<MuscleGroupId, MuscleAccum>(
@@ -208,12 +226,14 @@ export function computeMuscleStates(
       const muscleId = muscle as MuscleGroupId;
       const impulse = impulseRaw ?? 0;
       if (impulse <= 0) continue;
-      const tau = MUSCLE_TAU_H[muscleId];
+      const tau = tauForMuscle(muscleId, recoveryRateMuscle);
+      const calisMult = analysis.calisRecoveryByMuscle?.[muscleId] ?? 1;
+      const tauCalis = tau * (calisMult > 1 ? calisMult : 1);
       // Dommage excentrique : décroissance un peu plus lente les 48 premières heures
       const eccSlow =
         analysis.eccentricFactor >= 1.25 && hoursSince < 48
-          ? tau * (1 + (analysis.eccentricFactor - 1) * 0.25)
-          : tau;
+          ? tauCalis * (1 + (analysis.eccentricFactor - 1) * 0.25)
+          : tauCalis;
       const decayed = impulse * Math.exp(-hoursSince / eccSlow);
       const cur = acc.get(muscleId)!;
       const isLatest =
@@ -258,7 +278,7 @@ export function computeMuscleStates(
     const recoveryPctExact = Math.max(2, Math.min(100, 100 - load));
     const recoveryPct = Math.round(recoveryPctExact);
     const level = levelFromPct(recoveryPctExact);
-    const tau = MUSCLE_TAU_H[id];
+    const tau = tauForMuscle(id, recoveryRateMuscle);
     const hFreshExact = hoursToFreshExact(recoveryPctExact, tau);
     const hFresh = Math.round(hFreshExact);
     const minutesToFresh = Math.max(0, Math.round(hFreshExact * 60));
@@ -305,6 +325,18 @@ export function computeMuscleStates(
       restHoursRecommended,
     };
   });
+}
+
+/**
+ * Agrège 7 jours d’activités avec analyse multi-sport + décroissance
+ * exponentielle par muscle (impulse-response).
+ * `nowMs` permet de recalculer la progression minute par minute.
+ */
+export function computeMuscleStates(
+  input: MuscleStatesInput,
+  nowMs: number = Date.now(),
+): MuscleGroupState[] {
+  return computeMuscleStatesPersonalized(input, nowMs, {});
 }
 
 /** Score global + résumé de la dernière analyse séance */
@@ -366,11 +398,9 @@ export function overallReadiness(states: MuscleGroupState[]): {
   );
   const strained = states.filter((m) => m.level === 'strained').length;
   const label =
-    avg >= 85 ? 'Prêt à performer' : avg >= 65 ? 'Entraînement modéré' : avg >= 45 ? 'Gérer la charge' : 'Prioriser la récupération';
+    avg >= 85 ? 'Prêt' : avg >= 65 ? 'Modéré' : avg >= 45 ? 'Fatigué' : 'Repos';
   const summary =
-    strained > 0
-      ? `${strained} groupe(s) en surcharge — planifiez en conséquence.`
-      : `Récupération moyenne ${avg} % sur l'ensemble du corps.`;
+    strained > 0 ? `${strained} en surcharge` : `${avg} %`;
   return { score: avg, label, summary };
 }
 

@@ -48,28 +48,28 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk out/azimut.apk
-          ls -lh out/azimut.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk out/mova.apk
+          ls -lh out/mova.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: azimut-apk
-          path: out/azimut.apk
+          name: mova-apk
+          path: out/mova.apk
 
       - name: Publish GitHub Release (android-latest)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
-          name: Azimut Android
+          name: Mova Android
           body: |
             Installation en 1 clic sur Android :
-            1. Télécharge `azimut.apk`
+            1. Télécharge `mova.apk`
             2. Ouvre le fichier → Installer
-            3. L’icône Azimut apparaît comme une app Play Store
+            3. L’icône Mova apparaît comme une app Play Store
 
-            Page simple : https://hingantmael-gif.github.io/azimut/get.html
-          files: out/azimut.apk
+            Page simple : le site Mova (page /get.html)
+          files: out/mova.apk
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

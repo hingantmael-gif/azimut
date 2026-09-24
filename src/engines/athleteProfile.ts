@@ -10,6 +10,7 @@ import {
   RUN_DISTANCES,
   SWIM_DISTANCES,
 } from '../constants/sportDistances';
+import { vdotFromRace, velocityAtVo2 } from './raceTimePrediction';
 
 /**
  * Profil coureur — déduit hors ligne (pas de choix d'intensité).
@@ -78,6 +79,15 @@ export function levelFromAthleteProfile(opts: {
  */
 export function vmaFromRaceTime(distanceKm: number, timeSec: number): number {
   if (distanceKm <= 0 || timeSec <= 0) return 14;
+
+  // Modèle Daniels (continu) : VMA = vitesse à 100 % du VDOT mesuré sur la performance.
+  const vdot = vdotFromRace(distanceKm, timeSec);
+  if (Number.isFinite(vdot) && vdot >= 15 && vdot <= 95) {
+    const vmaFromVdot = (velocityAtVo2(vdot) * 60) / 1000;
+    return roundVmaKmh(Math.min(22, Math.max(10, vmaFromVdot)));
+  }
+
+  // Repli empirique (performances hors du domaine de validité du VDOT).
   const paceSecPerKm = timeSec / distanceKm;
   // VMA ≈ allure 5k / 0.90 à 0.95 selon distance
   let factor = 0.92;
@@ -236,7 +246,8 @@ export function resolveVma(opts: {
   if (opts.weeklyKmAvg != null && opts.weeklyKmAvg >= 5) {
     return vmaFromWeeklyKm(opts.weeklyKmAvg, opts.level);
   }
-  if (opts.vmaKmh && opts.vmaKmh > 0) return opts.vmaKmh;
+  // VMA saisie : uniquement si plausible (8–28 km/h), sinon défaut du niveau.
+  if (opts.vmaKmh && opts.vmaKmh >= 8 && opts.vmaKmh <= 28) return opts.vmaKmh;
   return defaultVmaForLevel(opts.level);
 }
 
@@ -376,6 +387,70 @@ export function lookupStoredChronoSec(opts: {
   }
 
   return null;
+}
+
+/**
+ * Enregistre une perf (fin de programme / test / séance matching)
+ * dans le profil onboarding pour préremplir le prochain cycle.
+ */
+export function promoteChronoToOnboarding(
+  onboarding: OnboardingAnswers | undefined | null,
+  opts: {
+    distanceKm: number;
+    timeSec: number;
+    sport?: string | null;
+  },
+): OnboardingAnswers | undefined | null {
+  const timeSec = Math.round(opts.timeSec);
+  const distanceKm = opts.distanceKm;
+  if (!onboarding || !(timeSec >= 30) || !(distanceKm > 0)) return onboarding;
+
+  const sport =
+    opts.sport ?? onboarding.sportCategory ?? 'run';
+  const next: OnboardingAnswers = {
+    ...onboarding,
+    recentTimeSec: timeSec,
+    recentDistanceKm: distanceKm,
+  };
+
+  if (sport === 'swim') {
+    const key = SWIM_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key;
+    if (key) {
+      next.sportTimesSec = {
+        ...onboarding.sportTimesSec,
+        swim: {
+          ...(onboarding.sportTimesSec?.swim ?? {}),
+          [key]: timeSec,
+        },
+      };
+    }
+  } else if (sport === 'bike') {
+    const key = BIKE_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key;
+    if (key) {
+      next.sportTimesSec = {
+        ...onboarding.sportTimesSec,
+        bike: {
+          ...(onboarding.sportTimesSec?.bike ?? {}),
+          [key]: timeSec,
+        },
+      };
+    }
+  } else {
+    const key = RUN_DISTANCES.find((row) => kmMatch(row.km, distanceKm))?.key as
+      | keyof NonNullable<OnboardingAnswers['raceTimesSec']>
+      | undefined;
+    if (key) {
+      next.raceTimesSec = {
+        ...(onboarding.raceTimesSec ?? {}),
+        [key]: timeSec,
+      };
+    }
+    if (distanceKm <= 5.5) {
+      next.vmaKmh = vmaFromRaceTime(distanceKm, timeSec);
+    }
+  }
+
+  return next;
 }
 
 /** Allure natation sec/100 m depuis chronos saisis. */

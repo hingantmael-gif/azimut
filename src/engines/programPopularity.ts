@@ -53,8 +53,9 @@ const BASELINE_OVERRIDES: Record<string, number> = {
   'prog-ironman-140-6-debut': 260,
   'prog-ironman-bridge': 220,
   'prog-ironman-performance': 200,
-  'prog-biathlon': 310,
-  'prog-duathlon-sprint': 280,
+  'prog-calisthenics-base': 420,
+  'prog-calisthenics-strength': 310,
+  'prog-calisthenics-endurance': 280,
 };
 
 /** Poids relatif par famille sport (Runna / NRC : course majoritaire, mais tri/nage visibles) */
@@ -75,7 +76,7 @@ const SPORT_LABEL: Record<ProgramSportCategory, string> = {
   triathlon: 'Triathlon',
   strength: 'Musculation',
   ironman: 'Ironman',
-  other: 'Duathlon',
+  other: 'Callisthénie',
 };
 
 export function sportLabelForCategory(cat: ProgramSportCategory): string {
@@ -125,26 +126,39 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
+/** Normalise l’ancienne clé unique + la liste multi-programmes. */
+export function normalizeCountedTemplateIds(
+  counted?: string | string[] | null,
+): string[] {
+  if (Array.isArray(counted)) {
+    return [...new Set(counted.filter((id) => isRankableProgramId(id)))];
+  }
+  if (isRankableProgramId(counted)) return [counted];
+  return [];
+}
+
 /**
  * Compteur communauté cumulé depuis le lancement (simulation stable).
- * +1 local si l'utilisateur a ce programme lancé (non supprimé).
+ * +1 local si l’utilisateur a lancé ce programme (actif ou terminé, pas abandonné).
  */
 export function usageCountForTemplate(
   templateId: string,
-  countedTemplateId?: string | null,
+  countedTemplateIds?: string | string[] | null,
 ): number {
   const template = findProgramById(templateId);
   const base = template ? baselineForTemplate(template) : 180;
   const h = hashStr(`alltime|${templateId}`);
   const drift = (h % 241) - 120;
   const community = Math.max(48, base + Math.round((base * drift) / 1800) + (h % 53));
-  const local = countedTemplateId === templateId ? 1 : 0;
+  const local = normalizeCountedTemplateIds(countedTemplateIds).includes(templateId)
+    ? 1
+    : 0;
   return community + local;
 }
 
 function rowFromTemplate(
   t: TrainingProgramTemplate,
-  counted: string | null,
+  counted: string[],
 ): Omit<ProgramUsageRow, 'rank'> {
   return {
     templateId: t.id,
@@ -158,7 +172,7 @@ function rowFromTemplate(
 }
 
 function allUsageRows(
-  counted: string | null,
+  counted: string[],
   sportFilter?: ProgramSportCategory | 'all',
 ): Omit<ProgramUsageRow, 'rank'>[] {
   let pool = PROGRAM_CATALOG;
@@ -177,12 +191,12 @@ function rankRows(rows: Omit<ProgramUsageRow, 'rank'>[]): ProgramUsageRow[] {
 
 /** Classement global ou filtré par sport (totaux depuis le lancement) */
 export function buildProgramUsageRanking(
-  countedTemplateId?: string | null,
+  countedTemplateIds?: string | string[] | null,
   _now: Date = new Date(),
   limit = 5,
   sportFilter: ProgramSportCategory | 'all' = 'all',
 ): ProgramUsageRow[] {
-  const counted = isRankableProgramId(countedTemplateId) ? countedTemplateId : null;
+  const counted = normalizeCountedTemplateIds(countedTemplateIds);
   return rankRows(allUsageRows(counted, sportFilter)).slice(0, limit);
 }
 
@@ -191,11 +205,11 @@ export function buildProgramUsageRanking(
  * Évite un top 5 100 % course à pied.
  */
 export function buildMixedProgramUsageRanking(
-  countedTemplateId?: string | null,
+  countedTemplateIds?: string | string[] | null,
   _now: Date = new Date(),
   limit = 8,
 ): ProgramUsageRow[] {
-  const counted = isRankableProgramId(countedTemplateId) ? countedTemplateId : null;
+  const counted = normalizeCountedTemplateIds(countedTemplateIds);
   const all = rankRows(allUsageRows(counted, 'all'));
 
   const picked = new Set<string>();
@@ -238,11 +252,11 @@ export function buildMixedProgramUsageRanking(
 /** Top N par sport (pour l'écran wizard) */
 export function topProgramsForSport(
   sport: ProgramSportCategory,
-  countedTemplateId?: string | null,
+  countedTemplateIds?: string | string[] | null,
   limit = 5,
   now: Date = new Date(),
 ): ProgramUsageRow[] {
-  return buildProgramUsageRanking(countedTemplateId, now, limit, sport);
+  return buildProgramUsageRanking(countedTemplateIds, now, limit, sport);
 }
 
 export function usageCountLabel(n: number): string {

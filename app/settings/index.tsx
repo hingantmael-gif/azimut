@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   SettingsRow,
@@ -19,6 +20,12 @@ import {
 import { getWatchEntry } from '../../src/constants/watches';
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
+import { useI18n } from '../../src/i18n/I18nContext';
+import { localeLabel } from '../../src/i18n/locales';
+import { isOwnerPremiumEmail } from '../../src/engines/ownerAccess';
+import { apiAdminMessages } from '../../src/services/contactApi';
+import { hasPremiumAccess } from '../../src/premium/entitlement';
+import { isPremiumUiVisible } from '../../src/premium/featureFlags';
 
 /**
  * Hub paramètres — préférences app uniquement (comme Strava / Apple Fitness).
@@ -26,21 +33,37 @@ import { radii, spacing } from '../../src/theme/tokens';
  */
 export default function SettingsIndex() {
   const router = useRouter();
+  // Visible seulement dans le navigateur (pas une fois l'app installée).
+  const canInstallPwa =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    !window.matchMedia('(display-mode: standalone)').matches &&
+    (window.navigator as Navigator & { standalone?: boolean }).standalone !== true;
   const { state, dispatch } = useApp();
   const { colors } = useThemeColors();
+  const { t, locale } = useI18n();
   const [query, setQuery] = useState(getSettingsSearchDraft);
   const isDark = state.profile.theme === 'dark';
   const watchLabel = state.profile.watch?.brandId
     ? getWatchEntry(state.profile.watch.brandId).label
-    : 'Non configurée';
+    : '—';
 
-  const searchResults = useMemo(() => searchSettings(query), [query]);
+  const searchResults = useMemo(() => {
+    const results = searchSettings(query);
+    if (isOwnerPremiumEmail(state.profile.email)) return results;
+    return results.filter((item) => item.id !== 'premium-manage');
+  }, [query, state.profile.email]);
   const searching = query.trim().length > 0;
+
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const ownerToken = isOwnerPremiumEmail(state.profile.email) ? state.authToken : null;
 
   useFocusEffect(
     useCallback(() => {
       setQuery(getSettingsSearchDraft());
-    }, []),
+      // Compte propriétaire : nombre de messages non lus.
+      if (ownerToken) void apiAdminMessages(ownerToken).then((r) => setUnreadMessages(r.unread));
+    }, [ownerToken]),
   );
 
   const onChangeQuery = (text: string) => {
@@ -51,13 +74,13 @@ export default function SettingsIndex() {
   return (
     <SettingsScreen>
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
-        <SettingsBrandHeader subtitle="Paramètres · affichage, sync, compte" />
+        <SettingsBrandHeader subtitle={t('settings.subtitle')} />
 
         <View style={styles.searchWrap}>
           <AppTextInput
             value={query}
             onChangeText={onChangeQuery}
-            placeholder="Rechercher (montre, notifications, compte…)"
+            placeholder={t('settings.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={[
               styles.searchInput,
@@ -99,10 +122,36 @@ export default function SettingsIndex() {
         ) : (
           <>
             <SettingsSection title="Compte">
+              {isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
+                  label="Messages"
+                  value={unreadMessages > 0 ? `${unreadMessages} non lu${unreadMessages > 1 ? 's' : ''}` : 'Boîte de réception'}
+                  onPress={() => router.push('/settings/messages')}
+                />
+              ) : null}
+              {isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
+                  label="Règles de la communauté"
+                  value="Groupes · certification"
+                  onPress={() => router.push('/settings/community-rules')}
+                />
+              ) : null}
+              {isPremiumUiVisible() && isOwnerPremiumEmail(state.profile.email) ? (
+                <SettingsRow
+                  label="Gestion compte premium"
+                  value="Cadeaux Premium"
+                  onPress={() => router.push('/settings/premium-manage')}
+                />
+              ) : null}
               <SettingsRow
                 label="Modifier mon profil"
                 value={`${state.profile.firstName} ${state.profile.lastName}`.trim() || undefined}
                 onPress={() => router.push('/settings/profile')}
+              />
+              <SettingsRow
+                label="Profil sportif"
+                value="Objectifs · données · forme"
+                onPress={() => router.push('/settings/athlete-hub')}
               />
               <SettingsRow
                 label="Compte et sécurité"
@@ -110,10 +159,10 @@ export default function SettingsIndex() {
               />
             </SettingsSection>
 
-            <SettingsSection title="Affichage">
+            <SettingsSection title={t('settings.display')}>
               <SettingsToggleRow
-                label="Mode sombre"
-                subtitle="Interface sombre pour un confort visuel réduit"
+                label={t('settings.darkMode')}
+                subtitle={t('settings.darkModeSub')}
                 value={isDark}
                 onToggle={() =>
                   dispatch({
@@ -123,8 +172,21 @@ export default function SettingsIndex() {
                 }
               />
               <SettingsRow
-                label="Unités et carte"
-                value={state.profile.units === 'metric' ? 'Métrique' : 'Impérial'}
+                label="Personnaliser l’application"
+                value={state.profile.customTheme?.active ? 'Activée' : 'Standard'}
+                icon={{ name: 'color-palette', color: '#A855F7' }}
+                onPress={() => router.push('/settings/customize')}
+              />
+              <SettingsRow
+                label={t('settings.language')}
+                value={localeLabel(locale)}
+                onPress={() => router.push('/settings/display')}
+              />
+              <SettingsRow
+                label={t('settings.unitsMap')}
+                value={
+                  state.profile.units === 'metric' ? t('settings.metric') : t('settings.imperial')
+                }
                 onPress={() => router.push('/settings/display')}
               />
             </SettingsSection>
@@ -168,14 +230,48 @@ export default function SettingsIndex() {
             </SettingsSection>
 
             <SettingsSection title="Explorer">
+              {isPremiumUiVisible() ? (
+                <SettingsRow
+                  label="Abonnement Premium"
+                  value={
+                    hasPremiumAccess({
+                      plan: state.profile.plan,
+                      subscription: state.profile.subscription,
+                      premiumSource: state.profile.premiumSource,
+                    })
+                      ? 'Actif'
+                      : 'Gratuit'
+                  }
+                  onPress={() => router.push('/settings/subscription')}
+                />
+              ) : null}
               <SettingsRow
-                label="Tout explorer"
-                value="Outils inclus"
-                onPress={() => router.push('/settings/subscription')}
+                label="Donner mon avis"
+                value="Sur le site Mova"
+                icon={{ name: 'star', color: '#F59E0B' }}
+                onPress={() => {
+                  const site = process.env.EXPO_PUBLIC_SITE_URL || 'https://hingantmael-gif.github.io/mova-site';
+                  void Linking.openURL(`${site}/avis.html`);
+                }}
               />
+              {isPremiumUiVisible() ? (
+                <SettingsRow
+                  label="Tout explorer"
+                  value="Outils inclus"
+                  onPress={() => router.push('/settings/subscription')}
+                />
+              ) : null}
             </SettingsSection>
 
             <SettingsSection title="Aide">
+              {canInstallPwa ? (
+                <SettingsRow
+                  label="Installer sur l'écran d'accueil"
+                  value="QR code"
+                  icon={{ name: 'download', color: '#0B8262' }}
+                  onPress={() => router.push('/install')}
+                />
+              ) : null}
               <SettingsRow label="Centre d'aide" onPress={() => router.push('/settings/help')} />
               <SettingsRow
                 label="Conditions d'utilisation"

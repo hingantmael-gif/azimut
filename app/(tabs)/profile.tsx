@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View, Pressable } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../../src/store/AppContext';
 import { useThemeColors } from '../../src/theme/ThemeContext';
@@ -20,6 +21,7 @@ import { longestSessionKmBySport } from '../../src/engines/profileCovers';
 import { AvatarPickerSheet } from '../../src/ui/profile/AvatarPickerSheet';
 import { ProfileAvatar } from '../../src/ui/profile/ProfileAvatar';
 import { BioRichText } from '../../src/ui/profile/BioRichText';
+import { CertificationCard } from '../../src/ui/profile/CertificationCard';
 import { RankBadge } from '../../src/ui/ranked/RankBadge';
 import { ProgramSportCover } from '../../src/ui/program/SportCover';
 import { formatProgramDurationLabel } from '../../src/constants/programs';
@@ -27,6 +29,7 @@ import { AppScrollView } from '../../src/ui/scrolling';
 import { summarizeSportsData } from '../../src/engines/athleteProfile';
 import { GOAL_LABELS } from '../../src/constants/features';
 import { ScreenAtmosphere } from '../../src/ui/atmosphere/ScreenAtmosphere';
+import { communityHubSummary, type HubSummary } from '../../src/api/community';
 
 function programProgressPct(opts: {
   nonRestCount: number;
@@ -57,15 +60,32 @@ export default function ProfileScreen() {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const [hub, setHub] = useState<HubSummary | null>(null);
   const p = state.profile;
   const ranked = p.ranked;
+
+  useEffect(() => {
+    let cancelled = false;
+    void communityHubSummary(state.authToken).then((res) => {
+      if (cancelled || !res) return;
+      setHub({
+        feedPosts: res.feedPosts ?? 0,
+        clubsJoined: res.clubsJoined ?? 0,
+        unreadSocial: res.unreadSocial ?? 0,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.authToken]);
+
   const tier = normalizeTier(ranked.tier);
   const meta = tierMeta(tier);
   const division = ranked.division !== undefined ? ranked.division : 3;
   const rankLabel = formatRankLabel(tier, division);
 
   const activePrograms = resolveActivePrograms(p);
-  const history = p.programHistory ?? [];
+  const history = (p.programHistory ?? []).filter((x) => !x.abandoned);
   const activityCount = state.activities.length;
   const programCount = activePrograms.length + history.length;
   const sportsFill = useMemo(
@@ -139,15 +159,15 @@ export default function ProfileScreen() {
 
       <View style={styles.actionRow}>
         <Pressable
-          style={[styles.actionBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+          style={[styles.actionBtn, { backgroundColor: colors.accent, borderColor: colors.accent }]}
           onPress={() => router.push('/settings/profile')}
           accessibilityRole="button"
           accessibilityLabel="Modifier le profil"
         >
-          <Text style={[styles.actionBtnText, { color: colors.text }]}>Modifier le profil</Text>
+          <Text style={[styles.actionBtnText, { color: colors.onAccent }]}>Modifier le profil</Text>
         </Pressable>
         <Pressable
-          style={[styles.actionBtn, { backgroundColor: colors.bg, borderColor: colors.border }]}
+          style={[styles.actionBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
           onPress={() => router.push('/search')}
           accessibilityRole="button"
           accessibilityLabel="Trouver des athlètes"
@@ -223,12 +243,74 @@ export default function ProfileScreen() {
       </Pressable>
 
       <Pressable
-        style={[styles.linkRow, { backgroundColor: colors.bg, borderColor: colors.border }]}
+        style={[styles.linkRow, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
         onPress={() => router.push('/badges')}
       >
         <Text style={[styles.linkRowLabel, { color: colors.text }]}>Badges</Text>
         <Text style={[styles.linkRowValue, { color: colors.textMuted }]}>Voir ›</Text>
       </Pressable>
+
+      <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+        <SectionHeader
+          title="Communauté"
+          subtitle="Fil social, cartes et groupes"
+          accentColor={colors.accent}
+          delay={50}
+        />
+      </View>
+      <FadeInUp delay={50}>
+        <View style={[styles.linkGroup, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.navigate('/(tabs)/social')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Fil social</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                {hub
+                  ? hub.unreadSocial > 0
+                    ? `${hub.unreadSocial} nouveauté${hub.unreadSocial > 1 ? 's' : ''} · ${hub.feedPosts} posts`
+                    : `${hub.feedPosts} activité${hub.feedPosts > 1 ? 's' : ''} dans le fil`
+                  : 'Activités des athlètes que tu suis'}
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
+          </PressableScale>
+          <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.navigate('/(tabs)/maps')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Cartes & parcours</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                Tes traces — heatmap communauté bientôt
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
+          </PressableScale>
+          <View style={[styles.linkRule, { backgroundColor: colors.border }]} />
+          <PressableScale
+            variant="subtle"
+            onPress={() => router.navigate('/(tabs)/groups')}
+            contentStyle={styles.linkRowInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.linkRowLabel, { color: colors.text }]}>Groupes</Text>
+              <Text style={[styles.hubPreview, { color: colors.textMuted }]}>
+                {hub && hub.clubsJoined > 0
+                  ? `${hub.clubsJoined} club${hub.clubsJoined > 1 ? 's' : ''} rejoint${hub.clubsJoined > 1 ? 's' : ''}`
+                  : `${state.clubs?.length ?? 0} club${(state.clubs?.length ?? 0) !== 1 ? 's' : ''} sur cet appareil`}
+              </Text>
+            </View>
+            <Text style={[styles.linkRowValue, { color: colors.accent }]}>›</Text>
+          </PressableScale>
+        </View>
+      </FadeInUp>
+
+      <CertificationCard />
 
       <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
         <SectionHeader
@@ -238,7 +320,7 @@ export default function ProfileScreen() {
           delay={40}
         />
       </View>
-      <View style={[styles.linkGroup, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+      <View style={[styles.linkGroup, { backgroundColor: colors.bgCard, borderColor: colors.border }]}>
         <Pressable
           style={styles.linkRowInner}
           onPress={() => router.push('/settings/goals')}
@@ -422,8 +504,9 @@ function makeStyles(colors: ColorPalette) {
       elevation: 21,
     },
     avatar: {
-      borderWidth: 3,
+      borderWidth: 4,
       borderColor: colors.bg,
+      boxShadow: `0px 8px 24px ${colors.shadow}33`,
     },
     avatarBadge: {
       position: 'absolute',
@@ -442,12 +525,13 @@ function makeStyles(colors: ColorPalette) {
     avatarBadgeText: { color: colors.white, fontSize: 12, fontWeight: '800' },
     name: {
       textAlign: 'center',
-      marginTop: spacing.sm,
-      fontSize: 20,
+      marginTop: spacing.md,
+      fontSize: 26,
       fontWeight: '800',
+      letterSpacing: -0.6,
       color: colors.text,
     },
-    handle: { textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+    handle: { textAlign: 'center', color: colors.textMuted, fontSize: 14, fontWeight: '600', marginTop: 2 },
     bio: {
       textAlign: 'center',
       color: colors.textSecondary,
@@ -464,20 +548,22 @@ function makeStyles(colors: ColorPalette) {
     },
     actionBtn: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: radii.md,
+      paddingVertical: 13,
+      borderRadius: radii.lg,
       borderWidth: 1,
       alignItems: 'center',
+      justifyContent: 'center',
     },
-    actionBtnText: { fontWeight: '700', fontSize: 13 },
+    actionBtnText: { fontWeight: '800', fontSize: 14, textAlign: 'center', width: '100%' },
     statsGrid: {
-      marginHorizontal: spacing.lg,
+      marginHorizontal: spacing.md,
       marginTop: spacing.md,
       paddingVertical: spacing.sm,
-      borderRadius: radii.lg,
-      backgroundColor: colors.bg,
+      borderRadius: radii.xl,
+      backgroundColor: colors.bgCard,
       borderWidth: 1,
       borderColor: colors.border,
+      boxShadow: `0px 6px 20px ${colors.shadow}14`,
     },
     statsRow: {
       flexDirection: 'row',
@@ -499,27 +585,28 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: colors.border,
       marginVertical: 6,
     },
-    socialN: { fontWeight: '800', fontSize: 16, color: colors.text },
-    socialL: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    socialN: { fontWeight: '800', fontSize: 22, letterSpacing: -0.4, color: colors.text },
+    socialL: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 2 },
     rankCard: {
       marginHorizontal: spacing.md,
       marginTop: spacing.md,
       padding: spacing.md,
-      borderRadius: radii.lg,
-      borderWidth: 1.5,
+      borderRadius: radii.xl,
+      borderWidth: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: spacing.md,
+      boxShadow: `0px 10px 28px ${colors.shadow}1F`,
     },
-    rankTitle: { fontWeight: '800', fontSize: 16 },
-    rankSub: { marginTop: 2, color: colors.textMuted, fontSize: 13 },
+    rankTitle: { fontWeight: '800', fontSize: 19, letterSpacing: -0.3 },
+    rankSub: { marginTop: 3, color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
     chevron: { fontSize: 22, color: colors.textMuted },
     linkRow: {
       marginHorizontal: spacing.md,
       marginTop: spacing.sm,
       paddingHorizontal: spacing.md,
-      paddingVertical: 14,
-      borderRadius: radii.lg,
+      paddingVertical: 16,
+      borderRadius: radii.xl,
       borderWidth: 1,
       flexDirection: 'row',
       alignItems: 'center',
@@ -528,9 +615,10 @@ function makeStyles(colors: ColorPalette) {
     linkGroup: {
       marginHorizontal: spacing.md,
       marginBottom: spacing.sm,
-      borderRadius: radii.lg,
+      borderRadius: radii.xl,
       borderWidth: 1,
       overflow: 'hidden',
+      boxShadow: `0px 6px 20px ${colors.shadow}12`,
     },
     linkRowInner: {
       paddingHorizontal: spacing.md,
@@ -541,7 +629,8 @@ function makeStyles(colors: ColorPalette) {
       gap: spacing.sm,
     },
     linkRule: { height: StyleSheet.hairlineWidth, marginLeft: spacing.md },
-    linkRowLabel: { fontWeight: '600', fontSize: 15 },
+    linkRowLabel: { fontWeight: '700', fontSize: 15 },
+    hubPreview: { fontSize: 12, fontWeight: '600', marginTop: 2 },
     linkRowValue: { fontSize: 13, flexShrink: 1, maxWidth: '48%', textAlign: 'right' },
     sectionTitle: {
       fontSize: 16,

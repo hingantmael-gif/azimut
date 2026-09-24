@@ -19,7 +19,8 @@ export type OnboardingStepId =
   | 'swim_volume'
   | 'ppg'
   | 'references'
-  | 'devices';
+  | 'devices'
+  | 'program_pick';
 
 /** Carte objectif (même pattern que la course). */
 export type SportGoalCard = {
@@ -265,28 +266,36 @@ export const GOAL_OPTIONS: Record<ProgramSportCategory, ReadonlyArray<SportGoalC
   ],
   other: [
     {
-      id: 'duathlon',
-      title: 'Duathlon',
-      subtitle: 'Course · vélo · course',
-      image: imageForProgram('other', 'prog-duathlon-sprint'),
+      id: 'endurance',
+      title: 'Endurance musculaire',
+      subtitle: 'Beaucoup de reps · repos 45–90 s',
+      image: imageForProgram('other', 'prog-calisthenics-endurance'),
       goal: 'forme',
-      preferProgramIds: ['prog-duathlon-sprint', 'prog-biathlon'],
+      preferProgramIds: ['prog-calisthenics-endurance', 'prog-calisthenics-base'],
     },
     {
-      id: 'biathlon',
-      title: 'Biathlon run / bike',
-      subtitle: 'Enchaînement course & vélo',
-      image: imageForProgram('other', 'prog-biathlon'),
+      id: 'hypertrophy',
+      title: 'Prendre du muscle',
+      subtitle: '8–12 reps · repos 90–150 s',
+      image: imageForProgram('other', 'prog-calisthenics-base'),
       goal: 'forme',
-      preferProgramIds: ['prog-biathlon', 'prog-duathlon-sprint'],
+      preferProgramIds: ['prog-calisthenics-base', 'prog-calisthenics-strength'],
     },
     {
-      id: 'progress',
-      title: 'Progresser en multi-sport',
-      subtitle: 'Régularité & enchaînements',
-      image: imageForProgram('other'),
+      id: 'strength',
+      title: 'Devenir plus fort',
+      subtitle: 'Progressions difficiles · repos 2–4 min',
+      image: imageForProgram('other', 'prog-calisthenics-strength'),
       goal: 'forme',
-      preferProgramIds: ['prog-duathlon-sprint', 'prog-biathlon'],
+      preferProgramIds: ['prog-calisthenics-strength', 'prog-calisthenics-base'],
+    },
+    {
+      id: 'skill',
+      title: 'Contrôle & gainage',
+      subtitle: 'Tenues, qualité du mouvement',
+      image: imageForProgram('other', 'prog-calisthenics-base'),
+      goal: 'forme',
+      preferProgramIds: ['prog-calisthenics-base', 'prog-calisthenics-endurance'],
     },
   ],
 };
@@ -333,6 +342,9 @@ export function buildOnboardingSteps(
     case 'strength':
       // Objectif d’abord (comme la course), puis matériel
       return ['sport', 'strength_goal', 'equipment', 'level', 'days'];
+    case 'other':
+      // Callisthénie : objectif → niveau → jours (pas de RPE, poids du corps)
+      return ['sport', 'goal', 'level', 'days'];
     case 'swim':
       return ['sport', 'goal', 'level', 'days', 'swim_volume', 'references'];
     case 'bike':
@@ -389,7 +401,9 @@ export function stepTitle(id: OnboardingStepId, sport: ProgramSportCategory | nu
     case 'references':
       return 'Repères (optionnel)';
     case 'devices':
-      return 'Ta montre (optionnel)';
+      return 'Montre (plus tard dans Paramètres)';
+    case 'program_pick':
+      return 'Choisis ton programme';
     default:
       return 'Suite';
   }

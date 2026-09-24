@@ -16,12 +16,13 @@ export function isGarminAuthConfigured(): boolean {
 }
 
 export function garminRedirectUri(): string {
-  return makeRedirectUri({ scheme: 'endurancetraining', path: 'oauth/garmin' });
+  return makeRedirectUri({ scheme: 'mova', path: 'oauth/garmin' });
 }
 
 /**
- * OAuth 2.0 PKCE Garmin Connect — ouvre la page de connexion Garmin,
- * puis échange le code côté serveur (secret jamais sur le client).
+ * OAuth 2.0 PKCE Garmin Connect — ouvre la page de connexion Garmin (pop-up sur le web,
+ * navigateur intégré sur mobile), puis échange le code côté serveur (secret jamais sur le client).
+ * Même parcours sur téléphone, tablette et ordinateur.
  */
 export async function connectGarminAccount(authToken: string): Promise<{
   ok: boolean;
@@ -32,14 +33,6 @@ export async function connectGarminAccount(authToken: string): Promise<{
       ok: false,
       error:
         'Garmin non configuré. Ajoute EXPO_PUBLIC_GARMIN_CLIENT_ID et les clés GARMIN_* dans backend/.env (programme développeur Garmin requis).',
-    };
-  }
-
-  if (Platform.OS === 'web') {
-    return {
-      ok: false,
-      error:
-        'La liaison OAuth Garmin se fait depuis l’app mobile Azimut (iOS ou Android), pas depuis le navigateur.',
     };
   }
 
@@ -55,7 +48,13 @@ export async function connectGarminAccount(authToken: string): Promise<{
   try {
     result = await request.promptAsync(GARMIN_DISCOVERY);
   } catch {
-    return { ok: false, error: 'Impossible d’ouvrir la page d’autorisation Garmin Connect.' };
+    return {
+      ok: false,
+      error:
+        Platform.OS === 'web'
+          ? 'La fenêtre Garmin a été bloquée. Autorise les pop-ups pour ce site puis réessaie.'
+          : 'Impossible d’ouvrir la page d’autorisation Garmin Connect.',
+    };
   }
   if (result.type !== 'success') {
     if (result.type === 'dismiss' || result.type === 'cancel') {

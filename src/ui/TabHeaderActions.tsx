@@ -1,8 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../store/AppContext';
 import { useThemeColors } from '../theme/ThemeContext';
 import { IconBell, IconSearch, IconSettings } from './icons/AppIcons';
+import { PressableScale } from './motion/softMotion';
 
 type Props = {
   /** Sur l’onglet Vous : accès paramètres (comme Instagram / Strava) */
@@ -23,35 +25,40 @@ export function TabHeaderActions({ showSettings = false }: Props) {
 
   return (
     <View style={styles.row}>
-      <Pressable
-        style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+      <PressableScale
+        variant="pop"
+        style={styles.iconBtn}
         onPress={() => router.push('/search')}
         accessibilityLabel="Rechercher des athlètes"
       >
         <IconSearch size={24} color={colors.text} />
-      </Pressable>
+      </PressableScale>
 
-      <Pressable
-        style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+      <PressableScale
+        variant="pop"
+        style={styles.iconBtn}
         onPress={() => router.push('/notifications')}
         accessibilityLabel="Notifications"
       >
-        <IconBell size={23} color={colors.text} />
-        {unread > 0 ? (
-          <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-            <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
-          </View>
-        ) : null}
-      </Pressable>
+        <View>
+          <IconBell size={23} color={colors.text} />
+          {unread > 0 ? (
+            <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+              <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+            </View>
+          ) : null}
+        </View>
+      </PressableScale>
 
       {showSettings ? (
-        <Pressable
-          style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+        <PressableScale
+          variant="nav"
+          style={styles.iconBtn}
           onPress={() => router.push('/settings')}
           accessibilityLabel="Paramètres"
         >
           <IconSettings size={23} color={colors.text} />
-        </Pressable>
+        </PressableScale>
       ) : null}
     </View>
   );
@@ -70,11 +77,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: { opacity: 0.55 },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: -4,
+    right: -6,
     minWidth: 16,
     height: 16,
     borderRadius: 8,
@@ -82,5 +88,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
 });

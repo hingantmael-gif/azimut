@@ -51,10 +51,18 @@ import { resolveWeekLoadProfile } from './volumeProgression';
 import {
   buildStrengthSession,
   normalizeStrengthEquipment,
+  parseStrengthTargets,
   type StrengthBodyFocus,
   type StrengthEquipment,
   type StrengthGoalFocus,
 } from './strengthProgramming';
+import {
+  buildCalisthenicsSession,
+  dedupeCalisthenicsPerDay,
+  parseCalisScope,
+  parseCalisTargets,
+  parseCalisthenicsGoal,
+} from './calisthenicsProgramming';
 
 export type SportFamily = 'run' | 'bike' | 'swim' | 'triathlon' | 'strength' | 'other';
 
@@ -99,7 +107,10 @@ function clamp(n: number, min: number, max: number): number {
 function addDays(iso: string, dayOffset: number): string {
   const d = new Date(iso + 'T12:00:00');
   d.setDate(d.getDate() + dayOffset);
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 /** Durée totale d’une séance (secondes) — distance convertie via allure si besoin */
@@ -498,6 +509,7 @@ function makeStrength(
     equipment?: string | string[];
     strengthGoal?: string;
     strengthBodyFocus?: string;
+    strengthTargets?: string[];
     weekIndex?: number;
   },
 ): PlannedWorkout {
@@ -514,8 +526,37 @@ function makeStrength(
           ? 'fitness'
           : parseStrengthGoal(opts?.strengthGoal ?? (focus === 'hypertrophy' ? 'hypertrophy' : undefined)),
       bodyFocus: parseStrengthBodyFocus(opts?.strengthBodyFocus),
+      targets: focus === 'ppg' ? [] : parseStrengthTargets(opts?.strengthTargets),
       ppgLite: focus === 'ppg',
       weekIndex: opts?.weekIndex,
+    }),
+  );
+}
+
+function makeCalisthenics(
+  date: string,
+  level: AthleticLevel,
+  block: PeriodizationBlock,
+  opts?: {
+    slotIndex?: number;
+    trainingDaysCount?: number;
+    calisthenicsGoal?: string;
+    weekIndex?: number;
+    calisScope?: string;
+    calisTargets?: string[];
+  },
+): PlannedWorkout {
+  return finalize(
+    buildCalisthenicsSession({
+      date,
+      slotIndex: opts?.slotIndex ?? 0,
+      trainingDaysCount: opts?.trainingDaysCount ?? 3,
+      level,
+      block,
+      goal: parseCalisthenicsGoal(opts?.calisthenicsGoal),
+      weekIndex: opts?.weekIndex,
+      scope: parseCalisScope(opts?.calisScope),
+      targets: parseCalisTargets(opts?.calisTargets),
     }),
   );
 }
@@ -600,13 +641,17 @@ export function generateCoachedWeek(
     ? answers.longRunDay
     : availableDays[availableDays.length - 1];
 
-  const sessionCount = resolveWeeklySessionCount({
-    level: answers.level,
-    goal: answers.goal,
-    family,
-    availableDaysCount: availableDays.length,
-    weeklyKm,
-  });
+  const sessionCount = Math.min(
+    availableDays.length,
+    answers.weeklySessionsTarget ??
+      resolveWeeklySessionCount({
+        level: answers.level,
+        goal: answers.goal,
+        family,
+        availableDaysCount: availableDays.length,
+        weeklyKm,
+      }),
+  );
   const days = selectSessionDays(availableDays, longDow, sessionCount);
   const raceKm = answers.targetDistanceKm ?? answers.recentDistanceKm ?? 10;
   const zoneMix = zoneMixForRaceDistanceKm(raceKm);
@@ -616,7 +661,7 @@ export function generateCoachedWeek(
     days,
     longDow,
     hiCount,
-    includePpg: !!answers.includePpg && family !== 'strength',
+    includePpg: !!answers.includePpg && family !== 'strength' && family !== 'other',
     family,
   });
   let strengthSlot = 0;
@@ -651,6 +696,7 @@ export function generateCoachedWeek(
     weekIndex: opts.weekIndex,
     goal: answers.goal,
     isDeload: weekLoad.isDeload,
+    focus: answers.runFocus ?? (answers.trainingTerrain === 'hills' ? 'hills' : undefined),
   });
 
   for (const [dow, role] of roles) {
@@ -688,26 +734,17 @@ export function generateCoachedWeek(
     }
 
     if (family === 'other') {
-      const ctx: RunSessionContext = { ...runCtxBase(), date };
-      if (role === 'brick') {
-        // Enchaînement vélo → course (biathlon / duathlon)
-        workouts.push(makeBrick(date, ftp, paceZones, load, block, 'triathlon_sprint'));
-      } else if (role === 'long') {
-        workouts.push(makeLongRunEasy(ctx, Math.round(longKm * 1000)));
-      } else if (role === 'bike') {
-        workouts.push(
-          makeBikeEndurance(date, Math.round(50 + 25 * load), ftp, block, 'Sortie vélo'),
-        );
-      } else if (role === 'easy') {
-        workouts.push(makeRecoveryRun(ctx, Math.round(otherEasyKm * 1000)));
-      } else if (role === 'quality_a' || role === 'quality_b') {
-        workouts.push(pickQualitySession({ ...ctx, qualitySlot: qualitySlot }));
-        qualitySlot = 1;
-      } else if (role === 'strength') {
-        workouts.push(makeStrength(date, answers.level, block, 'ppg', ppgStrengthOpts(answers, opts.weekIndex)));
-      } else {
-        workouts.push(makeRecoveryRun(ctx, Math.round(otherEasyKm * 1000)));
-      }
+      const slot = strengthSlot++;
+      workouts.push(
+        makeCalisthenics(date, answers.level, block, {
+          slotIndex: slot,
+          trainingDaysCount: days.length,
+          calisthenicsGoal: answers.strengthGoal ?? answers.goal,
+          weekIndex: opts.weekIndex,
+          calisScope: answers.calisScope,
+          calisTargets: answers.calisTargets,
+        }),
+      );
       continue;
     }
 
@@ -827,6 +864,7 @@ export function generateCoachedWeek(
           equipment: answers.strengthEquipment,
           strengthGoal: answers.strengthGoal,
           strengthBodyFocus: answers.strengthBodyFocus,
+          strengthTargets: answers.strengthTargets,
           weekIndex: opts.weekIndex,
         }),
       );
@@ -834,7 +872,7 @@ export function generateCoachedWeek(
     }
   }
 
-  return workouts
+  return dedupeCalisthenicsPerDay(workouts)
     .map((w) =>
       enrichRunWarmup(w, answers.targetDistanceKm ?? answers.recentDistanceKm),
     )
@@ -848,3 +886,16 @@ export function generateCoachedWeek(
     )
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** Constructeurs de séances exposés à la bibliothèque / aux séances rapides (mêmes séances que les plans). */
+export const sessionBuilders = {
+  bikeEndurance: makeBikeEndurance,
+  bikeVo2: makeBikeVo2,
+  swimAerobic: makeSwimAerobic,
+  swimCss: makeSwimCss,
+  strength: makeStrength,
+  calisthenics: makeCalisthenics,
+  mobility: makeMobility,
+  ftpFromLevel: ftpWattsFromLevel,
+  swimPaceFromLevel: swimPaceSecPer100,
+};

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Text } from '../Text';
 import { useThemeColors } from '../../theme/ThemeContext';
 import { PhoneModal } from '../PhoneModal';
 import { AppTextInput } from '../AppTextInput';

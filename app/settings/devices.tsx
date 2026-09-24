@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
-import { Alert, Linking, Platform, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View } from 'react-native';
+import { Text } from '../../src/ui/Text';
+import { useRouter, type Href } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
@@ -35,17 +36,6 @@ export default function DevicesScreen() {
     void syncFromServer();
   }, [syncFromServer]);
 
-  const openOsSettings = () => {
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Localisation',
-        'Sur le web, autorise la localisation dans les paramètres du navigateur si une activité GPS le demande.',
-      );
-      return;
-    }
-    void Linking.openSettings();
-  };
-
   return (
     <SettingsScreen>
       <AppScrollView contentContainerStyle={{ paddingBottom: 48 }}>
@@ -63,6 +53,14 @@ export default function DevicesScreen() {
           <SettingsRow
             label="Importer sommeil"
             onPress={() => router.push('/sleep')}
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Garmin">
+          <SettingsRow
+            label="Mode d’emploi Garmin"
+            value="Lier & envoyer"
+            onPress={() => router.push('/settings/garmin-guide' as Href)}
           />
         </SettingsSection>
 
@@ -87,14 +85,14 @@ export default function DevicesScreen() {
 
         <SettingsSection title="Santé & localisation">
           <SettingsRow
-            label="Données de santé"
-            value="Via les apps ci-dessus"
-            showChevron={false}
+            label="Consentement données de santé"
+            value="Activer / retirer"
+            onPress={() => router.push('/settings/data-permissions')}
           />
           <SettingsRow
             label="Localisation (GPS)"
-            value="Réglages système"
-            onPress={openOsSettings}
+            value="Activer / retirer"
+            onPress={() => router.push('/settings/data-permissions')}
           />
           <SettingsRow
             label="Historique de synchronisation"

@@ -1,4 +1,4 @@
-# Azimut — front web + API auth (comme BTP Pro)
+# Mova — front web + API auth
 # Front : https://azimut.onrender.com (optionnel)
 # API  : https://azimut-api.onrender.com
 
@@ -15,8 +15,25 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
+      # Le code de vérification n'est JAMAIS renvoyé par l'API en production.
       - key: AUTH_ALLOW_DEMO_CODE
-        value: "true"
+        value: "false"
+      # Base de données PostgreSQL (Neon / Supabase / Render Postgres) — OBLIGATOIRE pour ne pas perdre les comptes.
+      - key: DATABASE_URL
+        sync: false
+      # Adresse publique du site Mova (ex. https://mova.app), séparées par des virgules si plusieurs.
+      - key: CORS_ORIGINS
+        sync: false
+      # E-mail du compte propriétaire (Premium offert, Google uniquement).
+      - key: OWNER_PREMIUM_EMAIL
+        sync: false
+      # Optionnel : envoi réel des codes par e-mail
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: JWT_SECRET
         generateValue: true
 

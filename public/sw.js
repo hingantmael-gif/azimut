@@ -1,5 +1,8 @@
-/* Service worker Azimut — mises à jour auto à chaque réouverture. */
-const CACHE = 'azimut-static-v25';
+/* Service worker Mova — mises à jour auto à chaque réouverture. */
+const CACHE = 'mova-static-v96';
+const IMMUTABLE = 'mova-immutable-v1';
+/** Nom de fichier avec empreinte (…-<hash 32 hex>.ext ou entry-<hash>.js) : jamais modifié après publication. */
+const HASHED = /[.-][0-9a-f]{32}\.[a-z0-9]+$/i;
 const PRECACHE = [
   '/manifest.webmanifest',
   '/icon.png',
@@ -19,6 +22,20 @@ self.addEventListener('install', (event) => {
   );
 });
 
+/* Clic sur une notification : ramène l'app au premier plan (ou l'ouvre). */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if ('focus' in c) return c.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
@@ -26,7 +43,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k !== CACHE)
+            .filter((k) => k !== CACHE && k !== IMMUTABLE)
             .map((k) => caches.delete(k)),
         ),
       )
@@ -50,6 +67,30 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Le site vitrine est indépendant de l'application : on ne l'intercepte jamais.
+  if (url.pathname.startsWith('/mova-site/')) return;
+
+  // Contrôle de version et liste des pages à précharger : toujours frais (jamais en cache).
+  if (url.pathname === '/version.json' || url.pathname === '/chunks.json') return;
+
+  // Fichiers hachés (bundles, images, polices) : cache d'abord — le nom change à chaque
+  // modification, donc jamais périmé ; les visites suivantes sont quasi instantanées.
+  if (HASHED.test(url.pathname)) {
+    event.respondWith(
+      caches.open(IMMUTABLE).then((cache) =>
+        cache.match(req).then(
+          (hit) =>
+            hit ||
+            fetch(req).then((res) => {
+              if (res && res.ok) cache.put(req, res.clone());
+              return res;
+            }),
+        ),
+      ),
+    );
+    return;
+  }
 
   // App bundle + API : toujours le réseau (jamais de vieux JS en cache SW)
   if (

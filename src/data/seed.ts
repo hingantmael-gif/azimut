@@ -1,6 +1,7 @@
 import type {
   AthleteProfile,
   BanisterState,
+  Club,
   HealthSnapshot,
   LifetimeStats,
   PlannedWorkout,
@@ -11,67 +12,12 @@ import type {
   StravaActivity,
 } from '../types/domain';
 import type { ScheduledReminder } from '../engines/notifications';
-import { DEMO_DIRECTORY } from './demoDirectory';
-import { trimSocialNotifications } from '../engines/socialNotifications';
 import { defaultAchievementsFromCatalog } from '../engines/achievements';
 
 const today = new Date();
 
 function buildDemoSocialNotifications(): SocialNotification[] {
-  const core: SocialNotification[] = [
-    {
-      id: 'n-like-1',
-      kind: 'program_like',
-      fromUsername: 'leamartin',
-      fromDisplayName: 'Léa Martin',
-      createdAt: new Date(Date.now() - 3600_000).toISOString(),
-      read: false,
-      programTitle: 'Programme 5 km',
-    },
-    {
-      id: 'n-req-1',
-      kind: 'follow_request',
-      fromUsername: 'nathanbertrand',
-      fromDisplayName: 'Nathan Bertrand',
-      createdAt: new Date(Date.now() - 7200_000).toISOString(),
-      read: false,
-      requestStatus: 'pending',
-    },
-    {
-      id: 'n-req-2',
-      kind: 'follow_request',
-      fromUsername: 'ninarossi',
-      fromDisplayName: 'Nina Rossi',
-      createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-      read: false,
-      requestStatus: 'pending',
-    },
-  ];
-
-  const extras: SocialNotification[] = DEMO_DIRECTORY.slice(0, 24).map((m, i) => {
-    const hoursAgo = 3 + i * 5;
-    if (i % 4 === 0) {
-      return {
-        id: `n-follow-${m.username}`,
-        kind: 'new_follower' as const,
-        fromUsername: m.username,
-        fromDisplayName: m.name,
-        createdAt: new Date(Date.now() - hoursAgo * 3600_000).toISOString(),
-        read: i > 4,
-      };
-    }
-    return {
-      id: `n-like-${m.username}`,
-      kind: 'program_like' as const,
-      fromUsername: m.username,
-      fromDisplayName: m.name,
-      createdAt: new Date(Date.now() - hoursAgo * 3600_000).toISOString(),
-      read: i > 3,
-      programTitle: `Programme ${m.sport}`,
-    };
-  });
-
-  return trimSocialNotifications([...core, ...extras]);
+  return [];
 }
 
 export const defaultProfile: AthleteProfile = {
@@ -184,8 +130,12 @@ export type AppState = {
   progress: ProgressPoint[];
   authToken: string | null;
   reminders: ScheduledReminder[];
+  /** Clubs / groupes rejoints ou créés (local) */
+  clubs: Club[];
   /** Messages coach récents (adaptations auto) */
   coachAdaptations?: string[];
+  /** RPE prédit pour la séance en attente de feedback (boucle fermée V2) */
+  pendingPredictedRpe?: number | null;
 };
 export function buildFreshAccountState(
   authToken: string,
@@ -226,6 +176,7 @@ export function buildFreshAccountState(
     progress: [],
     authToken,
     reminders: [],
+    clubs: [],
   };
 }
 

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import type { MuscleGroupState } from '../../engines/muscleRecovery';
 import {
   colorForRecoveryPct,
@@ -10,20 +11,20 @@ import {
 import { useThemeColors } from '../../theme/ThemeContext';
 import { radii, spacing } from '../../theme/tokens';
 import type { ColorPalette } from '../../theme/palettes';
-import { FadeInUp, StaggerIn } from '../motion/softMotion';
+import { StaggerIn } from '../motion/softMotion';
 
 const LOAD_LABELS: Record<string, string> = {
-  normal: 'Volume normal',
-  moderate: 'Volume modéré',
-  light: 'Séance légère',
-  rest: 'Repos actif',
+  normal: 'Normal',
+  moderate: 'Modéré',
+  light: 'Léger',
+  rest: 'Repos',
 };
 
 type Props = {
   muscle: MuscleGroupState;
 };
 
-/** Détail récupération d'un muscle (métriques, badge, barre, conseil) */
+/** Détail récupération — métriques compactes, sans pavés de texte. */
 export function MuscleRecoveryDetail({ muscle }: Props) {
   const { colors } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -35,7 +36,7 @@ export function MuscleRecoveryDetail({ muscle }: Props) {
         <View style={styles.metrics}>
           <View style={styles.metricBox}>
             <Text style={styles.metricN}>{muscle.recoveryPct}%</Text>
-            <Text style={styles.metricL}>Récupération</Text>
+            <Text style={styles.metricL}>Récup.</Text>
           </View>
           <View style={styles.metricBox}>
             <Text style={styles.metricN}>
@@ -43,11 +44,11 @@ export function MuscleRecoveryDetail({ muscle }: Props) {
                 ? formatRecoveryEta(muscle.minutesToFresh / 60)
                 : '—'}
             </Text>
-            <Text style={styles.metricL}>Avant fraîcheur</Text>
+            <Text style={styles.metricL}>Délai</Text>
           </View>
           <View style={styles.metricBox}>
             <Text style={styles.metricN}>{LOAD_LABELS[muscle.trainingLoad]}</Text>
-            <Text style={styles.metricL}>Charge conseillée</Text>
+            <Text style={styles.metricL}>Charge</Text>
           </View>
         </View>
       </StaggerIn>
@@ -72,32 +73,16 @@ export function MuscleRecoveryDetail({ muscle }: Props) {
             />
           </View>
           <View style={styles.recoveryBarLabels}>
-            <Text style={styles.recoveryBarTick}>Surcharge</Text>
+            <Text style={styles.recoveryBarTick}>Fatigué</Text>
             <Text
               style={[styles.recoveryBarValue, { color: colorForRecoveryPct(muscle.recoveryPct) }]}
             >
-              {muscle.recoveryPct}% récupéré
+              {muscle.recoveryPct}%
             </Text>
-            <Text style={styles.recoveryBarTick}>Fraîcheur</Text>
+            <Text style={styles.recoveryBarTick}>Frais</Text>
           </View>
         </View>
       </StaggerIn>
-      <FadeInUp delay={320} duration={780} distance={12}>
-        <Text style={styles.hint}>{muscle.recommendation}</Text>
-      </FadeInUp>
-      {muscle.analysisDetail ? (
-        <FadeInUp delay={420} duration={800} distance={12}>
-          <Text style={styles.analysis}>{muscle.analysisDetail}</Text>
-        </FadeInUp>
-      ) : null}
-      {muscle.restHoursRecommended != null && muscle.restHoursRecommended > 0 ? (
-        <FadeInUp delay={500} duration={820} distance={10}>
-          <Text style={styles.rest}>
-            Repos ciblé recommandé : ~{muscle.restHoursRecommended} h avant une charge élevée sur ce
-            groupe.
-          </Text>
-        </FadeInUp>
-      ) : null}
     </View>
   );
 }
@@ -118,51 +103,38 @@ function makeStyles(colors: ColorPalette) {
     badge: {
       alignSelf: 'flex-start',
       paddingHorizontal: 12,
-      paddingVertical: 5,
+      paddingVertical: 6,
       borderRadius: radii.pill,
-      marginTop: spacing.md,
+      marginTop: spacing.sm,
     },
-    badgeText: { color: colors.white, fontWeight: '700', fontSize: 12 },
+    badgeText: { color: '#fff', fontWeight: '800', fontSize: 12 },
     recoveryBarWrap: { marginTop: spacing.md },
     recoveryBar: {
-      flexDirection: 'row',
       height: 10,
       borderRadius: 5,
+      flexDirection: 'row',
       overflow: 'hidden',
       position: 'relative',
     },
     recoveryBarSeg: { flex: 1 },
     recoveryMarker: {
       position: 'absolute',
-      top: -2,
+      top: -3,
       width: 4,
-      height: 14,
+      height: 16,
       marginLeft: -2,
-      backgroundColor: colors.text,
       borderRadius: 2,
+      backgroundColor: '#fff',
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.2)',
     },
     recoveryBarLabels: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      marginTop: 6,
       alignItems: 'center',
-      marginTop: 6,
     },
-    recoveryBarTick: { fontSize: 10, color: colors.textMuted },
+    recoveryBarTick: { fontSize: 10, color: colors.textMuted, fontWeight: '600' },
     recoveryBarValue: { fontSize: 12, fontWeight: '800' },
-    hint: { color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 20, fontSize: 14 },
-    analysis: {
-      color: colors.text,
-      marginTop: spacing.sm,
-      lineHeight: 19,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    rest: {
-      color: colors.accentDark,
-      marginTop: 6,
-      lineHeight: 18,
-      fontSize: 12,
-      fontWeight: '700',
-    },
   });
 }

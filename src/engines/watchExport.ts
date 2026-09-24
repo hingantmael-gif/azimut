@@ -1,4 +1,5 @@
-import { Alert, Platform, Share } from 'react-native';
+import { Platform, Share } from 'react-native';
+import { Alert } from '../utils/appAlert';
 import type { PlannedWorkout, SportDiscipline, WatchBrandId } from '../types/domain';
 import { getWatchEntry } from '../constants/watches';
 import { summarizeWorkout } from './workoutPresentation';
@@ -6,15 +7,15 @@ import { buildWorkoutShareMessage } from './stravaExport';
 
 /**
  * Sports que Garmin Connect accepte en séance structurée (Training / workouts) :
- * course, vélo, natation, musculation.
- * Pas de brick multi-sport ni repos — export peu fiable / inutile.
+ * course, vélo, natation. Pas de musculation ni de callisthénie (séries / répétitions : la séance guidée
+ * de l'app est faite pour ça), pas de brick multi-sport ni de repos — export peu fiable / inutile.
  */
-export const WATCH_EXPORTABLE_DISCIPLINES: readonly SportDiscipline[] = [
-  'run',
-  'bike',
-  'swim',
-  'strength',
-];
+export const WATCH_EXPORTABLE_DISCIPLINES: readonly SportDiscipline[] = ['run', 'bike', 'swim'];
+
+/** Fichier GPX/TCX pour Strava : uniquement les sports à trace GPS. */
+export function canSendWorkoutToStrava(discipline: SportDiscipline | undefined | null): boolean {
+  return discipline === 'run' || discipline === 'bike' || discipline === 'swim';
+}
 
 export function canSendWorkoutToWatch(
   discipline: SportDiscipline | undefined | null,
@@ -54,17 +55,17 @@ export function watchResendLabel(brandId?: WatchBrandId | null): string {
 
 /**
  * Hint sous le bouton — explique le flux Bluetooth / app compagnon
- * (1–2 gestes après l’envoi Azimut).
+ * (1–2 gestes après l’envoi Mova).
  */
 export function watchExportHint(brandId?: WatchBrandId | null): string {
   if (!brandId) {
-    return 'Au premier envoi, Azimut te demande quelle montre tu as — puis exporte le bon fichier.';
+    return 'Au premier envoi, Mova te demande quelle montre tu as — puis exporte le bon fichier.';
   }
   switch (brandId) {
     case 'garmin':
-      return 'Export JSON Garmin Training (+ TCX). Si ton compte est lié, Azimut pousse aussi sur Garmin Connect → sync Bluetooth.';
+      return 'Compte Garmin lié : envoi automatique, sans câble. Sinon : sur téléphone, copie la séance et recrée-la dans Garmin Connect ; sur ordinateur, fichier .fit à copier par USB.';
     case 'apple':
-      return 'Export JSON WorkoutKit (+ TCX). Ouvre Fitness / Santé sur iPhone — l’Apple Watch récupère le plan.';
+      return 'App Mova iPhone (iOS 17+) : ajout direct à l’Apple Watch. Ailleurs : copie la séance et recrée-la dans l’app Exercice de la montre.';
     case 'samsung':
       return 'Export TCX Samsung Health (+ JSON). Importe dans Samsung Health puis sync Bluetooth Galaxy Watch.';
     case 'google_fitbit':
@@ -104,7 +105,7 @@ export function buildWatchWorkoutBrief(workout: PlannedWorkout): string {
     'Déroulé :',
     steps,
     '',
-    '— Export Azimut → montre',
+    '— Export Mova → montre',
   ]
     .filter(Boolean)
     .join('\n');

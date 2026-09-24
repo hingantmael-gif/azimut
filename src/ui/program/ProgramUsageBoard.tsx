@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { useRouter } from 'expo-router';
 import type { ProgramSportCategory } from '../../constants/programs';
 import { POPULAR_SPORT_CATEGORIES } from '../../constants/programs';
@@ -18,7 +19,7 @@ import type { ColorPalette } from '../../theme/palettes';
 type SportFilter = ProgramSportCategory | 'all';
 
 type Props = {
-  countedTemplateId?: string | null;
+  countedTemplateIds?: string | string[] | null;
   /** Nombre de lignes affichées */
   limit?: number;
   /** Si true, ouvre le wizard sur ce template (via query) */
@@ -27,17 +28,16 @@ type Props = {
   mixed?: boolean;
 };
 
-const FILTER_CHIPS: Array<{ id: SportFilter; label: string }> = [
+const FILTER_CHIPS: Array<{ id: SportFilter; label: string; comingSoon?: boolean }> = [
   { id: 'all', label: 'Tous sports' },
   ...POPULAR_SPORT_CATEGORIES.map((c) => ({ id: c.id as SportFilter, label: c.label })),
-  { id: 'other', label: 'Duathlon' },
 ];
 
 /**
  * Classement des programmes les plus utilisés — multi-disciplines, filtrable.
  */
 export function ProgramUsageBoard({
-  countedTemplateId,
+  countedTemplateIds,
   limit = 8,
   allowStart = true,
   mixed = true,
@@ -48,11 +48,12 @@ export function ProgramUsageBoard({
   const [sportFilter, setSportFilter] = useState<SportFilter>('all');
 
   const rows = useMemo(() => {
-    if (sportFilter === 'all' && mixed) {
-      return buildMixedProgramUsageRanking(countedTemplateId, new Date(), limit);
-    }
-    return buildProgramUsageRanking(countedTemplateId, new Date(), limit, sportFilter);
-  }, [countedTemplateId, limit, mixed, sportFilter]);
+    const raw =
+      sportFilter === 'all' && mixed
+        ? buildMixedProgramUsageRanking(countedTemplateIds, new Date(), limit + 4)
+        : buildProgramUsageRanking(countedTemplateIds, new Date(), limit + 4, sportFilter);
+    return raw.slice(0, limit).map((r, i) => ({ ...r, rank: i + 1 }));
+  }, [countedTemplateIds, limit, mixed, sportFilter]);
 
   return (
     <View style={styles.wrap}>
@@ -71,16 +72,25 @@ export function ProgramUsageBoard({
         {FILTER_CHIPS.map((chip) => (
           <Pressable
             key={chip.id}
-            style={[styles.chip, sportFilter === chip.id && styles.chipActive]}
-            onPress={() => setSportFilter(chip.id)}
+            disabled={chip.comingSoon}
+            style={[
+              styles.chip,
+              sportFilter === chip.id && styles.chipActive,
+              chip.comingSoon && styles.chipSoon,
+            ]}
+            onPress={() => {
+              if (chip.comingSoon) return;
+              setSportFilter(chip.id);
+            }}
           >
             <Text
               style={[
                 styles.chipText,
                 sportFilter === chip.id && styles.chipTextActive,
+                chip.comingSoon && styles.chipSoonText,
               ]}
             >
-              {chip.label}
+              {chip.comingSoon ? `👷 ${chip.label}` : chip.label}
             </Text>
           </Pressable>
         ))}
@@ -210,6 +220,13 @@ function makeStyles(colors: ColorPalette) {
     },
     chipTextActive: {
       color: colors.accentDark,
+    },
+    chipSoon: {
+      opacity: 0.55,
+      borderStyle: 'dashed',
+    },
+    chipSoonText: {
+      color: colors.textMuted,
     },
     empty: {
       fontSize: 13,

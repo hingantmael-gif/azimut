@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { PhoneModal } from '../PhoneModal';
 import { WatchBrandPicker } from '../sleep/WatchBrandPicker';
 import type { WatchBrandId } from '../../types/domain';
@@ -26,7 +27,7 @@ export function WatchBrandPickModal({ visible, onSelect, onCancel }: Props) {
           <AppScrollView contentContainerStyle={{ paddingBottom: spacing.md }}>
             <WatchBrandPicker
               title="Quelle montre possédez-vous ?"
-              subtitle="Un choix unique — ensuite Azimut exporte le bon format de fichier et envoie la séance en quelques clics."
+              subtitle="Un choix unique — ensuite Mova exporte le bon format de fichier et envoie la séance en quelques clics."
               onSelect={onSelect}
             />
             <Pressable onPress={onCancel} style={styles.cancel}>

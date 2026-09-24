@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../Text';
 import { AppTextInput } from '../AppTextInput';
 import type { ActiveProgram, ProgramReviewFeeling } from '../../types/domain';
 import { useThemeColors } from '../../theme/ThemeContext';
@@ -9,7 +10,7 @@ import type { ColorPalette } from '../../theme/palettes';
 export function programReviewLabel(feeling?: ProgramReviewFeeling | string | null): string | null {
   if (!feeling) return null;
   if (feeling === 'up' || feeling === 'tres_satisfait' || feeling === 'satisfait') {
-    return 'Pouce vert';
+    return 'Satisfait';
   }
   if (
     feeling === 'down' ||
@@ -17,15 +18,24 @@ export function programReviewLabel(feeling?: ProgramReviewFeeling | string | nul
     feeling === 'difficile' ||
     feeling === 'mitige'
   ) {
-    return 'Pouce rouge';
+    return 'Pas satisfait';
   }
   return null;
 }
 
 export function programReviewEmoji(feeling?: ProgramReviewFeeling | string | null): string | null {
-  const label = programReviewLabel(feeling);
-  if (label === 'Pouce vert') return '👍';
-  if (label === 'Pouce rouge') return '👎';
+  if (!feeling) return null;
+  if (feeling === 'up' || feeling === 'tres_satisfait' || feeling === 'satisfait') {
+    return '👍';
+  }
+  if (
+    feeling === 'down' ||
+    feeling === 'decu' ||
+    feeling === 'difficile' ||
+    feeling === 'mitige'
+  ) {
+    return '👎';
+  }
   return null;
 }
 
@@ -37,7 +47,7 @@ type Props = {
 };
 
 /**
- * Satisfaction fin de programme : pouce vert / rouge + commentaire optionnel.
+ * Satisfaction fin de programme : pouces + commentaire optionnel.
  */
 export function ProgramReviewCard({ program, onSave, promptMode }: Props) {
   const { colors } = useThemeColors();
@@ -66,30 +76,24 @@ export function ProgramReviewCard({ program, onSave, promptMode }: Props) {
       </Text>
       <Text style={styles.sub}>
         {promptMode
-          ? `${program.title} — pouce vert ou rouge, puis un commentaire si tu veux.`
-          : 'Pouce vert ou rouge — le commentaire est facultatif.'}
+          ? `${program.title} — ton avis, puis un commentaire si tu veux.`
+          : 'Choisis un pouce — le commentaire est facultatif.'}
       </Text>
 
       <View style={styles.thumbs}>
         <Pressable
           onPress={() => setFeeling('up')}
           style={[styles.thumb, feeling === 'up' && styles.thumbUpOn]}
-          accessibilityLabel="Pouce vert — satisfait"
+          accessibilityLabel="Satisfait"
         >
           <Text style={styles.thumbEmoji}>👍</Text>
-          <Text style={[styles.thumbLabel, feeling === 'up' && styles.thumbLabelOn]}>
-            Vert
-          </Text>
         </Pressable>
         <Pressable
           onPress={() => setFeeling('down')}
           style={[styles.thumb, feeling === 'down' && styles.thumbDownOn]}
-          accessibilityLabel="Pouce rouge — pas satisfait"
+          accessibilityLabel="Pas satisfait"
         >
           <Text style={styles.thumbEmoji}>👎</Text>
-          <Text style={[styles.thumbLabel, feeling === 'down' && styles.thumbLabelOn]}>
-            Rouge
-          </Text>
         </Pressable>
       </View>
 
@@ -175,13 +179,6 @@ function makeStyles(colors: ColorPalette) {
       backgroundColor: '#FEE2E2',
     },
     thumbEmoji: { fontSize: 28 },
-    thumbLabel: {
-      marginTop: 6,
-      fontSize: 13,
-      fontWeight: '800',
-      color: colors.textMuted,
-    },
-    thumbLabelOn: { color: colors.text },
     input: {
       marginTop: spacing.md,
       minHeight: 72,

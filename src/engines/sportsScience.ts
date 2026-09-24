@@ -29,15 +29,16 @@ export function computeAcwr(dailyLoads: DailyLoadPoint[], asOfDate: string): {
   ratio: number;
   forceRest: boolean;
 } {
-  const asOf = asOfDate.slice(0, 10);
-  const asOfMs = new Date(`${asOf}T12:00:00`).getTime();
+  // Jours calendaires en UTC : insensible aux changements d'heure (journées de 23/25 h).
+  const dayIndex = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / 86_400_000;
+  const asOfDay = dayIndex(asOfDate);
   let acute = 0;
   let chronic = 0;
   for (const p of dailyLoads) {
-    const ms = new Date(`${p.date.slice(0, 10)}T12:00:00`).getTime();
-    const daysAgo = (asOfMs - ms) / 86_400_000;
-    if (daysAgo < 0 || daysAgo > 28) continue;
-    if (daysAgo <= 7) acute += p.load;
+    const daysAgo = asOfDay - dayIndex(p.date);
+    // Fenêtres exactes : aiguë = J0..J-6 (7 j), chronique = J0..J-27 (28 j).
+    if (!(daysAgo >= 0) || daysAgo >= 28) continue;
+    if (daysAgo < 7) acute += p.load;
     chronic += p.load;
   }
   const acuteAvg = acute / 7;
@@ -184,40 +185,31 @@ export function qualitySessionsFromZoneMix(
 }
 
 /**
- * Échauffement structuré (mobilité → cardio EF → gammes si ≤21 km).
+ * Échauffement de course : UN bloc lisible (footing lent, on accélère doucement de lui-même) +, pour les
+ * séances intenses seulement, quelques accélérations. Aucune étape vague sans valeur chiffrée.
  */
 export function buildRunWarmupProtocol(opts: {
   raceDistanceKm?: number;
   sessionKind?: SessionIntensityKind;
 }): WorkoutStep[] {
   const kind = opts.sessionKind ?? 'ef';
-  const dist = opts.raceDistanceKm ?? 10;
+  const intense = kind === 'vma' || kind === 'tempo';
   const steps: WorkoutStep[] = [
     {
-      id: 'wu-mob',
+      id: 'wu-run',
       type: 'warmup',
-      label: 'Mobilité ostéo-articulaire (chevilles, hanches) · 5 min',
+      label: 'Échauffement · footing lent, accélère doucement',
       endCondition: 'duration',
-      durationSec: 5 * 60,
-    },
-    {
-      id: 'wu-cardio',
-      type: 'warmup',
-      label:
-        kind === 'vma' || kind === 'tempo'
-          ? 'Cardio progressif Zone 1 → Zone 2 · 12 min'
-          : 'Cardio progressif Zone 1 → Zone 2 · 10 min',
-      endCondition: 'duration',
-      durationSec: (kind === 'vma' || kind === 'tempo' ? 12 : 10) * 60,
+      durationSec: (intense ? 12 : 10) * 60,
     },
   ];
-  if (dist <= 21 && (kind === 'vma' || kind === 'tempo' || kind === 'ef')) {
+  if (intense && (opts.raceDistanceKm ?? 10) <= 21) {
     steps.push({
       id: 'wu-strides',
       type: 'warmup',
-      label: 'Gammes / lignes droites · 4 × 50 m accélération progressive',
+      label: '4 accélérations de 15 s',
       endCondition: 'duration',
-      durationSec: 4 * 60,
+      durationSec: 3 * 60,
     });
   }
   return steps;

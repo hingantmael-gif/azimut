@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Text } from '../src/ui/Text';
 import { useRouter } from 'expo-router';
 import { useApp } from '../src/store/AppContext';
 import { formatUsernameDisplay } from '../src/utils/username';
@@ -25,8 +26,14 @@ function timeAgo(iso: string): string {
 }
 
 function notifTitle(n: SocialNotification): string {
+  if (n.kind === 'product') {
+    return n.programTitle ?? 'Mise à jour Mova';
+  }
   if (n.kind === 'program_like') {
     return `${n.fromDisplayName} a aimé votre programme`;
+  }
+  if (n.kind === 'session_like') {
+    return `${n.fromDisplayName} a aimé votre séance`;
   }
   if (n.kind === 'follow_request') {
     if (n.requestStatus === 'accepted') return `${n.fromDisplayName} — demande acceptée`;
@@ -43,6 +50,7 @@ function notifTitle(n: SocialNotification): string {
 }
 
 function notifSub(n: SocialNotification): string {
+  if (n.kind === 'product') return 'Annonce';
   if (n.kind === 'program_like' && n.programTitle) return n.programTitle;
   return formatUsernameDisplay(n.fromUsername);
 }
@@ -92,8 +100,23 @@ export default function NotificationsScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setLoadedPages(1);
-    setTimeout(() => setRefreshing(false), 500);
-  }, []);
+    const me = (state.profile.username ?? '').trim().toLowerCase();
+    void (async () => {
+      try {
+        if (me) {
+          const { claimSocialInboxEvents } = await import(
+            '../src/storage/socialInbox'
+          );
+          const batch = await claimSocialInboxEvents(me, 5);
+          for (const notification of batch) {
+            dispatch({ type: 'PUSH_SOCIAL_NOTIFICATION', notification });
+          }
+        }
+      } finally {
+        setRefreshing(false);
+      }
+    })();
+  }, [dispatch, state.profile.username]);
 
   const openProfile = useCallback(
     (fromUsername: string) => {
@@ -217,7 +240,7 @@ export default function NotificationsScreen() {
 
 function makeStyles(colors: ColorPalette) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bgSecondary },
+    root: { flex: 1, backgroundColor: 'transparent' },
     empty: {
       textAlign: 'center',
       marginTop: spacing.xl,

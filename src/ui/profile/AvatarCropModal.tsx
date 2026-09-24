@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   PanResponder,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { Alert } from '../../utils/appAlert';
+import { Text } from '../Text';
 import Svg, { Circle, Defs, Mask, Rect } from 'react-native-svg';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useThemeColors } from '../../theme/ThemeContext';

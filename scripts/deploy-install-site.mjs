@@ -1,5 +1,5 @@
 /**
- * Déploie Azimut à la RACINE HTTPS (comme BTP Pro sur Render).
+ * Déploie Mova à la RACINE HTTPS (comme BTP Pro sur Render).
  * Cible : https://hingantmael-gif.github.io/  (repo user pages)
  * + miroir redirect depuis l’ancien /azimut/
  */
@@ -10,14 +10,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const LIVE = 'https://hingantmael-gif.github.io';
+/** Adresse publique du site. Pour un domaine propre : MOVA_SITE_URL=https://mova.app (+ CNAME DNS chez le registrar). */
+const LIVE = (process.env.MOVA_SITE_URL || 'https://hingantmael-gif.github.io').replace(/\/$/, '');
+const CUSTOM_DOMAIN = /github\.io$/.test(new URL(LIVE).hostname) ? null : new URL(LIVE).hostname;
 /** API auth partagée (Render) — tous les e-mails, comptes cross-device */
-const PROD_API = process.env.AZIMUT_PROD_API_URL || 'https://azimut-auth-api.onrender.com';
+const PROD_API = process.env.MOVA_API_URL || 'https://mova-api.onrender.com';
 const sh = (cmd, cwd = root, env = {}) =>
   execSync(cmd, { cwd, stdio: 'inherit', shell: true, env: { ...process.env, ...env } });
 
+/** Identifiant unique de ce déploiement : l'app installée le compare à /version.json pour se mettre à jour seule. */
+const BUILD_ID = Date.now().toString(36);
+
 sh('node scripts/generate-install-qr.mjs');
 sh('npx --yes tsx scripts/generate-terms-html.mjs');
+sh('npx --yes tsx scripts/generate-privacy-html.mjs');
 
 /** Expo charge `.env` et peut écraser l’env shell → on force l’URL prod le temps du build. */
 const envPath = path.join(root, '.env');
@@ -33,8 +39,9 @@ if (fs.existsSync(envPath)) {
   fs.writeFileSync(envPath, next);
 }
 try {
-  sh('npx expo export --platform web', root, {
+  sh('npx expo export --platform web --clear', root, {
     EXPO_PUBLIC_API_URL: PROD_API,
+    EXPO_PUBLIC_BUILD_ID: BUILD_ID,
   });
 } finally {
   if (envBackup != null) fs.writeFileSync(envPath, envBackup);
@@ -47,6 +54,8 @@ for (const f of [
   'icon.png',
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable-512.png',
+  'apple-touch-icon.png',
   'favicon.png',
   'telecharger.html',
   'qr-install.png',
@@ -59,12 +68,44 @@ for (const f of [
   if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dist, f));
 }
 
+// Version publiée + service worker estampillé (chaque déploiement change les octets de sw.js,
+// donc le navigateur installe la nouvelle version au prochain lancement).
+fs.writeFileSync(path.join(dist, 'version.json'), JSON.stringify({ build: BUILD_ID }));
+fs.appendFileSync(path.join(dist, 'sw.js'), `\n// build: ${BUILD_ID}\n`);
+// Pages (chunks) à précharger en arrière-plan : un appui sur un onglet est instantané.
+{
+  const jsDir = path.join(dist, '_expo', 'static', 'js', 'web');
+  const skip = /^(entry|__common|__expo-metro-runtime)-/;
+  const chunks = fs.existsSync(jsDir)
+    ? fs
+        .readdirSync(jsDir)
+        .filter((f) => f.endsWith('.js') && !skip.test(f) && !f.includes('[') && !f.includes(']'))
+        .map((f) => ({ url: '/_expo/static/js/web/' + f, size: fs.statSync(path.join(jsDir, f)).size }))
+    : [];
+  fs.writeFileSync(path.join(dist, 'chunks.json'), JSON.stringify(chunks));
+}
+
 if (fs.existsSync(path.join(dist, 'index.html'))) {
   // App Expo = index + 404 (SPA). Page publique Google = /apropos.html uniquement.
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'));
   fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, 'app.html'));
 }
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
+if (CUSTOM_DOMAIN) fs.writeFileSync(path.join(dist, 'CNAME'), `${CUSTOM_DOMAIN}\n`);
+
+// Google Play : jeton remplacé par la vraie fiche une fois publiée (voir docs/PLAY_STORE.md).
+// Vide tant que EXPO_PUBLIC_PLAY_STORE_URL n'est pas défini → la page affiche « Bientôt disponible ».
+{
+  const telechargerPath = path.join(dist, 'telecharger.html');
+  if (fs.existsSync(telechargerPath)) {
+    const playUrl = (process.env.EXPO_PUBLIC_PLAY_STORE_URL || '').trim();
+    const patched = fs
+      .readFileSync(telechargerPath, 'utf8')
+      .split('__PLAY_STORE_URL__')
+      .join(playUrl);
+    fs.writeFileSync(telechargerPath, patched);
+  }
+}
 
 // Garde-fou OAuth : si Google renvoie encore sur /apropos.html, renvoyer vers /welcome
 const aproposPath = path.join(dist, 'apropos.html');
@@ -94,7 +135,7 @@ sh('git init', rootTmp);
 sh('git checkout -b main', rootTmp);
 sh('git add -A', rootTmp);
 sh(
-  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "deploy: Azimut PWA racine (comme BTP Pro)"',
+  'git -c user.email=noreply@github.com -c user.name="Mova Deploy" commit -m "deploy: Mova PWA racine (comme BTP Pro)"',
   rootTmp,
 );
 try {
@@ -105,7 +146,7 @@ try {
   });
 } catch {
   sh(
-    'gh repo create hingantmael-gif/hingantmael-gif.github.io --public --description "Azimut — app web PWA (racine)"',
+    'gh repo create hingantmael-gif/hingantmael-gif.github.io --public --description "Mova — app web PWA (racine)"',
   );
 }
 sh('git remote add origin https://github.com/hingantmael-gif/hingantmael-gif.github.io.git', rootTmp);
@@ -118,11 +159,11 @@ const redirectHtml = `<!doctype html>
   <meta charset="UTF-8" />
   <meta http-equiv="refresh" content="0;url=${LIVE}/telecharger.html" />
   <link rel="canonical" href="${LIVE}/telecharger.html" />
-  <title>Redirection Azimut…</title>
+  <title>Redirection Mova…</title>
   <script>location.replace(${JSON.stringify(LIVE + '/telecharger.html')} + location.search + location.hash);</script>
 </head>
 <body style="background:#07111f;color:#fff;font-family:system-ui;padding:24px;text-align:center">
-  <p>Redirection vers Azimut…</p>
+  <p>Redirection vers Mova…</p>
   <p><a style="color:#3dff9a" href="${LIVE}/telecharger.html">Ouvrir l’installateur</a></p>
 </body>
 </html>`;
@@ -136,7 +177,7 @@ sh('git init', legacyTmp);
 sh('git checkout -b gh-pages', legacyTmp);
 sh('git add -A', legacyTmp);
 sh(
-  'git -c user.email=noreply@github.com -c user.name="Azimut Deploy" commit -m "redirect: /azimut → site racine PWA"',
+  'git -c user.email=noreply@github.com -c user.name="Mova Deploy" commit -m "redirect: /azimut → site racine PWA"',
   legacyTmp,
 );
 sh('git remote add origin https://github.com/hingantmael-gif/azimut.git', legacyTmp);

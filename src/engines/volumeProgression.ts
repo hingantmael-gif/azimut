@@ -127,6 +127,11 @@ export function buildWeeklyVolumeCurve(opts: {
 
   const curve: number[] = [];
   let prev = startKm;
+  // Dernier volume hors décharge/affûtage : après une semaine de décharge, le plafond
+  // +10 % se compare à CE volume, pas à la semaine allégée (sinon le volume ne remonte
+  // jamais à son niveau d'avant et le plan reste sous-chargé à chaque cycle 3:1).
+  let lastBuild = startKm;
+  let prevWasDeload = false;
 
   for (let w = 0; w < opts.totalWeeks; w++) {
     const block = opts.blocks[w] ?? 'developpement_general';
@@ -138,13 +143,19 @@ export function buildWeeklyVolumeCurve(opts: {
     targetW *= load.volumeFactor;
 
     // Règle Runna : max +10 % / semaine (plus conservateur si faible volume)
-    const maxIncrease = prev < 20 ? 1.08 : 1.1;
-    targetW = Math.min(targetW, prev * maxIncrease);
-    targetW = clamp(targetW, profile.minWeeklyKm, profile.maxWeeklyKm);
+    const ref = prevWasDeload ? Math.max(prev, lastBuild) : prev;
+    const maxIncrease = ref < 20 ? 1.08 : 1.1;
+    targetW = Math.min(targetW, ref * maxIncrease);
+    // Le plancher du profil ne s'applique pas aux semaines de décharge / affûtage : elles
+    // doivent rester plus légères que la charge normale (sinon décharge = semaine normale).
+    const floorKm = load.isDeload || load.isTaper ? profile.minWeeklyKm * 0.6 : profile.minWeeklyKm;
+    targetW = clamp(targetW, floorKm, profile.maxWeeklyKm);
     targetW = Math.round(targetW * 10) / 10;
 
     curve.push(targetW);
     prev = targetW;
+    if (!load.isDeload && !load.isTaper) lastBuild = targetW;
+    prevWasDeload = load.isDeload;
   }
 
   return curve;
@@ -166,6 +177,10 @@ export function buildLongRunCurve(opts: {
 
   const curve: number[] = [];
   let prevLong = start;
+  // Même règle que le volume hebdo : après une décharge, on repart de la dernière sortie
+  // longue « normale », pas de la sortie allégée.
+  let lastBuildLong = start;
+  let prevWasDeload = false;
 
   for (let w = 0; w < opts.totalWeeks; w++) {
     const block = opts.blocks[w] ?? 'developpement_general';
@@ -190,11 +205,14 @@ export function buildLongRunCurve(opts: {
     let longKm = Math.min(weekTarget, fromVolume, peak);
 
     // Plafond indépendant Runna : max +10 % ou +2 km vs semaine précédente
-    const maxFromPrev = prevLong * 1.1;
-    const maxAbs = prevLong + 2;
+    const refLong = prevWasDeload ? Math.max(prevLong, lastBuildLong) : prevLong;
+    const maxFromPrev = refLong * 1.1;
+    const maxAbs = refLong + 2;
     longKm = Math.min(longKm, maxFromPrev, maxAbs);
 
-    longKm = clamp(longKm, Math.min(start, peak * 0.45), peak);
+    // Plancher réduit en décharge : la sortie longue allégée ne doit pas rester au niveau normal.
+    const longFloor = Math.min(start, peak * 0.45) * (load.isDeload ? 0.75 : 1);
+    longKm = clamp(longKm, longFloor, peak);
 
     const race = opts.targetDistanceKm;
     if (race != null && race > 0 && race <= 12) {
@@ -208,6 +226,8 @@ export function buildLongRunCurve(opts: {
     longKm = Math.round(longKm * 10) / 10;
     curve.push(longKm);
     prevLong = longKm;
+    if (!load.isDeload && !(w > buildEnd && taperWeeks > 0)) lastBuildLong = longKm;
+    prevWasDeload = load.isDeload;
   }
 
   return curve;

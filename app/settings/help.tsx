@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../src/ui/Text';
 import { useRouter, type Href } from 'expo-router';
 import {
   SettingsRow,
   SettingsScreen,
   SettingsSection,
 } from '../../src/ui/settings/SettingsList';
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../../src/constants/support';
 import { AboutBrandMark } from '../../src/ui/brand/AppBrandBlocks';
 import { AppScrollView } from '../../src/ui/scrolling';
 import { useThemeColors } from '../../src/theme/ThemeContext';
@@ -56,7 +56,7 @@ const FAQ: FaqItem[] = [
     id: 'program',
     title: 'Créer un programme',
     body:
-      'Depuis Accueil ou Profil, lance « Nouveau programme », choisis sport / durée / options, puis génère. Tu peux ajouter un programme en parallèle : Répartir (autres jours + repos entre qualités/renfos) ou Superposer (mêmes jours, séances allégées).',
+      'Depuis Accueil ou Profil, lance « Nouveau programme », choisis sport / durée / options, puis génère. Si un programme est déjà actif : Superposer (mêmes jours, allégé) ou Remplacer (arrête l’ancien).',
     actionLabel: 'Nouveau programme',
     href: '/program/new',
   },
@@ -80,7 +80,7 @@ const FAQ: FaqItem[] = [
     id: 'subscription',
     title: 'Fonctionnalités',
     body:
-      'L’écran Fonctionnalités liste tout ce que propose Azimut (coaching, Strava, Garmin, classement…). Touche une ligne pour ouvrir directement l’écran — et le bouton d’action quand c’est possible.',
+      'L’écran Fonctionnalités liste tout ce que propose Mova (coaching, Strava, Garmin, classement…). Touche une ligne pour ouvrir directement l’écran — et le bouton d’action quand c’est possible.',
     actionLabel: 'Voir les fonctionnalités',
     href: '/settings/subscription',
   },
@@ -163,9 +163,8 @@ export default function HelpScreen() {
 
         <SettingsSection title="Support">
           <SettingsRow
-            label="Contacter le support"
-            value={SUPPORT_EMAIL}
-            onPress={() => Linking.openURL(SUPPORT_MAILTO)}
+            label="Écrire à Mova"
+            onPress={() => router.push('/settings/contact')}
           />
           <SettingsRow
             label="Conditions d'utilisation"

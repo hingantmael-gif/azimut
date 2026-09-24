@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "Azimut",
-    "slug": "azimut",
+    "name": "Mova",
+    "slug": "mova",
+    "description": "Coach sportif personnel : programme multi-mois, tracker GPS, séance adaptée à ton sommeil et à ta forme.",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,10 +16,10 @@
       }
     },
     "userInterfaceStyle": "automatic",
-    "scheme": "azimut",
+    "scheme": "mova",
     "newArchEnabled": true,
     "android": {
-      "package": "app.azimut.training",
+      "package": "app.mova.coach",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07111F",
@@ -29,7 +30,11 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS"
       ],
       "intentFilters": [
         {
@@ -37,7 +42,7 @@
           "autoVerify": true,
           "data": [
             {
-              "scheme": "azimut",
+              "scheme": "mova",
               "host": "*"
             }
           ],
@@ -81,10 +86,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.azimut.training",
+      "bundleIdentifier": "app.mova.coach",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Azimut utilise ta position pour suivre ta séance même en arrière-plan si tu l’autorises.",
+        "NSLocationWhenInUseUsageDescription": "Mova utilise ta position pour guider ta séance (distance, allure, carte).",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Mova continue de suivre ta séance (distance, allure, tracé) quand l’écran est verrouillé. La position n’est utilisée que pendant un enregistrement.",
         "LSApplicationQueriesSchemes": [
           "strava",
           "connect"
@@ -98,29 +104,42 @@
               "public.xml"
             ]
           }
-        ]
+        ],
+        "UIBackgroundModes": [
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static",
-      "name": "Azimut",
-      "shortName": "Azimut",
-      "description": "Coaching multi-sport — installe Azimut sur téléphone, tablette ou PC.",
+      "name": "Mova",
+      "shortName": "Mova",
+      "description": "Coaching multi-sport — installe Mova sur téléphone, tablette ou PC.",
       "themeColor": "#07111F",
       "backgroundColor": "#07111F"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": "production"
+          }
+        }
+      ],
       "expo-secure-store",
       "expo-document-picker",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Azimut utilise ta position pour guider ta séance (distance, allure, carte).",
-          "isIosBackgroundLocationEnabled": false,
-          "isAndroidBackgroundLocationEnabled": false
+          "locationWhenInUsePermission": "Mova utilise ta position pour guider ta séance (distance, allure, carte).",
+          "locationAlwaysAndWhenInUsePermission": "Mova continue de suivre ta séance quand l’écran est verrouillé. La position n’est utilisée que pendant un enregistrement.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
@@ -140,7 +159,19 @@
           "microphonePermission": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-font",
+      "expo-task-manager",
+      "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "17.0"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

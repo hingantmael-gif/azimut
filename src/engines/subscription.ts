@@ -1,20 +1,38 @@
 import type { SubscriptionPlan, WatchBrandId } from '../types/domain';
 import { watchResendLabel, watchSendLabel } from './watchExport';
+import { isPremiumGateActive } from '../premium/featureFlags';
 
-/** Toutes les fonctionnalités sont accessibles (plus de paywall). */
-export function isPremium(_plan?: SubscriptionPlan): boolean {
-  return true;
+export function isPremium(plan?: SubscriptionPlan): boolean {
+  return plan === 'premium_monthly' || plan === 'premium_yearly';
 }
 
-/** Bonus XP Premium : +40 % (arrondi à l’unité supérieure) */
-export const PREMIUM_XP_BONUS_RATIO = 0.4;
+/** Avantages (boucliers ladder…) : tout le monde quand Premium est désactivé, sinon abonnés seulement. */
+export function hasPremiumPerks(plan?: SubscriptionPlan): boolean {
+  return !isPremiumGateActive() || isPremium(plan);
+}
+
+/** Bonus XP Premium : désactivé sur le compétitif (anti pay-to-win — brief §5). */
+export const PREMIUM_XP_BONUS_RATIO = 0;
 
 /**
- * Applique le bonus Premium sur un gain d’XP.
- * Ex. 100 → 140 ; 15 → 21 ; 50 → 70. Si résultat à virgule → ceil.
+ * Gains d’XP compétitifs (ladder, sessions, RPE, likes…) : même rythme Free/Premium.
+ * Ne pas réintroduire un bonus invisible sur le classement.
  */
 export function withPremiumXpBonus(baseXp: number, _premium?: boolean): number {
   return Math.round(Math.max(0, baseXp));
+}
+
+/**
+ * Réservé aux jalons non compétitifs (badges cosmétiques, etc.) si besoin plus tard.
+ * Aujourd’hui : pas de bonus (parité éthique).
+ */
+export function withPremiumCosmeticXpBonus(
+  baseXp: number,
+  premium?: boolean,
+): number {
+  const n = Math.max(0, baseXp);
+  if (!premium) return Math.round(n);
+  return Math.round(n);
 }
 
 /** @deprecated — préférer watchSendLabel(brand) */

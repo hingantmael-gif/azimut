@@ -3,6 +3,7 @@ import { formatDuration, formatPace } from './core';
 import { computeSessionDurationSec } from './coachingEngine';
 import { describePaceZoneSource, resolvePaceZones } from './paceZones';
 import { pickBestRaceReference } from './athleteProfile';
+import { dropOrdinal, findRepeatCycle } from './stepGrouping';
 
 export function resolveAthletePaceZones(
   onboarding?: OnboardingAnswers,
@@ -60,7 +61,8 @@ export function formatStepTarget(step: WorkoutStep): string | null {
 }
 
 export function describeWorkoutStep(step: WorkoutStep): { title: string; detail: string } {
-  const title = step.label?.trim() || STEP_TYPE_LABELS[step.type];
+  const raw = step.label?.trim() || STEP_TYPE_LABELS[step.type];
+  const title = raw.replace(/^\[calis:[a-z_]+(?:\|[^\]]+)*\]\s*/i, '');
   const measure = formatStepMeasure(step);
   const withRepeat =
     step.repeat && step.repeat > 1 && !title.includes(`${step.repeat} ×`)
@@ -69,6 +71,51 @@ export function describeWorkoutStep(step: WorkoutStep): { title: string; detail:
   const target = formatStepTarget(step);
   const detail = target ? `${withRepeat} · ${target}` : withRepeat;
   return { title, detail };
+}
+
+export type StepLine = {
+  title: string;
+  detail: string;
+  /** Bloc répété (ex. « 8 × ») : les lignes qu'il contient, pour un affichage détaillé à la demande. */
+  group?: { count: number; parts: Array<{ title: string; detail: string }> };
+};
+
+/**
+ * Séance lisible en un coup d'œil : une série d'étapes qui se répète (fartlek, côtes, surges…) devient UNE ligne
+ * « Répéter N × … », et « N × effort » suivi de sa récupération devient une seule ligne.
+ * Le détail complet reste disponible via describeWorkoutStep sur chaque étape.
+ */
+export function compactStepLines(steps: WorkoutStep[]): StepLine[] {
+  const lines: StepLine[] = [];
+  let i = 0;
+  while (i < steps.length) {
+    const cycle = findRepeatCycle(steps, i);
+    if (cycle) {
+      const parts = steps.slice(i, i + cycle.len).map((st) => {
+        const d = describeWorkoutStep(st);
+        return { title: dropOrdinal(d.title), detail: d.detail };
+      });
+      lines.push({
+        title: `Répéter ${cycle.count} ×`,
+        detail: parts.map((pt) => (pt.detail && pt.detail !== '—' ? `${pt.title} (${pt.detail})` : pt.title)).join('  →  '),
+        group: { count: cycle.count, parts },
+      });
+      i += cycle.len * cycle.count;
+      continue;
+    }
+    const cur = steps[i];
+    const next = steps[i + 1];
+    const d = describeWorkoutStep(cur);
+    // « N × effort » + sa récupération répétée N fois → une seule ligne.
+    if (cur.repeat && cur.repeat > 1 && next && next.type === 'rest' && next.repeat === cur.repeat) {
+      lines.push({ title: d.title, detail: `${d.detail} · récup ${formatStepMeasure(next)}` });
+      i += 2;
+      continue;
+    }
+    lines.push(d);
+    i += 1;
+  }
+  return lines;
 }
 
 export function formatWorkoutDistance(meters?: number): string | null {
@@ -91,7 +138,10 @@ export function formatPeriodization(block?: string): string {
 export function summarizeWorkout(workout: PlannedWorkout): {
   durationLabel: string;
   distanceLabel: string | null;
-  stepLines: Array<{ title: string; detail: string }>;
+  /** Lignes compactes (répétitions regroupées). */
+  stepLines: StepLine[];
+  /** Une ligne par étape, sans regroupement. */
+  fullStepLines: Array<{ title: string; detail: string }>;
 } {
   const durationSec =
     workout.plannedDurationSec && workout.plannedDurationSec > 0
@@ -101,7 +151,8 @@ export function summarizeWorkout(workout: PlannedWorkout): {
   return {
     durationLabel: formatDuration(durationSec),
     distanceLabel: formatWorkoutDistance(workout.plannedDistanceM),
-    stepLines: workout.steps.map(describeWorkoutStep),
+    stepLines: compactStepLines(workout.steps),
+    fullStepLines: workout.steps.map(describeWorkoutStep),
   };
 }
 

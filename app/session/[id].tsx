@@ -1,13 +1,34 @@
-import { useMemo } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Body, Muted, PrimaryButton, Screen, Title } from '../../src/ui/primitives';
+import { useAmbientSport } from '../../src/theme/AmbientSport';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View, Image, Pressable } from 'react-native';
+import { Text } from '../../src/ui/Text';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import {
+  Body,
+  Muted,
+  PrimaryButton,
+  Screen,
+  SecondaryButton,
+  Title,
+} from '../../src/ui/primitives';
 import { useApp } from '../../src/store/AppContext';
 import {
   formatPeriodization,
   formatVmaHint,
   summarizeWorkout,
 } from '../../src/engines/workoutPresentation';
+import {
+  isCalisthenicsWorkout,
+  parseCalisExerciseIdFromStepLabel,
+  stripCalisStepLabel,
+} from '../../src/engines/calisthenicsProgramming';
+import { canStartGuidedStrengthSession, visualKeyFor } from '../../src/engines/guidedStrengthSession';
+import {
+  calisthenicsDemoImage,
+  COVER_CROP_CENTER,
+  coverCropImageStyle,
+  guidedExerciseImage,
+} from '../../src/constants/sportVisuals';
 import { DISCIPLINE_META } from '../../src/constants/disciplines';
 import {
   canAccessSessionRpe,
@@ -16,21 +37,24 @@ import {
 import { useThemeColors } from '../../src/theme/ThemeContext';
 import { radii, spacing } from '../../src/theme/tokens';
 import type { ColorPalette } from '../../src/theme/palettes';
-import { canSendWorkoutToWatch } from '../../src/engines/watchExport';
+import { canSendWorkoutToStrava, canSendWorkoutToWatch } from '../../src/engines/watchExport';
 import { canStartLiveWorkout } from '../../src/engines/liveWorkout';
-import { shareWorkoutSession } from '../../src/engines/stravaExport';
+import { exportWorkoutToStrava } from '../../src/engines/stravaExport';
 import { useWatchWorkoutExport } from '../../src/hooks/useGarminWorkoutExport';
 import { useActionFocus } from '../../src/hooks/useActionFocus';
 import { FocusTarget } from '../../src/ui/FocusTarget';
 import { AppScrollView } from '../../src/ui/scrolling';
+import { appConfirm } from '../../src/utils/appAlert';
+import { safeGoBack } from '../../src/ui/navigation/AlwaysBackButton';
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, dispatch } = useApp();
   const router = useRouter();
-  const { colors } = useThemeColors();
+  const { colors, custom: customTheme } = useThemeColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const workout = state.plan.find((w) => w.id === id);
+  useAmbientSport(workout?.discipline);
   const {
     exporting,
     sendWorkout,
@@ -42,6 +66,9 @@ export default function SessionDetailScreen() {
   const focusGarmin = useActionFocus('garmin');
   const focusStrava = useActionFocus('strava');
   const focusRpe = useActionFocus('rpe');
+  const [showFullSteps, setShowFullSteps] = useState(false);
+  /** Course / vélo / natation : le déroulé est replié (la note du coach et les boutons passent d'abord). */
+  const [showSteps, setShowSteps] = useState(false);
 
   if (!workout) {
     return (
@@ -55,11 +82,25 @@ export default function SessionDetailScreen() {
   const vmaHint = formatVmaHint(state.profile.onboarding, state.activities);
   const todayIso = new Date().toISOString().slice(0, 10);
   const isRest = workout.discipline === 'rest';
+  const isCalis = isCalisthenicsWorkout(workout);
+  const isShortSession =
+    workout.discipline === 'mobility' ||
+    workout.discipline === 'ppg' ||
+    /gainage/i.test(workout.title);
   const canWatchSend = canSendWorkoutToWatch(workout.discipline);
+  const canStravaSend = canSendWorkoutToStrava(workout.discipline);
   const rpeAlreadyDone = hasRpeFeedbackForSession(state.feedbacks, workout.id);
+  const canMarkDone =
+    !isRest && !rpeAlreadyDone && (isCalis || isShortSession);
+  const canGuided =
+    !isRest && !rpeAlreadyDone && canStartGuidedStrengthSession(workout);
   const canRpe =
-    !isRest && !rpeAlreadyDone && canAccessSessionRpe(workout.date, todayIso);
-  const discColor = DISCIPLINE_META[workout.discipline]?.color ?? colors.accent;
+    !isCalis &&
+    !isShortSession &&
+    !isRest &&
+    !rpeAlreadyDone &&
+    canAccessSessionRpe(workout.date, todayIso);
+  const discColor = (customTheme ? undefined : DISCIPLINE_META[workout.discipline]?.color) ?? colors.accent;
 
   const dateLabel = new Date(workout.date + 'T12:00:00').toLocaleDateString('fr-FR', {
     weekday: 'long',
@@ -71,12 +112,31 @@ export default function SessionDetailScreen() {
   if (!canWatchSend) {
     watchHint = isRest
       ? 'Pas d’export pour un jour de repos.'
-      : 'Course, vélo, natation et musculation uniquement — cette séance ne peut pas être envoyée telle quelle.';
+      : isShortSession
+        ? 'Séance courte (gainage / mobilité) — pas besoin d’envoyer à la montre. Marque-la comme faite ou retire-la du plan.'
+        : '';
   } else if (workout.exportedToGarmin) {
     watchHint = 'Séance déjà envoyée vers ta montre — tu peux renvoyer si besoin.';
   } else {
     watchHint = hint;
   }
+
+  const markSessionDone = () => {
+    dispatch({ type: 'COMPLETE_SESSION_DONE', sessionId: workout.id });
+    safeGoBack(router, '/(tabs)');
+  };
+
+  const removeFromPlan = async () => {
+    const ok = await appConfirm(
+      'Retirer du plan',
+      `Retirer « ${workout.title} » du plan ?`,
+      'Retirer',
+      'Annuler',
+    );
+    if (!ok) return;
+    dispatch({ type: 'REMOVE_WORKOUT', id: workout.id });
+    safeGoBack(router, '/(tabs)/calendar');
+  };
 
   const onWatchPress = () => {
     if (!canWatchSend || exporting) return;
@@ -85,9 +145,16 @@ export default function SessionDetailScreen() {
 
   const onStravaPress = async () => {
     if (isRest) return;
-    const result = await shareWorkoutSession(workout);
-    if (result === 'shared') {
+    const result = await exportWorkoutToStrava(
+      workout,
+      state.activities,
+      state.analyses,
+      state.profile,
+    );
+    if (result === 'ok') {
       dispatch({ type: 'EXPORT_STRAVA', workoutId: workout.id });
+    } else if (result === 'paywall') {
+      router.push('/settings/subscription');
     }
   };
 
@@ -126,41 +193,122 @@ export default function SessionDetailScreen() {
           ) : null}
         </View>
 
+        {canGuided ? (
+          <View style={{ marginTop: spacing.md }}>
+            <PrimaryButton
+              label="Commencer la séance guidée"
+              onPress={() => router.push({ pathname: '/session/guided', params: { id: workout.id } })}
+            />
+          </View>
+        ) : null}
+
         {vmaHint ? (
           <Muted style={{ marginTop: spacing.sm }}>{vmaHint} · allures offline</Muted>
         ) : null}
 
-        {workout.coachNote ? (
+        {workout.coachNote && !canGuided ? (
           <View style={styles.coachBox}>
             <Text style={styles.coachLabel}>Note du coach</Text>
             <Body style={{ marginTop: 4 }}>{workout.coachNote}</Body>
           </View>
         ) : null}
 
-        <Body style={{ marginTop: spacing.lg, fontWeight: '700' }}>Déroulé</Body>
-        {summary.stepLines.map((line, i) => (
-          <View key={`${workout.id}-line-${i}`} style={styles.step}>
-            <View style={[styles.stepDot, { backgroundColor: discColor }]} />
-            <View style={{ flex: 1 }}>
-              <Body style={{ fontWeight: '700' }}>{line.title}</Body>
-              <Muted>{line.detail}</Muted>
-            </View>
-          </View>
-        ))}
+        {canGuided || isCalis ? (
+          <Body style={{ marginTop: spacing.lg, fontWeight: '700' }}>Déroulé</Body>
+        ) : null}
+        {canGuided ? (
+          <Muted style={{ marginTop: 4, marginBottom: 4 }}>
+            {workout.steps.filter((s) => s.type === 'active').length} exercices · séance guidée
+            avec chrono et images
+          </Muted>
+        ) : null}
+        {!canGuided && !isCalis && !isRest ? (
+          <Pressable
+            onPress={() => setShowSteps((v) => !v)}
+            accessibilityRole="button"
+            style={{ marginTop: spacing.md }}
+          >
+            <Body style={{ color: colors.accent, fontWeight: '700' }}>
+              {showSteps ? 'Masquer le déroulé ▾' : 'Voir le déroulé ▸'}
+            </Body>
+          </Pressable>
+        ) : null}
+        {!canGuided && !isCalis && showSteps
+          ? (showFullSteps ? summary.fullStepLines : summary.stepLines).map((line, i) => (
+              <View key={`${workout.id}-cline-${i}`} style={styles.step}>
+                <View style={[styles.stepDot, { backgroundColor: discColor }]} />
+                <View style={{ flex: 1 }}>
+                  <Body style={{ fontWeight: '700' }}>{line.title}</Body>
+                  {line.detail ? <Muted>{line.detail}</Muted> : null}
+                </View>
+              </View>
+            ))
+          : null}
+        {!canGuided && !isCalis && showSteps && summary.fullStepLines.length > summary.stepLines.length ? (
+          <Pressable
+            onPress={() => setShowFullSteps((v) => !v)}
+            accessibilityRole="button"
+            style={{ marginTop: spacing.sm }}
+          >
+            <Body style={{ color: colors.accent, fontWeight: '700' }}>
+              {showFullSteps ? 'Masquer le détail' : 'Voir le détail complet'}
+            </Body>
+          </Pressable>
+        ) : null}
+        {(canGuided || isCalis ? (canGuided ? workout.steps.filter((s) => s.type === 'active') : workout.steps) : []).map(
+          (step, i) => {
+            const calisId = parseCalisExerciseIdFromStepLabel(step.label);
+            const raw = stripCalisStepLabel(step.label ?? '');
+            const title = raw.split('·')[0].trim() || raw;
+            const shortDetail = raw.includes('·')
+              ? raw
+                  .split('·')
+                  .slice(1, 3)
+                  .join(' · ')
+                  .replace(/\s*[—–].*$/, '')
+                  .trim()
+              : summary.stepLines[i]?.detail;
+            const demo =
+              calisthenicsDemoImage(calisId) ??
+              (canGuided ? guidedExerciseImage(visualKeyFor(title, calisId)) : undefined);
+            return (
+              <View key={`${workout.id}-line-${step.id}-${i}`} style={styles.step}>
+                {demo ? (
+                  <Image
+                    source={demo}
+                    style={[styles.demoThumb, coverCropImageStyle(COVER_CROP_CENTER)]}
+                    resizeMode="cover"
+                    accessibilityLabel="Démonstration"
+                  />
+                ) : (
+                  <View style={[styles.stepDot, { backgroundColor: discColor }]} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Body style={{ fontWeight: '700' }} numberOfLines={1}>
+                    {title}
+                  </Body>
+                  {shortDetail ? (
+                    <Muted numberOfLines={1}>{shortDetail}</Muted>
+                  ) : null}
+                </View>
+              </View>
+            );
+          },
+        )}
+
 
         {!isRest && canStartLiveWorkout(workout.discipline) ? (
           <>
             <View style={{ marginTop: spacing.md }}>
               <PrimaryButton
-                label="Effectuer la séance dans Azimut"
+                label="Démarrer la séance dans Mova"
                 onPress={() =>
                   router.push({ pathname: '/session/live', params: { id: workout.id } })
                 }
               />
             </View>
             <Muted style={{ marginTop: 6 }}>
-              Tracker GPS intégré : allure cible, étapes du plan, carte live — sans passer par
-              Strava.
+              Tracker GPS : carte interactive, chrono, distance et allure — comme Strava, dans Mova.
             </Muted>
           </>
         ) : null}
@@ -181,22 +329,51 @@ export default function SessionDetailScreen() {
               />
             </FocusTarget>
             <Muted style={{ marginTop: 6 }}>{watchHint}</Muted>
+            {!state.profile.watch?.brandId || state.profile.watch.brandId === 'garmin' ? (
+              <Pressable
+                onPress={() => router.push('/settings/garmin-guide' as Href)}
+                accessibilityRole="button"
+                style={{ marginTop: spacing.xs }}
+              >
+                <Body style={{ color: colors.accent, fontWeight: '700' }}>Comment l’envoyer sur ma Garmin ? (sans télécharger)</Body>
+              </Pressable>
+            ) : null}
           </>
-        ) : (
+        ) : watchHint ? (
           <Muted style={{ marginTop: spacing.md }}>{watchHint}</Muted>
-        )}
+        ) : null}
 
-        <FocusTarget active={focusStrava} style={{ marginTop: spacing.sm }}>
-          <PrimaryButton
-            label={
-              workout.exportedToStrava
-                ? 'Renvoyer / partager vers Strava'
-                : 'Envoyer vers Strava'
-            }
-            disabled={isRest}
-            onPress={() => void onStravaPress()}
-          />
-        </FocusTarget>
+        {canStravaSend ? (
+          <FocusTarget active={focusStrava} style={{ marginTop: spacing.sm }}>
+            <PrimaryButton
+              label={
+                workout.exportedToStrava
+                  ? 'Renvoyer / partager vers Strava'
+                  : 'Envoyer vers Strava'
+              }
+              disabled={isRest}
+              onPress={() => void onStravaPress()}
+            />
+          </FocusTarget>
+        ) : null}
+
+        {canMarkDone && !canGuided ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <PrimaryButton
+              label="Marquer comme faite"
+              onPress={markSessionDone}
+            />
+            <Muted style={{ marginTop: 6 }}>
+              {isCalis
+                ? 'Callisthénie : pas de feedback RPE — valide quand tu as terminé.'
+                : 'Séance courte : valide dès que c’est fait — pas besoin de GPS ni de montre.'}
+            </Muted>
+          </View>
+        ) : null}
+
+        {(isCalis || isShortSession) && rpeAlreadyDone ? (
+          <Muted style={{ marginTop: spacing.sm }}>Séance déjà validée.</Muted>
+        ) : null}
 
         {canRpe ? (
           <FocusTarget active={focusRpe} style={{ marginTop: spacing.sm }}>
@@ -210,14 +387,23 @@ export default function SessionDetailScreen() {
               }
             />
           </FocusTarget>
-        ) : rpeAlreadyDone ? (
+        ) : !isCalis && !isShortSession && rpeAlreadyDone ? (
           <Muted style={{ marginTop: spacing.sm }}>
             Feedback RPE déjà enregistré pour cette séance.
           </Muted>
-        ) : !isRest ? (
+        ) : !isCalis && !isShortSession && !isRest ? (
           <Muted style={{ marginTop: spacing.sm }}>
             RPE dispo dès 3 jours avant la séance, le jour J, et après.
           </Muted>
+        ) : null}
+
+        {!isRest && !workout.lockedRest ? (
+          <View style={{ marginTop: spacing.md }}>
+            <SecondaryButton label="Retirer du plan" onPress={() => void removeFromPlan()} />
+            <Muted style={{ marginTop: 6, color: colors.danger }}>
+              Retire la séance du calendrier sans la marquer comme faite.
+            </Muted>
+          </View>
         ) : null}
       </AppScrollView>
       {WatchPicker}
@@ -266,6 +452,11 @@ function makeStyles(colors: ColorPalette) {
       height: 10,
       borderRadius: 5,
       marginTop: 6,
+    },
+    demoThumb: {
+      width: 72,
+      height: 72,
+      borderRadius: radii.md,
     },
     coachBox: {
       marginTop: spacing.md,

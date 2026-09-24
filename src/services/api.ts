@@ -1,21 +1,12 @@
 /**
- * Client auth Azimut → API (inscription e-mail + Google).
+ * Client auth Mova → API (inscription e-mail + Google).
  * En cas d’API injoignable, les écrans basculent sur le stockage local.
  */
-function resolveApiUrl(): string {
-  const fromEnv = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/$/, '');
-  if (fromEnv && !/localhost|127\.0\.0\.1/i.test(fromEnv)) return fromEnv;
-  if (typeof globalThis !== 'undefined') {
-    const loc = (globalThis as { location?: { hostname?: string } }).location;
-    const host = loc?.hostname ?? '';
-    if (host.includes('github.io') || host.includes('onrender.com')) {
-      return 'https://azimut-auth-api.onrender.com';
-    }
-  }
-  return fromEnv || 'http://localhost:8787';
-}
+import { resolveApiUrl } from './apiBase';
 
 const API_URL = resolveApiUrl();
+
+export { resolveApiUrl };
 
 export type AuthUserDto = {
   id: string;

@@ -1,4 +1,5 @@
-import { Platform, StyleSheet, Text, type TextProps, type StyleProp, type TextStyle } from 'react-native';
+import { Platform, StyleSheet, type TextProps, type StyleProp, type TextStyle } from 'react-native';
+import { Text } from '../Text';
 import { UI_PLAIN } from '../../constants/authLabels';
 
 type Props = {

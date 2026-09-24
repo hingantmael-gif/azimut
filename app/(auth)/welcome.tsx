@@ -1,17 +1,27 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Platform, StyleSheet, View } from 'react-native';
+import { isStandaloneDisplay } from '../../src/services/pwaInstall';
+import { Text } from '../../src/ui/Text';
+import { useRouter, type Href } from 'expo-router';
 import { BrandMark } from '../../src/ui/strava/BrandMark';
 import { OrangeButton } from '../../src/ui/strava/AuthScreen';
 import { BRAND } from '../../src/constants/brand';
-import { AUTH_LABELS } from '../../src/constants/authLabels';
 import { useApp } from '../../src/store/AppContext';
 import { spacing } from '../../src/theme/tokens';
+import { useI18n } from '../../src/i18n/I18nContext';
+import { WizardBackdrop } from '../../src/ui/program/WizardBackdrop';
 
-/** Accueil Azimut — entrée simple ; CGU à l’inscription / connexion. */
+/** Accueil Mova — entrée simple ; CGU à l’inscription. */
+function useCanInstall(): boolean {
+  // Navigateur (pas l'app installée) : on propose le guide d'installation dès l'accueil — utile surtout sur iPhone.
+  return Platform.OS === 'web' && typeof window !== 'undefined' && !isStandaloneDisplay();
+}
+
 export default function WelcomeScreen() {
   const router = useRouter();
+  const canInstall = useCanInstall();
   const { state } = useApp();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!state.authToken || !state.profile.emailVerified) return;
@@ -29,30 +39,33 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
+      <WizardBackdrop sport="run" />
+      <View pointerEvents="none" style={styles.scrim} />
       <View style={styles.hero}>
-        <View style={styles.wash} />
-        <View style={styles.orbitA} />
-        <View style={styles.orbitB} />
-        <View style={styles.orbitC} />
         <View style={styles.heroContent}>
-          <Text style={styles.eyebrow}>MULTI-SPORT</Text>
+          <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
           <BrandMark size="lg" ink surfaceColor={BRAND.ink} />
-          <Text style={styles.tagline}>{BRAND.taglineLines}</Text>
+          <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
         </View>
       </View>
 
       <View style={styles.actions}>
         <OrangeButton
-          label="Inscription"
+          label={t('welcome.signup')}
           onPress={() => router.push('/(auth)/register')}
         />
         <OrangeButton
-          label={AUTH_LABELS.signIn}
+          label={t('auth.signIn')}
           variant="outline"
           onPress={() => router.push('/(auth)/login')}
         />
-        <Text style={styles.legal} onPress={() => router.push('/settings/terms')}>
-          Conditions d’utilisation
+        {canInstall ? (
+          <Text style={styles.legal} onPress={() => router.push('/install' as Href)}>
+            Installer Mova sur mon téléphone
+          </Text>
+        ) : null}
+        <Text style={styles.legal} onPress={() => router.push('/settings/legal/terms' as Href)}>
+          {t('settings.terms')}
         </Text>
       </View>
     </View>
@@ -64,6 +77,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BRAND.ink,
   },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(3,8,16,0.5)' },
   hero: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -71,7 +85,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     minHeight: 440,
     overflow: 'hidden',
-    backgroundColor: BRAND.ink,
   },
   wash: {
     ...StyleSheet.absoluteFill,
@@ -130,11 +143,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    backgroundColor: '#F3F7F5',
     gap: spacing.sm,
   },
   legal: {
-    color: '#0E8F6F',
+    color: '#3DFF9A',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',

@@ -17,6 +17,7 @@ import { resolveSportFamily } from './coachingEngine';
 import {
   resolveWeeklySessionCount,
 } from './trainingSchedulePolicy';
+import { todayIsoDate } from './core';
 
 export interface ProgramBuildInput {
   templateId: string;
@@ -27,6 +28,8 @@ export interface ProgramBuildInput {
   /** Jours d'entraînement (0=dim … 6=sam) */
   trainingDays: number[];
   longRunDay: number;
+  /** Nombre de séances / semaine choisi dans le wizard */
+  weeklySessionsTarget?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   /** Volume hebdo moyen récent (km) */
   weeklyKmAvg: number;
   recentTimeSec?: number;
@@ -41,16 +44,46 @@ export interface ProgramBuildInput {
   strengthGoal?: string;
   /** Musculation : upper | lower | full */
   strengthBodyFocus?: string;
+  /** Musculation : cibles précises (abs, back, arms, legs, chest). */
+  strengthTargets?: string[];
+  /** Callisthénie : zone (full | upper | lower) et cibles précises (abs, back, arms, legs, chest). */
+  calisScope?: string;
+  calisTargets?: string[];
   /** Musculation : pas de date limite — calendrier glissant */
   ongoing?: boolean;
   /** Intention course (démarrage doux si start / reprise) */
   runIntent?: OnboardingAnswers['runIntent'];
+  /** Objectif d'entraînement course (endurance / puissance-vitesse / dénivelé / équilibré) */
+  runFocus?: OnboardingAnswers['runFocus'];
+  /** Horodatage de génération (tests) — défaut : maintenant */
+  generatedAt?: Date;
 }
 
-function weekStartIso(): string {
-  const d = new Date();
+/**
+ * Après cette heure locale, une séance « aujourd’hui » n’est plus proposée
+ * à la génération (ex. 22h24 → première séance demain).
+ */
+export const PROGRAM_GEN_SAME_DAY_CUTOFF_HOUR = 18;
+
+/**
+ * Première date autorisée pour une séance du plan nouvellement généré.
+ * Avant 18h → aujourd’hui ; à partir de 18h → demain.
+ */
+export function effectiveProgramStartIso(now: Date = new Date()): string {
+  const today = todayIsoDate(now);
+  if (now.getHours() < PROGRAM_GEN_SAME_DAY_CUTOFF_HOUR) {
+    return today;
+  }
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 12, 0, 0, 0);
+  return todayIsoDate(next);
+}
+
+function weekStartIso(now: Date = new Date()): string {
+  const d = new Date(now);
+  d.setHours(12, 0, 0, 0);
+  // Dimanche de la semaine locale en cours
   d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().slice(0, 10);
+  return todayIsoDate(d);
 }
 
 function goalFromDistanceKm(km: number): GoalType {
@@ -134,17 +167,21 @@ function resolveTemplate(input: ProgramBuildInput): {
     ? input.customTitle ?? `Objectif ${input.customDistanceKm ?? '?'} km`
     : sportCat === 'strength'
       ? ['Musculation', focusLabel].filter(Boolean).join(' · ')
-      : template!.title;
+      : sportCat === 'other'
+        ? 'Callisthénie'
+        : template!.title;
 
   const dateHint = raceDateIso ? ` · course le ${raceDateIso}` : '';
   const family = resolveSportFamily(sportCat, goal);
-  const sessionCount = resolveWeeklySessionCount({
-    level,
-    goal,
-    family,
-    availableDaysCount: input.trainingDays.length,
-    weeklyKm: input.weeklyKmAvg,
-  });
+  const sessionCount =
+    input.weeklySessionsTarget ??
+    resolveWeeklySessionCount({
+      level,
+      goal,
+      family,
+      availableDaysCount: input.trainingDays.length,
+      weeklyKm: input.weeklyKmAvg,
+    });
   const strengthHint =
     sportCat === 'strength' && input.strengthGoal
       ? ` · ${
@@ -154,7 +191,9 @@ function resolveTemplate(input: ProgramBuildInput): {
               ? 'force'
               : 'tonifier'
         }`
-      : '';
+      : sportCat === 'other' && input.strengthGoal
+        ? ` · ${input.strengthGoal}`
+        : '';
   const subtitle = isOngoingStrength
     ? `Sans date de fin · ${sessionCount} séances/sem${strengthHint}`
     : `${weeks} sem. · ${sessionCount} séances/sem${
@@ -167,6 +206,8 @@ function resolveTemplate(input: ProgramBuildInput): {
     trainingDays: input.trainingDays,
     longRunDay: input.longRunDay,
     weeklyKmAvg: input.weeklyKmAvg,
+    weeklySessionsTarget: (input.weeklySessionsTarget ??
+      sessionCount) as OnboardingAnswers['weeklySessionsTarget'],
     targetDistanceKm,
     recentTimeSec: input.recentTimeSec,
     recentDistanceKm: input.recentDistanceKm,
@@ -177,9 +218,13 @@ function resolveTemplate(input: ProgramBuildInput): {
     strengthEquipment: input.strengthEquipment,
     strengthGoal: input.strengthGoal,
     strengthBodyFocus: input.strengthBodyFocus,
+    strengthTargets: input.strengthTargets,
+    calisScope: input.calisScope,
+    calisTargets: input.calisTargets,
     connectGarmin: true,
     connectStrava: true,
     runIntent: input.runIntent,
+    runFocus: input.runFocus,
   };
 
   return {
@@ -251,14 +296,19 @@ export function buildProgramPlan(input: ProgramBuildInput): {
 } {
   const resolved = resolveTemplate(input);
   const weeks = resolved.weeks;
+  const generatedAt = input.generatedAt ?? new Date();
 
   let plan = generateMultiWeekPlan(
     resolved.answers,
-    weekStartIso(),
+    weekStartIso(generatedAt),
     weeks,
     resolved.answers.sportCategory,
     { ongoing: resolved.ongoing },
   );
+
+  // Pas de séance avant aujourd’hui — et pas « aujourd’hui » si génération trop tardive (≥ 18h)
+  const planStart = effectiveProgramStartIso(generatedAt);
+  plan = plan.filter((w) => w.date >= planStart);
 
   const dist = input.customDistanceKm ?? resolved.targetDistanceKm;
   // La courbe buildLongRunCurve gère déjà la progression — pas de rescale post-génération
@@ -281,7 +331,8 @@ export function buildProgramPlan(input: ProgramBuildInput): {
     catalogId,
     title: resolved.title,
     subtitle: resolved.subtitle,
-    startedAt: new Date().toISOString().slice(0, 10),
+    /** Aligné sur la 1ʳᵉ date de séance possible (demain si soir) */
+    startedAt: planStart,
     weeks: resolved.weeks,
     targetDistanceKm: resolved.targetDistanceKm,
     sportCategory,
@@ -298,7 +349,7 @@ export function buildProgramPlan(input: ProgramBuildInput): {
       input.recentTimeSec && input.recentTimeSec > 0 ? input.recentTimeSec : undefined,
     currentBestAt:
       input.recentTimeSec && input.recentTimeSec > 0
-        ? new Date().toISOString()
+        ? generatedAt.toISOString()
         : undefined,
   };
 
